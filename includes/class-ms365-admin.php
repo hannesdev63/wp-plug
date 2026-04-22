@@ -55,6 +55,15 @@ class WP_MS365_Admin {
 			'wp-ms365-dashboard',
 			array( $this, 'render_dashboard' )
 		);
+
+		add_submenu_page(
+			'wp-ms365-graph',
+			__( 'Diagnostics', 'wp-ms365-graph' ),
+			__( 'Diagnostics', 'wp-ms365-graph' ),
+			'manage_options',
+			'wp-ms365-diagnostics',
+			array( $this, 'render_diagnostics' )
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -159,11 +168,21 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Render the diagnostics page.
+	 */
+	public function render_diagnostics() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		include WP_MS365_PLUGIN_DIR . 'admin/views/diagnostics.php';
+	}
+
+	/**
 	 * Section description for Azure app registration.
 	 */
 	public function section_azure_intro() {
 		echo '<p>'
-			. esc_html__( 'Enter your Azure Active Directory application credentials. You can create an app registration at ', 'wp-ms365-graph' )
+			. esc_html__( 'Enter your Entra ID application registration credentials. You can create an app registration at ', 'wp-ms365-graph' )
 			. '<a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer">'
 			. esc_html__( 'portal.azure.com', 'wp-ms365-graph' )
 			. '</a>.'

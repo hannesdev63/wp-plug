@@ -18,7 +18,7 @@ class WP_MS365_Auth {
 	const AUTHORITY_BASE = 'https://login.microsoftonline.com';
 
 	/** Graph API scopes requested. */
-	const SCOPES = 'offline_access User.Read Calendars.Read Calendars.Read.Shared Files.Read Files.Read.Shared';
+	const SCOPES = 'offline_access User.Read Calendars.Read Calendars.Read.Shared Files.Read';
 
 	// ------------------------------------------------------------------
 	// Public API
@@ -60,6 +60,8 @@ class WP_MS365_Auth {
 	public static function exchange_code_for_token( $code ) {
 		$settings = self::get_settings();
 
+		WP_MS365_Logger::log_auth_event( 'Code exchange requested', array( 'code' => substr( $code, 0, 10 ) . '...' ) );
+
 		$response = wp_remote_post(
 			sprintf( '%s/%s/oauth2/v2.0/token', self::AUTHORITY_BASE, rawurlencode( $settings['tenant_id'] ) ),
 			array(
@@ -74,6 +76,13 @@ class WP_MS365_Auth {
 				),
 			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			WP_MS365_Logger::log( 'error', 'Token exchange failed: ' . $response->get_error_message() );
+		} else {
+			$status = wp_remote_retrieve_response_code( $response );
+			WP_MS365_Logger::log( 'info', 'Token exchange response', array( 'status' => $status ) );
+		}
 
 		return self::process_token_response( $response );
 	}
@@ -91,6 +100,8 @@ class WP_MS365_Auth {
 			return false;
 		}
 
+		WP_MS365_Logger::log( 'debug', 'Attempting token refresh' );
+
 		$response = wp_remote_post(
 			sprintf( '%s/%s/oauth2/v2.0/token', self::AUTHORITY_BASE, rawurlencode( $settings['tenant_id'] ) ),
 			array(
@@ -104,6 +115,13 @@ class WP_MS365_Auth {
 				),
 			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			WP_MS365_Logger::log( 'error', 'Token refresh failed: ' . $response->get_error_message() );
+		} else {
+			$status = wp_remote_retrieve_response_code( $response );
+			WP_MS365_Logger::log( 'debug', 'Token refresh response', array( 'status' => $status ) );
+		}
 
 		return self::process_token_response( $response );
 	}
@@ -210,12 +228,15 @@ class WP_MS365_Auth {
 	 */
 	private static function process_token_response( $response ) {
 		if ( is_wp_error( $response ) ) {
+			WP_MS365_Logger::log( 'error', 'Token response error: ' . $response->get_error_message() );
 			return false;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( empty( $body['access_token'] ) ) {
+			$error_desc = isset( $body['error_description'] ) ? $body['error_description'] : 'Unknown error';
+			WP_MS365_Logger::log( 'error', 'No access token in response', array( 'error' => $error_desc ) );
 			return false;
 		}
 
@@ -235,6 +256,7 @@ class WP_MS365_Auth {
 			$payload = isset( $parts[1] ) ? json_decode( self::base64_url_decode( $parts[1] ), true ) : array();
 			if ( ! empty( $payload['name'] ) ) {
 				update_option( 'wp_ms365_connected_user', sanitize_text_field( $payload['name'] ) );
+				WP_MS365_Logger::log_auth_event( 'Connected successfully', array( 'user' => sanitize_text_field( $payload['name'] ) ) );
 			}
 		}
 

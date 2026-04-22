@@ -207,6 +207,7 @@ class WP_MS365_Graph {
 
 		// On transient 401 (e.g. token just expired), refresh once and retry.
 		if ( ! is_wp_error( $response ) && 401 === wp_remote_retrieve_response_code( $response ) ) {
+			WP_MS365_Logger::log( 'debug', 'Token expired (401), attempting refresh' );
 			if ( WP_MS365_Auth::refresh_access_token() ) {
 				$new_token = get_transient( 'wp_ms365_access_token' );
 				if ( $new_token ) {
@@ -214,6 +215,14 @@ class WP_MS365_Graph {
 					$response = wp_remote_request( $url, $args );
 				}
 			}
+		}
+
+		// Log the API call result.
+		if ( ! is_wp_error( $response ) ) {
+			$status = wp_remote_retrieve_response_code( $response );
+			WP_MS365_Logger::log_graph_call( $method, $url, $status );
+		} else {
+			WP_MS365_Logger::log( 'error', "Request failed to {$url}: " . $response->get_error_message() );
 		}
 
 		return self::parse_response( $response );
@@ -245,6 +254,10 @@ class WP_MS365_Graph {
 				__( 'Graph API error (HTTP %d).', 'wp-ms365-graph' ),
 				$code
 			);
+
+		if ( $code >= 400 ) {
+			WP_MS365_Logger::log_graph_call( 'RESPONSE', 'parse_response', $code, $error_message );
+		}
 
 		return new WP_Error(
 			'ms365_graph_error',

@@ -82,8 +82,21 @@ $auth_url        = WP_MS365_Auth::get_authorization_url();
 			<code>Calendars.Read.Shared</code>, <code>Files.Read.Shared</code>.<br />
 			<?php esc_html_e( 'After adding these permissions, click "Grant admin consent" in Azure and reconnect the plugin.', 'wp-ms365-graph' ); ?>
 		</p>
+		<p class="description">
+			<?php esc_html_e( 'Note: Files.Read.Shared is not a valid permission. Use Files.Read with Calendars.Read.Shared for accessing other users\' resources.', 'wp-ms365-graph' ); ?>
+		</p>
 	</div>
 	<?php endif; ?>
+	<!-- Diagnostics note -->
+	<div class="notice notice-info">
+		<p>
+			<?php esc_html_e( 'Having issues? Check the ', 'wp-ms365-graph' ); ?>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wp-ms365-diagnostics' ) ); ?>">
+				<?php esc_html_e( 'Diagnostics page', 'wp-ms365-graph' ); ?>
+			</a>
+			<?php esc_html_e( ' for troubleshooting and debug logs.', 'wp-ms365-graph' ); ?>
+		</p>
+	</div>
 
 	<!-- Connect button (only shown when credentials are saved) -->
 	<?php

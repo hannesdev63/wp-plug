@@ -54,7 +54,6 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
    - `Calendars.Read`
    - `Calendars.Read.Shared` (required for accessing other users' calendars)
    - `Files.Read`
-   - `Files.Read.Shared` (required for accessing other users' OneDrive)
    - `offline_access`
 7. Click **Grant admin consent**.
 
@@ -70,6 +69,28 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 1. After saving, click **Connect to Microsoft 365**.
 2. Sign in with your Microsoft account and grant the requested permissions.
 3. You are redirected back to WordPress with a *Successfully connected!* notice.
+
+---
+
+## Diagnostics & Troubleshooting
+
+The plugin includes a **Diagnostics** page to help troubleshoot OAuth and API issues:
+
+1. Go to **WordPress Admin → Microsoft 365 → Diagnostics**
+2. View system information, OAuth configuration status, and debug logs
+3. Enable **WP_DEBUG** in `wp-config.php` to record detailed debug logs:
+   ```php
+   define( 'WP_DEBUG', true );
+   ```
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| **Connection Failed** | Invalid credentials or misconfigured app | Check Tenant ID, Client ID, Client Secret. See Diagnostics page for details. |
+| **Access Denied (403) when accessing another user** | Missing `Calendars.Read.Shared` permission | Add `Calendars.Read.Shared` in Azure app permissions and grant admin consent. Reconnect in Settings. |
+| **No files/calendar displayed** | Not connected or wrong user targeted | Verify connection in Settings. Check if configured user has access. |
+| **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |
 
 ---
 

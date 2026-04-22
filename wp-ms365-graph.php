@@ -36,6 +36,9 @@ spl_autoload_register( function ( $class ) {
 	}
 } );
 
+// Load logger first (used by other classes).
+require_once WP_MS365_PLUGIN_DIR . 'includes/class-ms365-logger.php';
+
 /**
  * Bootstrap the plugin after all plugins have loaded.
  */
