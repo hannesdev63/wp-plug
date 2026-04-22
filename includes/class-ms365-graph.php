@@ -225,7 +225,7 @@ class WP_MS365_Graph {
 			WP_MS365_Logger::log( 'error', "Request failed to {$url}: " . $response->get_error_message() );
 		}
 
-		return self::parse_response( $response );
+		return self::parse_response( $response, $url );
 	}
 
 	/**
@@ -234,7 +234,7 @@ class WP_MS365_Graph {
 	 * @param  array|WP_Error $response wp_remote_* response.
 	 * @return array|WP_Error
 	 */
-	private static function parse_response( $response ) {
+	private static function parse_response( $response, $url = '' ) {
 		if ( is_wp_error( $response ) ) {
 			return $response;
 		}
@@ -248,15 +248,31 @@ class WP_MS365_Graph {
 		}
 
 		$error_message = isset( $data['error']['message'] )
-			? $data['error']['message']
+			? (string) $data['error']['message']
 			: sprintf(
 				/* translators: %d = HTTP status code */
 				__( 'Graph API error (HTTP %d).', 'wp-ms365-graph' ),
 				$code
 			);
 
+		$raw_message = $error_message;
+		$error_code  = isset( $data['error']['code'] ) ? (string) $data['error']['code'] : '';
+
+		if ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) {
+			if ( strpos( $url, '/drive/' ) !== false ) {
+				$error_message = __( 'OneDrive for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has OneDrive provisioned.', 'wp-ms365-graph' );
+			} elseif ( strpos( $url, '/calendar' ) !== false ) {
+				$error_message = __( 'Calendar for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has a mailbox/calendar in Microsoft 365.', 'wp-ms365-graph' );
+			} elseif ( strpos( $url, '/users/' ) !== false ) {
+				$error_message = __( 'The configured Specific User could not be found. Use a valid user principal name (user@domain.com) or Entra object ID.', 'wp-ms365-graph' );
+			}
+		}
+
 		if ( $code >= 400 ) {
 			WP_MS365_Logger::log_graph_call( 'RESPONSE', 'parse_response', $code, $error_message );
+			if ( $raw_message !== $error_message ) {
+				WP_MS365_Logger::log( 'debug', 'Raw Graph error message', array( 'message' => $raw_message, 'code' => $error_code, 'url' => $url ) );
+			}
 		}
 
 		return new WP_Error(

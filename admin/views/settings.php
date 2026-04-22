@@ -79,11 +79,8 @@ $auth_url        = WP_MS365_Auth::get_authorization_url();
 		<p>
 			<strong><?php esc_html_e( 'Note: Accessing another user requires additional permissions.', 'wp-ms365-graph' ); ?></strong><br />
 			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
-			<code>Calendars.Read.Shared</code>, <code>Files.Read.Shared</code>.<br />
+			<code>Calendars.Read.Shared</code>, <code>Files.Read</code>.<br />
 			<?php esc_html_e( 'After adding these permissions, click "Grant admin consent" in Azure and reconnect the plugin.', 'wp-ms365-graph' ); ?>
-		</p>
-		<p class="description">
-			<?php esc_html_e( 'Note: Files.Read.Shared is not a valid permission. Use Files.Read with Calendars.Read.Shared for accessing other users\' resources.', 'wp-ms365-graph' ); ?>
 		</p>
 	</div>
 	<?php endif; ?>

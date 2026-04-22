@@ -124,7 +124,7 @@ $is_specific_user = '' !== $configured_user;
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
-						<small><?php esc_html_e( 'If accessing a different user\'s OneDrive, ensure your Azure app has Files.Read.Shared permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+						<small><?php esc_html_e( 'If accessing a different user\'s OneDrive, ensure your Azure app has Files.Read permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
 					<?php endif; ?>
 				</p>
 			<?php elseif ( empty( $drive['value'] ) ) : ?>
