@@ -59,18 +59,44 @@ class WP_MS365_Graph {
 	}
 
 	/**
+	 * Retrieve the configured target user (UPN or object ID), if any.
+	 *
+	 * @return string Empty string means "use signed-in user".
+	 */
+	public static function get_configured_user() {
+		$settings = WP_MS365_Auth::get_settings();
+		return isset( $settings['specific_user'] ) ? trim( (string) $settings['specific_user'] ) : '';
+	}
+
+	/**
+	 * Retrieve the effective target user's profile.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @return array|WP_Error
+	 */
+	public static function get_target_user_profile( $user = '' ) {
+		$effective_user = self::get_effective_user( $user );
+		if ( '' === $effective_user ) {
+			return self::get_me();
+		}
+
+		return self::get( '/users/' . rawurlencode( $effective_user ) );
+	}
+
+	/**
 	 * Retrieve upcoming calendar events.
 	 *
 	 * @param  int    $limit    Maximum number of events to return.
 	 * @param  string $timezone IANA timezone string (default UTC).
 	 * @return array|WP_Error   Array with 'value' key containing events.
 	 */
-	public static function get_calendar_events( $limit = 10, $timezone = 'UTC' ) {
+	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '' ) {
 		$start = gmdate( 'Y-m-d\TH:i:s\Z' );
 		$end   = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days' ) );
+		$user_prefix = self::get_user_endpoint_prefix( $user );
 
 		return self::get(
-			'/me/calendarView',
+			$user_prefix . '/calendarView',
 			array(
 				'startDateTime'   => $start,
 				'endDateTime'     => $end,
@@ -89,11 +115,13 @@ class WP_MS365_Graph {
 	 * @param  int    $limit  Maximum number of items to return.
 	 * @return array|WP_Error
 	 */
-	public static function get_drive_items( $folder = '', $limit = 20 ) {
+	public static function get_drive_items( $folder = '', $limit = 20, $user = '' ) {
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+
 		if ( $folder ) {
-			$endpoint = '/me/drive/root:/' . ltrim( $folder, '/' ) . ':/children';
+			$endpoint = $user_prefix . '/drive/root:/' . ltrim( $folder, '/' ) . ':/children';
 		} else {
-			$endpoint = '/me/drive/root/children';
+			$endpoint = $user_prefix . '/drive/root/children';
 		}
 
 		return self::get(
@@ -112,9 +140,11 @@ class WP_MS365_Graph {
 	 * @param  int $limit Maximum number of messages to return.
 	 * @return array|WP_Error
 	 */
-	public static function get_mail_messages( $limit = 10 ) {
+	public static function get_mail_messages( $limit = 10, $user = '' ) {
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+
 		return self::get(
-			'/me/mailFolders/Inbox/messages',
+			$user_prefix . '/mailFolders/Inbox/messages',
 			array(
 				'$top'     => $limit,
 				'$select'  => 'subject,from,receivedDateTime,isRead,webLink',
@@ -221,5 +251,35 @@ class WP_MS365_Graph {
 			$error_message,
 			array( 'status' => $code, 'body' => $body )
 		);
+	}
+
+	/**
+	 * Resolve which user should be targeted for user-scoped endpoints.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @return string
+	 */
+	private static function get_effective_user( $user = '' ) {
+		$explicit_user = trim( (string) $user );
+		if ( '' !== $explicit_user ) {
+			return $explicit_user;
+		}
+
+		return self::get_configured_user();
+	}
+
+	/**
+	 * Get endpoint prefix for either configured user or signed-in user.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @return string
+	 */
+	private static function get_user_endpoint_prefix( $user = '' ) {
+		$effective_user = self::get_effective_user( $user );
+		if ( '' === $effective_user ) {
+			return '/me';
+		}
+
+		return '/users/' . rawurlencode( $effective_user );
 	}
 }

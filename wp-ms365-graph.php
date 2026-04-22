@@ -68,6 +68,7 @@ function wp_ms365_graph_activate() {
 		'tenant_id'     => '',
 		'client_id'     => '',
 		'client_secret' => '',
+		'specific_user' => '',
 		'redirect_uri'  => admin_url( 'admin.php?page=wp-ms365-graph' ),
 	);
 	add_option( 'wp_ms365_settings', $defaults );

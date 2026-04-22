@@ -266,6 +266,7 @@ class WP_MS365_Auth {
 			'tenant_id'     => '',
 			'client_id'     => '',
 			'client_secret' => '',
+			'specific_user' => '',
 		);
 		$settings = get_option( 'wp_ms365_settings', $defaults );
 		return wp_parse_args( $settings, $defaults );

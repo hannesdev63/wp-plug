@@ -12,6 +12,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 | **Calendar Events** | `[ms365_calendar]` shortcode – renders upcoming events from Outlook Calendar |
 | **OneDrive Files** | `[ms365_files]` shortcode – renders a file/folder listing from OneDrive |
 | **User Profile** | `[ms365_profile]` shortcode – displays the signed-in user's name, email and job title |
+| **Specific User Targeting** | Optionally configure a Microsoft user (UPN or object ID); calendar and OneDrive use that user, otherwise they default to the signed-in user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
 | **Token Refresh** | Automatically refreshes expired access tokens using the stored refresh token |
 
@@ -59,7 +60,8 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 
 1. Go to **Microsoft 365 → Settings**.
 2. Fill in **Tenant ID**, **Client ID**, and **Client Secret**.
-3. Click **Save Changes**.
+3. (Optional) Fill in **Specific User (UPN or ID)** to target one Microsoft account for calendar and OneDrive.
+4. Click **Save Changes**.
 
 ### 3 – Authorize the Connection
 
@@ -73,7 +75,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 
 ### `[ms365_calendar]`
 
-Displays upcoming calendar events from Outlook Calendar.
+Displays upcoming calendar events from the selected user. If no specific user is configured, the signed-in user is used.
 
 | Attribute | Default | Description |
 |---|---|---|
@@ -89,7 +91,7 @@ Displays upcoming calendar events from Outlook Calendar.
 
 ### `[ms365_files]`
 
-Displays a OneDrive file/folder listing.
+Displays a OneDrive file/folder listing from the selected user. If no specific user is configured, the signed-in user is used.
 
 | Attribute | Default | Description |
 |---|---|---|

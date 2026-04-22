@@ -84,6 +84,7 @@ class WP_MS365_Admin {
 			'tenant_id'     => __( 'Directory (Tenant) ID', 'wp-ms365-graph' ),
 			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
 			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
+			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
 		);
 
 		foreach ( $fields as $key => $label ) {
@@ -110,6 +111,7 @@ class WP_MS365_Admin {
 		$clean['tenant_id']     = isset( $input['tenant_id'] )     ? sanitize_text_field( $input['tenant_id'] )     : '';
 		$clean['client_id']     = isset( $input['client_id'] )     ? sanitize_text_field( $input['client_id'] )     : '';
 		$clean['client_secret'] = isset( $input['client_secret'] ) ? sanitize_text_field( $input['client_secret'] ) : '';
+		$clean['specific_user'] = isset( $input['specific_user'] ) ? sanitize_text_field( $input['specific_user'] ) : '';
 
 		// Basic UUID format validation for tenant/client IDs.
 		$uuid_pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
@@ -186,6 +188,12 @@ class WP_MS365_Admin {
 			esc_attr( $key ),
 			esc_attr( $value )
 		);
+
+		if ( 'specific_user' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional. Use a Microsoft user principal name (for example user@contoso.com) or object ID. Leave empty to use the signed-in user.', 'wp-ms365-graph' )
+				. '</p>';
+		}
 	}
 
 	// ------------------------------------------------------------------

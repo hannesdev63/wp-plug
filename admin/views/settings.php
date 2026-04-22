@@ -103,12 +103,12 @@ $auth_url        = WP_MS365_Auth::get_authorization_url();
 		<tbody>
 			<tr>
 				<td><code>[ms365_calendar]</code></td>
-				<td><?php esc_html_e( 'Displays upcoming calendar events from your Outlook Calendar.', 'wp-ms365-graph' ); ?></td>
+				<td><?php esc_html_e( 'Displays upcoming calendar events from the selected user. If no specific user is configured, the signed-in user is used.', 'wp-ms365-graph' ); ?></td>
 				<td><code>[ms365_calendar limit="5" timezone="Europe/London" title="My Calendar"]</code></td>
 			</tr>
 			<tr>
 				<td><code>[ms365_files]</code></td>
-				<td><?php esc_html_e( 'Displays a file listing from your OneDrive.', 'wp-ms365-graph' ); ?></td>
+				<td><?php esc_html_e( 'Displays a file listing from the selected user OneDrive. If no specific user is configured, the signed-in user is used.', 'wp-ms365-graph' ); ?></td>
 				<td><code>[ms365_files limit="10" folder="Documents" title="My Files"]</code></td>
 			</tr>
 			<tr>

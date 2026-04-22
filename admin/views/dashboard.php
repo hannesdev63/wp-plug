@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $is_connected = WP_MS365_Auth::is_connected();
+$configured_user = WP_MS365_Graph::get_configured_user();
+$is_specific_user = '' !== $configured_user;
 ?>
 <div class="wrap ms365-dashboard">
 	<h1 class="ms365-dashboard__heading">
@@ -34,15 +36,21 @@ $is_connected = WP_MS365_Auth::is_connected();
 	<?php else : ?>
 
 		<!-- User profile card -->
-		<?php $me = WP_MS365_Graph::get_me(); ?>
-		<?php if ( ! is_wp_error( $me ) ) : ?>
+		<?php $selected_user = WP_MS365_Graph::get_target_user_profile(); ?>
+		<?php if ( ! is_wp_error( $selected_user ) ) : ?>
 		<div class="ms365-card ms365-card--profile">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Signed-in User', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
 			<p>
-				<strong><?php echo esc_html( isset( $me['displayName'] ) ? $me['displayName'] : '' ); ?></strong><br />
-				<?php echo esc_html( isset( $me['mail'] ) ? $me['mail'] : ( isset( $me['userPrincipalName'] ) ? $me['userPrincipalName'] : '' ) ); ?><br />
-				<?php if ( ! empty( $me['jobTitle'] ) ) : ?>
-					<em><?php echo esc_html( $me['jobTitle'] ); ?></em>
+				<strong><?php echo esc_html( isset( $selected_user['displayName'] ) ? $selected_user['displayName'] : '' ); ?></strong><br />
+				<?php echo esc_html( isset( $selected_user['mail'] ) ? $selected_user['mail'] : ( isset( $selected_user['userPrincipalName'] ) ? $selected_user['userPrincipalName'] : '' ) ); ?><br />
+				<?php if ( ! empty( $selected_user['jobTitle'] ) ) : ?>
+					<em><?php echo esc_html( $selected_user['jobTitle'] ); ?></em><br />
+				<?php endif; ?>
+				<?php if ( $is_specific_user ) : ?>
+					<?php /* translators: %s: configured user value */ ?>
+					<span><?php printf( esc_html__( 'Configured user: %s', 'wp-ms365-graph' ), esc_html( $configured_user ) ); ?></span>
+				<?php else : ?>
+					<span><?php esc_html_e( 'Using signed-in user (default).', 'wp-ms365-graph' ); ?></span>
 				<?php endif; ?>
 			</p>
 		</div>
@@ -50,7 +58,7 @@ $is_connected = WP_MS365_Auth::is_connected();
 
 		<!-- Calendar events -->
 		<div class="ms365-card ms365-card--calendar">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Upcoming Calendar Events (next 30 days)', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$events = WP_MS365_Graph::get_calendar_events( 5 );
 			if ( is_wp_error( $events ) ) :
@@ -97,7 +105,7 @@ $is_connected = WP_MS365_Auth::is_connected();
 
 		<!-- OneDrive files -->
 		<div class="ms365-card ms365-card--files">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$drive = WP_MS365_Graph::get_drive_items( '', 10 );
 			if ( is_wp_error( $drive ) ) :
