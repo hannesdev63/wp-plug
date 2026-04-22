@@ -158,6 +158,14 @@ class WP_MS365_Auth {
 			'client_secret' => '',
 			'specific_user' => '',
 			'custom_css'    => '',
+			'calendar_empty_text'      => '',
+			'calendar_header_date'     => '',
+			'calendar_header_event'    => '',
+			'calendar_header_location' => '',
+			'files_empty_text'         => '',
+			'files_header_file'        => '',
+			'files_header_size'        => '',
+			'files_header_modified'    => '',
 		);
 		$settings = get_option( 'wp_ms365_settings', $defaults );
 		return wp_parse_args( $settings, $defaults );

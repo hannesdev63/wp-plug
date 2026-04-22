@@ -3,11 +3,27 @@
    ============================================================================= */
 
 .ms365-settings__heading,
-.ms365-dashboard__heading {
+.ms365-dashboard__heading,
+.ms365-diagnostics__heading {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 20px;
+}
+
+.ms365-page-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 4px;
+}
+
+/* Menu icon sizing fix – WordPress wraps data-URI icons in an <img> */
+#toplevel_page_wp-ms365-graph .wp-menu-image img {
+    width: 20px !important;
+    height: 20px !important;
+    padding: 0 !important;
+    margin-top: 5px;
 }
 
 /* ---------- Connection status banner ---------- */

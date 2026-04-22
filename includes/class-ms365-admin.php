@@ -26,6 +26,30 @@ class WP_MS365_Admin {
 	// ------------------------------------------------------------------
 
 	/**
+	 * Returns the plugin icon as a base64-encoded SVG data URI (for menu use).
+	 *
+	 * @return string
+	 */
+	public static function get_menu_icon_uri() {
+		$svg_file = WP_MS365_PLUGIN_DIR . 'assets/images/icon.svg';
+		if ( ! file_exists( $svg_file ) ) {
+			return 'dashicons-microsoft';
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$svg = file_get_contents( $svg_file );
+		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
+	}
+
+	/**
+	 * Returns the URL to the plugin icon SVG for use in <img> tags.
+	 *
+	 * @return string
+	 */
+	public static function get_icon_url() {
+		return WP_MS365_PLUGIN_URL . 'assets/images/icon.svg';
+	}
+
+	/**
 	 * Register top-level admin menu item.
 	 */
 	public function register_menu() {
@@ -35,7 +59,7 @@ class WP_MS365_Admin {
 			'manage_options',
 			'wp-ms365-graph',
 			array( $this, 'render_dashboard' ),
-			'dashicons-microsoft',
+			self::get_menu_icon_uri(),
 			80
 		);
 
@@ -55,6 +79,15 @@ class WP_MS365_Admin {
 			'manage_options',
 			'wp-ms365-settings',
 			array( $this, 'render_page' )
+		);
+
+		add_submenu_page(
+			'wp-ms365-graph',
+			__( 'Wording', 'wp-ms365-graph' ),
+			__( 'Wording', 'wp-ms365-graph' ),
+			'manage_options',
+			'wp-ms365-wording',
+			array( $this, 'render_wording_page' )
 		);
 
 		add_submenu_page(
@@ -108,6 +141,35 @@ class WP_MS365_Admin {
 				array( 'key' => $key, 'label' => $label )
 			);
 		}
+
+		add_settings_section(
+			'wp_ms365_wording',
+			__( 'Shortcode Wording', 'wp-ms365-graph' ),
+			array( $this, 'section_wording_intro' ),
+			'wp-ms365-wording'
+		);
+
+		$wording_fields = array(
+			'calendar_empty_text'     => __( 'Calendar: No items found', 'wp-ms365-graph' ),
+			'calendar_header_date'    => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
+			'calendar_header_event'   => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
+			'calendar_header_location'=> __( 'Calendar: Header Location', 'wp-ms365-graph' ),
+			'files_empty_text'        => __( 'Files: No items found', 'wp-ms365-graph' ),
+			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
+			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
+			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+		);
+
+		foreach ( $wording_fields as $key => $label ) {
+			add_settings_field(
+				'wp_ms365_' . $key,
+				$label,
+				array( $this, 'render_text_field' ),
+				'wp-ms365-wording',
+				'wp_ms365_wording',
+				array( 'key' => $key, 'label' => $label )
+			);
+		}
 	}
 
 	/**
@@ -117,13 +179,60 @@ class WP_MS365_Admin {
 	 * @return array
 	 */
 	public function sanitize_settings( $input ) {
-		$clean = array();
+		$current = WP_MS365_Auth::get_settings();
+		$clean   = $current;
 
-		$clean['tenant_id']     = isset( $input['tenant_id'] )     ? sanitize_text_field( $input['tenant_id'] )     : '';
-		$clean['client_id']     = isset( $input['client_id'] )     ? sanitize_text_field( $input['client_id'] )     : '';
-		$clean['client_secret'] = isset( $input['client_secret'] ) ? sanitize_text_field( $input['client_secret'] ) : '';
-		$clean['specific_user'] = isset( $input['specific_user'] ) ? sanitize_text_field( $input['specific_user'] ) : '';
-		$clean['custom_css']    = isset( $input['custom_css'] )    ? sanitize_textarea_field( $input['custom_css'] ) : '';
+		if ( isset( $input['tenant_id'] ) ) {
+			$clean['tenant_id'] = sanitize_text_field( $input['tenant_id'] );
+		}
+
+		if ( isset( $input['client_id'] ) ) {
+			$clean['client_id'] = sanitize_text_field( $input['client_id'] );
+		}
+
+		if ( isset( $input['client_secret'] ) ) {
+			$clean['client_secret'] = sanitize_text_field( $input['client_secret'] );
+		}
+
+		if ( isset( $input['specific_user'] ) ) {
+			$clean['specific_user'] = sanitize_text_field( $input['specific_user'] );
+		}
+
+		if ( isset( $input['custom_css'] ) ) {
+			$clean['custom_css'] = sanitize_textarea_field( $input['custom_css'] );
+		}
+
+		if ( isset( $input['calendar_empty_text'] ) ) {
+			$clean['calendar_empty_text'] = sanitize_text_field( $input['calendar_empty_text'] );
+		}
+
+		if ( isset( $input['calendar_header_date'] ) ) {
+			$clean['calendar_header_date'] = sanitize_text_field( $input['calendar_header_date'] );
+		}
+
+		if ( isset( $input['calendar_header_event'] ) ) {
+			$clean['calendar_header_event'] = sanitize_text_field( $input['calendar_header_event'] );
+		}
+
+		if ( isset( $input['calendar_header_location'] ) ) {
+			$clean['calendar_header_location'] = sanitize_text_field( $input['calendar_header_location'] );
+		}
+
+		if ( isset( $input['files_empty_text'] ) ) {
+			$clean['files_empty_text'] = sanitize_text_field( $input['files_empty_text'] );
+		}
+
+		if ( isset( $input['files_header_file'] ) ) {
+			$clean['files_header_file'] = sanitize_text_field( $input['files_header_file'] );
+		}
+
+		if ( isset( $input['files_header_size'] ) ) {
+			$clean['files_header_size'] = sanitize_text_field( $input['files_header_size'] );
+		}
+
+		if ( isset( $input['files_header_modified'] ) ) {
+			$clean['files_header_modified'] = sanitize_text_field( $input['files_header_modified'] );
+		}
 
 		// Basic UUID format validation for tenant/client IDs.
 		$uuid_pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
@@ -159,6 +268,16 @@ class WP_MS365_Admin {
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/settings.php';
+	}
+
+	/**
+	 * Render the wording customization page.
+	 */
+	public function render_wording_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		include WP_MS365_PLUGIN_DIR . 'admin/views/wording.php';
 	}
 
 	/**
@@ -214,6 +333,15 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Section description for wording customization.
+	 */
+	public function section_wording_intro() {
+		echo '<p>'
+			. esc_html__( 'Override shortcode table headings and empty-state text. Leave any field blank to use the built-in translated default.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
 	 * Render a single text/password field.
 	 *
 	 * @param array $args Field arguments.
@@ -250,6 +378,10 @@ class WP_MS365_Admin {
 			echo '<p class="description">'
 				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
 				. '</p>';
+		} elseif ( false !== strpos( $key, 'header_' ) || false !== strpos( $key, 'empty_text' ) ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional override. Leave blank to use the translated default text.', 'wp-ms365-graph' )
+				. '</p>';
 		}
 	}
 
@@ -266,9 +398,11 @@ class WP_MS365_Admin {
 		$allowed_hooks = array(
 			'toplevel_page_wp-ms365-graph',
 			'entra-id-connect_page_wp-ms365-settings',
+			'entra-id-connect_page_wp-ms365-wording',
 			'entra-id-connect_page_wp-ms365-diagnostics',
 			'microsoft-365_page_wp-ms365-dashboard',
 			'microsoft-365_page_wp-ms365-settings',
+			'microsoft-365_page_wp-ms365-wording',
 			'microsoft-365_page_wp-ms365-diagnostics',
 		);
 		if ( ! in_array( $hook, $allowed_hooks, true ) ) {

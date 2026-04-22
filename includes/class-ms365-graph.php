@@ -26,11 +26,12 @@ class WP_MS365_Graph {
 	 *
 	 * @param  string $endpoint  Relative endpoint, e.g. "/me/calendars".
 	 * @param  array  $query     Optional query-string parameters.
+	 * @param  array  $headers   Optional request headers.
 	 * @return array|WP_Error    Decoded JSON body as an associative array, or WP_Error.
 	 */
-	public static function get( $endpoint, array $query = array() ) {
+	public static function get( $endpoint, array $query = array(), array $headers = array() ) {
 		$url = self::build_url( $endpoint, $query );
-		return self::request( 'GET', $url );
+		return self::request( 'GET', $url, array(), $headers );
 	}
 
 	/**
@@ -106,7 +107,9 @@ class WP_MS365_Graph {
 				'$top'            => $limit,
 				'$orderby'        => 'start/dateTime',
 				'$select'         => 'id,subject,start,end,location,webLink,organizer,isAllDay,categories',
-				'Prefer'          => 'outlook.timezone="' . $timezone . '"',
+			),
+			array(
+				'Prefer' => 'outlook.timezone="' . $timezone . '"',
 			)
 		);
 	}
@@ -286,9 +289,10 @@ class WP_MS365_Graph {
 	 * @param  string $method HTTP method.
 	 * @param  string $url    Full URL.
 	 * @param  array  $body   Optional request body for POST/PATCH.
+	 * @param  array  $headers Optional request headers.
 	 * @return array|WP_Error
 	 */
-	private static function request( $method, $url, array $body = array() ) {
+	private static function request( $method, $url, array $body = array(), array $headers = array() ) {
 		$token = WP_MS365_Auth::get_access_token();
 		if ( ! $token ) {
 			return new WP_Error(
@@ -309,6 +313,10 @@ class WP_MS365_Graph {
 
 		if ( ! empty( $body ) ) {
 			$args['body'] = wp_json_encode( $body );
+		}
+
+		if ( ! empty( $headers ) ) {
+			$args['headers'] = array_merge( $args['headers'], $headers );
 		}
 
 		$response = wp_remote_request( $url, $args );

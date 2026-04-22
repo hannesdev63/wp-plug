@@ -36,7 +36,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 <div class="wrap ms365-diagnostics">
 	<h1 class="ms365-diagnostics__heading">
-		<span class="dashicons dashicons-tools"></span>
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
 		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
 	</h1>
 

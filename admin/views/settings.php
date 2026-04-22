@@ -16,7 +16,7 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 ?>
 <div class="wrap ms365-settings">
 	<h1 class="ms365-settings__heading">
-		<span class="dashicons dashicons-microsoft"></span>
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
 		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Settings', 'wp-ms365-graph' ); ?>
 	</h1>
 

@@ -67,44 +67,41 @@ class WP_MS365_Shortcodes {
 			wp_die( esc_html( $download_url->get_error_message() ), 403 );
 		}
 
-		$response = wp_remote_get(
-			$download_url,
+		// Use a local safe filename and MIME type from Graph metadata — never
+		// forward the upstream Content-Disposition to prevent header injection.
+		$safe_name = sanitize_file_name( $filename );
+		$safe_mime = sanitize_mime_type( $mime_type ? $mime_type : 'application/octet-stream' );
+
+		// Stream the remote file directly to the client to avoid buffering
+		// the full body in PHP memory (prevents worker/memory exhaustion).
+		$context = stream_context_create(
 			array(
-				'timeout'     => 60,
-				'redirection' => 5,
+				'http' => array(
+					'timeout'        => 60,
+					'ignore_errors'  => true,
+				),
+				'ssl' => array(
+					'verify_peer'      => true,
+					'verify_peer_name' => true,
+				),
 			)
 		);
 
-		if ( is_wp_error( $response ) ) {
-			wp_die( esc_html( $response->get_error_message() ), 500 );
-		}
-
-		$code = wp_remote_retrieve_response_code( $response );
-		if ( $code < 200 || $code >= 300 ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen
+		$handle = @fopen( $download_url, 'rb', false, $context );
+		if ( false === $handle ) {
 			wp_die( esc_html__( 'Unable to download this file right now.', 'wp-ms365-graph' ), 502 );
 		}
 
-		$body = wp_remote_retrieve_body( $response );
-		if ( '' === $body ) {
-			wp_die( esc_html__( 'Downloaded file was empty.', 'wp-ms365-graph' ), 404 );
-		}
-
-		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
-		$disposition  = wp_remote_retrieve_header( $response, 'content-disposition' );
-		$content_len  = wp_remote_retrieve_header( $response, 'content-length' );
-		$safe_name    = str_replace( '"', '', $filename );
-
 		nocache_headers();
-		header( 'Content-Type: ' . ( $content_type ? $content_type : ( $mime_type ? $mime_type : 'application/octet-stream' ) ) );
-		if ( $disposition ) {
-			header( 'Content-Disposition: ' . $disposition );
-		} else {
-			header( 'Content-Disposition: attachment; filename="' . $safe_name . '"; filename*=UTF-8\'\'' . rawurlencode( $filename ) );
-		}
-		if ( $content_len ) {
-			header( 'Content-Length: ' . $content_len );
-		}
-		echo $body;
+		header( 'Content-Type: ' . $safe_mime );
+		header(
+			'Content-Disposition: attachment; filename="' . str_replace( '"', '', $safe_name ) . '"; filename*=UTF-8\'\'' . rawurlencode( $filename )
+		);
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fpassthru
+		fpassthru( $handle );
+		fclose( $handle );
 		exit;
 	}
 
@@ -197,37 +194,95 @@ class WP_MS365_Shortcodes {
 	}
 
 	/**
-	 * Encode a local query param payload safely for URLs.
+	 * Encode a local query param payload as a signed, expiring token.
+	 *
+	 * Format: base64url(json({id, exp})).base64url(hmac-sha256)
+	 * Expiry is 1 hour from generation.
 	 *
 	 * @param  string $value Raw identifier.
 	 * @return string
 	 */
 	private function encode_local_token_param( $value ) {
-		return rtrim( strtr( base64_encode( (string) $value ), '+/', '-_' ), '=' );
+		$payload = $this->base64url_encode(
+			wp_json_encode(
+				array(
+					'id'  => (string) $value,
+					'exp' => time() + HOUR_IN_SECONDS,
+				)
+			)
+		);
+		$sig = $this->base64url_encode(
+			hash_hmac( 'sha256', $payload, wp_salt( 'auth' ), true )
+		);
+		return $payload . '.' . $sig;
 	}
 
 	/**
-	 * Decode a local query param payload previously encoded with base64url.
+	 * Decode and validate a signed expiring token from a query parameter.
 	 *
 	 * @param  string $key Query parameter key.
-	 * @return string
+	 * @return string Decoded identifier, or empty string on any failure.
 	 */
 	private function decode_local_token_param( $key ) {
 		if ( ! isset( $_GET[ $key ] ) ) {
 			return '';
 		}
 
-		$encoded = trim( (string) wp_unslash( $_GET[ $key ] ) );
-		if ( '' === $encoded ) {
+		$token = trim( (string) wp_unslash( $_GET[ $key ] ) );
+		if ( '' === $token ) {
 			return '';
 		}
 
-		$decoded = base64_decode( strtr( $encoded, '-_', '+/' ), true );
-		if ( false !== $decoded ) {
-			return trim( $decoded );
+		$parts = explode( '.', $token, 2 );
+		if ( 2 !== count( $parts ) ) {
+			return '';
 		}
 
-		return '';
+		list( $payload_b64, $sig_b64 ) = $parts;
+
+		// Constant-time HMAC verification.
+		$expected = $this->base64url_encode(
+			hash_hmac( 'sha256', $payload_b64, wp_salt( 'auth' ), true )
+		);
+		if ( ! hash_equals( $expected, $sig_b64 ) ) {
+			return '';
+		}
+
+		$json = $this->base64url_decode( $payload_b64 );
+		if ( false === $json ) {
+			return '';
+		}
+
+		$payload = json_decode( $json, true );
+		if ( ! is_array( $payload ) || ! isset( $payload['id'], $payload['exp'] ) ) {
+			return '';
+		}
+
+		if ( (int) $payload['exp'] < time() ) {
+			wp_die( esc_html__( 'This link has expired. Please reload the page to get a new one.', 'wp-ms365-graph' ), 410 );
+		}
+
+		return (string) $payload['id'];
+	}
+
+	/**
+	 * Base64url-encode binary data.
+	 *
+	 * @param  string $data Raw bytes.
+	 * @return string
+	 */
+	private function base64url_encode( $data ) {
+		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
+	}
+
+	/**
+	 * Base64url-decode a string.
+	 *
+	 * @param  string $data Encoded string.
+	 * @return string|false Decoded string, or false on failure.
+	 */
+	private function base64url_decode( $data ) {
+		return base64_decode( strtr( $data, '-_', '+/' ), true );
 	}
 
 	// ------------------------------------------------------------------
@@ -239,26 +294,33 @@ class WP_MS365_Shortcodes {
 	 *
 	 * Attributes:
 	 *   limit    – max number of events (default 5)
-	 *   timezone – IANA timezone string (default UTC)
+	 *   timezone – IANA timezone string (default WP site timezone)
 	 *   title    – heading text (default "Upcoming Events")
 	 *   calendar_link_mode – link behavior: "ics" or "none" (default "ics")
 	 *   categories – comma-separated category names to include (default: all)
+	 *   show_headers – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
 	 */
 	public function render_calendar( $atts ) {
+		$default_timezone = $this->get_default_calendar_timezone();
+		$wording          = $this->get_shortcode_wording();
+
 		$atts = shortcode_atts(
 			array(
 				'limit'              => 5,
-				'timezone'           => 'UTC',
+				'timezone'           => $default_timezone,
 				'title'              => '',
 				'calendar_link_mode' => 'ics',
 				'categories'         => '',
+				'show_headers'       => 'true',
 			),
 			$atts,
 			'ms365_calendar'
 		);
+
+		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
 
 		$link_mode = strtolower( trim( (string) $atts['calendar_link_mode'] ) );
 		if ( ! in_array( $link_mode, array( 'ics', 'none' ), true ) ) {
@@ -309,46 +371,130 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 
 			<?php if ( empty( $items ) ) : ?>
-				<p class="ms365-calendar__empty"><?php esc_html_e( 'No upcoming events found.', 'wp-ms365-graph' ); ?></p>
+				<p class="ms365-calendar__empty"><?php echo esc_html( $wording['calendar_empty_text'] ); ?></p>
 			<?php else : ?>
-				<ul class="ms365-calendar__list">
-					<?php foreach ( $items as $event ) : ?>
-						<?php
-						$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'wp-ms365-graph' );
-						$start    = isset( $event['start']['dateTime'] ) ? $event['start']['dateTime'] : '';
-						$end      = isset( $event['end']['dateTime'] )   ? $event['end']['dateTime']   : '';
-						$location = isset( $event['location']['displayName'] ) ? $event['location']['displayName'] : '';
-						$event_link = '';
-						if ( 'ics' === $link_mode && isset( $event['id'] ) && '' !== (string) $event['id'] ) {
-							$event_link = add_query_arg( 'ms365_calendar_ics', $this->encode_local_token_param( (string) $event['id'] ), home_url( '/' ) );
-						}
-						$all_day  = ! empty( $event['isAllDay'] );
-
-						$start_display = $start
-							? ( $all_day
-								? date_i18n( get_option( 'date_format' ), strtotime( $start ) )
-								: date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $start ) ) )
-							: '';
-						?>
-						<li class="ms365-calendar__item">
-							<span class="ms365-calendar__date"><?php echo esc_html( $start_display ); ?></span>
-							<?php if ( $event_link ) : ?>
-								<a class="ms365-calendar__subject" href="<?php echo esc_url( $event_link ); ?>" rel="nofollow">
-									<?php echo esc_html( $subject ); ?>
-								</a>
-							<?php else : ?>
-								<span class="ms365-calendar__subject"><?php echo esc_html( $subject ); ?></span>
-							<?php endif; ?>
-							<?php if ( $location ) : ?>
-								<span class="ms365-calendar__location"><?php echo esc_html( $location ); ?></span>
-							<?php endif; ?>
-						</li>
-					<?php endforeach; ?>
-				</ul>
+				<table class="ms365-table ms365-calendar__table">
+					<?php if ( $show_headers ) : ?>
+						<thead>
+							<tr>
+								<th scope="col"><?php echo esc_html( $wording['calendar_header_date'] ); ?></th>
+								<th scope="col"><?php echo esc_html( $wording['calendar_header_event'] ); ?></th>
+								<th scope="col"><?php echo esc_html( $wording['calendar_header_location'] ); ?></th>
+							</tr>
+						</thead>
+					<?php endif; ?>
+					<tbody>
+						<?php foreach ( $items as $event ) : ?>
+							<?php
+							$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'wp-ms365-graph' );
+							$start    = isset( $event['start']['dateTime'] ) ? $event['start']['dateTime'] : '';
+							$location = isset( $event['location']['displayName'] ) ? $event['location']['displayName'] : '';
+							$event_timezone = isset( $event['start']['timeZone'] ) ? (string) $event['start']['timeZone'] : (string) $atts['timezone'];
+							$event_link = '';
+							if ( 'ics' === $link_mode && isset( $event['id'] ) && '' !== (string) $event['id'] ) {
+								$event_link = add_query_arg( 'ms365_calendar_ics', $this->encode_local_token_param( (string) $event['id'] ), home_url( '/' ) );
+							}
+							$all_day  = ! empty( $event['isAllDay'] );
+							$start_display = $start
+								? ( $all_day
+									? $this->format_event_datetime_for_display( $start, $event_timezone, true )
+									: $this->format_event_datetime_for_display( $start, $event_timezone, false ) )
+								: '';
+							?>
+							<tr class="ms365-calendar__item">
+								<td class="ms365-calendar__date" data-label="<?php echo esc_attr( $wording['calendar_header_date'] ); ?>"><?php echo esc_html( $start_display ); ?></td>
+								<td class="ms365-calendar__subject" data-label="<?php echo esc_attr( $wording['calendar_header_event'] ); ?>">
+									<?php if ( $event_link ) : ?>
+										<a href="<?php echo esc_url( $event_link ); ?>" rel="nofollow">
+											<?php echo esc_html( $subject ); ?>
+										</a>
+									<?php else : ?>
+										<?php echo esc_html( $subject ); ?>
+									<?php endif; ?>
+								</td>
+								<td class="ms365-calendar__location" data-label="<?php echo esc_attr( $wording['calendar_header_location'] ); ?>"><?php echo esc_html( $location ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
 			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
+	}
+
+	/**
+	 * Format a Graph event date/time for site display.
+	 *
+	 * @param  string $date_time Graph date/time string.
+	 * @param  string $source_timezone Graph timezone (IANA or common Windows value).
+	 * @param  bool   $all_day Whether this is an all-day event.
+	 * @return string
+	 */
+	private function format_event_datetime_for_display( $date_time, $source_timezone, $all_day = false ) {
+		$source_tz_name = $this->normalize_graph_timezone( (string) $source_timezone );
+		$display_tz     = new DateTimeZone( $source_tz_name );
+		$format         = $all_day ? get_option( 'date_format' ) : get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+
+		try {
+			if ( preg_match( '/(Z|[+\-]\d{2}:\d{2})$/', (string) $date_time ) ) {
+				$dt = new DateTimeImmutable( (string) $date_time );
+			} else {
+				$dt = new DateTimeImmutable( (string) $date_time, $display_tz );
+			}
+		} catch ( Exception $e ) {
+			$timestamp = strtotime( (string) $date_time );
+			if ( false === $timestamp ) {
+				return '';
+			}
+			return wp_date( $format, $timestamp, $display_tz );
+		}
+
+		return wp_date( $format, $dt->getTimestamp(), $display_tz );
+	}
+
+	/**
+	 * Normalize Graph timezone names to PHP-compatible timezone IDs.
+	 *
+	 * @param  string $timezone Graph timezone name.
+	 * @return string
+	 */
+	private function normalize_graph_timezone( $timezone ) {
+		$timezone = trim( (string) $timezone );
+		if ( '' === $timezone ) {
+			return $this->get_default_calendar_timezone();
+		}
+
+		$map = array(
+			'W. Europe Standard Time' => 'Europe/Berlin',
+			'GMT Standard Time'       => 'Europe/London',
+			'Romance Standard Time'   => 'Europe/Paris',
+			'UTC'                     => 'UTC',
+		);
+
+		if ( isset( $map[ $timezone ] ) ) {
+			return $map[ $timezone ];
+		}
+
+		if ( in_array( $timezone, timezone_identifiers_list(), true ) ) {
+			return $timezone;
+		}
+
+		return $this->get_default_calendar_timezone();
+	}
+
+	/**
+	 * Return the default calendar timezone based on WordPress settings.
+	 *
+	 * @return string
+	 */
+	private function get_default_calendar_timezone() {
+		$wp_tz = wp_timezone_string();
+		if ( '' !== $wp_tz ) {
+			return $wp_tz;
+		}
+
+		return 'UTC';
 	}
 
 	// ------------------------------------------------------------------
@@ -362,20 +508,26 @@ class WP_MS365_Shortcodes {
 	 *   limit  – max number of items (default 10)
 	 *   folder – OneDrive folder path (default: root)
 	 *   title  – heading text (default "My Files")
+	 *   show_headers – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
 	 */
 	public function render_files( $atts ) {
+		$wording = $this->get_shortcode_wording();
+
 		$atts = shortcode_atts(
 			array(
 				'limit'  => 10,
 				'folder' => '',
 				'title'  => '',
+				'show_headers' => 'true',
 			),
 			$atts,
 			'ms365_files'
 		);
+
+		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
@@ -406,38 +558,46 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 
 			<?php if ( empty( $items ) ) : ?>
-				<p class="ms365-files__empty"><?php esc_html_e( 'No files found.', 'wp-ms365-graph' ); ?></p>
+				<p class="ms365-files__empty"><?php echo esc_html( $wording['files_empty_text'] ); ?></p>
 			<?php else : ?>
-				<ul class="ms365-files__list">
-					<?php foreach ( $items as $item ) : ?>
-						<?php
-						$name     = isset( $item['name'] ) ? $item['name'] : '';
-						$size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
-						$modified = isset( $item['lastModifiedDateTime'] )
-							? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
-							: '';
-						$download_link = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
-							? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
-							: '';
-						?>
-						<li class="ms365-files__item">
-							<span class="ms365-files__icon ms365-files__icon--file"></span>
-							<?php if ( $download_link ) : ?>
-								<a class="ms365-files__name" href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
-									<?php echo esc_html( $name ); ?>
-								</a>
-							<?php else : ?>
-								<span class="ms365-files__name"><?php echo esc_html( $name ); ?></span>
-							<?php endif; ?>
-							<?php if ( $size ) : ?>
-								<span class="ms365-files__meta"><?php echo esc_html( $size ); ?></span>
-							<?php endif; ?>
-							<?php if ( $modified ) : ?>
-								<span class="ms365-files__meta"><?php echo esc_html( $modified ); ?></span>
-							<?php endif; ?>
-						</li>
-					<?php endforeach; ?>
-				</ul>
+				<table class="ms365-table ms365-files__table">
+					<?php if ( $show_headers ) : ?>
+						<thead>
+							<tr>
+								<th scope="col"><?php echo esc_html( $wording['files_header_file'] ); ?></th>
+								<th scope="col"><?php echo esc_html( $wording['files_header_size'] ); ?></th>
+								<th scope="col"><?php echo esc_html( $wording['files_header_modified'] ); ?></th>
+							</tr>
+						</thead>
+					<?php endif; ?>
+					<tbody>
+						<?php foreach ( $items as $item ) : ?>
+							<?php
+							$name     = isset( $item['name'] ) ? $item['name'] : '';
+							$size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
+							$modified = isset( $item['lastModifiedDateTime'] )
+								? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
+								: '';
+							$download_link = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
+								? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
+								: '';
+							?>
+							<tr class="ms365-files__item">
+								<td class="ms365-files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
+									<?php if ( $download_link ) : ?>
+										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
+											<?php echo esc_html( $name ); ?>
+										</a>
+									<?php else : ?>
+										<?php echo esc_html( $name ); ?>
+									<?php endif; ?>
+								</td>
+								<td class="ms365-files__meta ms365-files__meta--size" data-label="<?php echo esc_attr( $wording['files_header_size'] ); ?>"><?php echo esc_html( $size ); ?></td>
+								<td class="ms365-files__meta ms365-files__meta--modified" data-label="<?php echo esc_attr( $wording['files_header_modified'] ); ?>"><?php echo esc_html( $modified ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -500,6 +660,79 @@ class WP_MS365_Shortcodes {
 
 		$settings   = WP_MS365_Auth::get_settings();
 		$custom_css = isset( $settings['custom_css'] ) ? trim( (string) $settings['custom_css'] ) : '';
+		$base_css   = '
+			.ms365-table {
+				width: 100%;
+				border-collapse: collapse;
+				border: 0;
+			}
+			.ms365-calendar__table th:first-child,
+			.ms365-calendar__table td:first-child,
+			.ms365-files__table th:nth-child(2),
+			.ms365-files__table th:nth-child(3),
+			.ms365-files__table td:nth-child(2),
+			.ms365-files__table td:nth-child(3) {
+				white-space: nowrap;
+			}
+			.ms365-table th,
+			.ms365-table td {
+				border: 0;
+				padding: 0.3rem 0.5rem 0.3rem 0;
+				text-align: left;
+				vertical-align: top;
+			}
+			.ms365-files__table th:nth-child(2),
+			.ms365-files__table th:nth-child(3),
+			.ms365-files__table td:nth-child(2),
+			.ms365-files__table td:nth-child(3) {
+				text-align: right;
+				padding-right: 0;
+				padding-left: 0.75rem;
+			}
+			.ms365-table th {
+				font-weight: 600;
+			}
+			@media (max-width: 640px) {
+				.ms365-table,
+				.ms365-table tbody,
+				.ms365-table tr,
+				.ms365-table td {
+					display: block;
+					width: 100%;
+				}
+				.ms365-table thead {
+					position: absolute;
+					width: 1px;
+					height: 1px;
+					padding: 0;
+					margin: -1px;
+					overflow: hidden;
+					clip: rect(0, 0, 0, 0);
+					white-space: nowrap;
+					border: 0;
+				}
+				.ms365-table tr {
+					padding: 0.2rem 0;
+				}
+				.ms365-table td {
+					padding: 0.18rem 0;
+					text-align: left;
+				}
+				.ms365-table td::before {
+					content: attr(data-label) ": ";
+					font-weight: 600;
+				}
+				.ms365-files__table th:nth-child(2),
+				.ms365-files__table th:nth-child(3),
+				.ms365-files__table td:nth-child(2),
+				.ms365-files__table td:nth-child(3) {
+					text-align: left;
+					padding-left: 0;
+				}
+			}
+		';
+
+		wp_add_inline_style( 'wp-ms365-graph', $base_css );
 
 		if ( '' !== $custom_css ) {
 			wp_add_inline_style( 'wp-ms365-graph', $custom_css );
@@ -519,6 +752,61 @@ class WP_MS365_Shortcodes {
 		return '<p class="ms365-notice ms365-notice--warning">'
 			. esc_html__( 'Microsoft 365 is not connected. Please configure the plugin in the WordPress admin.', 'wp-ms365-graph' )
 			. '</p>';
+	}
+
+	/**
+	 * Parse a shortcode boolean-like attribute into a strict boolean.
+	 *
+	 * @param  mixed $value Raw attribute value.
+	 * @param  bool  $default Default value if parsing fails.
+	 * @return bool
+	 */
+	private function shortcode_att_to_bool( $value, $default = false ) {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		$normalized = strtolower( trim( (string) $value ) );
+		if ( '' === $normalized ) {
+			return $default;
+		}
+
+		if ( in_array( $normalized, array( '1', 'true', 'yes', 'on' ), true ) ) {
+			return true;
+		}
+
+		if ( in_array( $normalized, array( '0', 'false', 'no', 'off' ), true ) ) {
+			return false;
+		}
+
+		return $default;
+	}
+
+	/**
+	 * Return localized shortcode wording with optional per-site overrides.
+	 *
+	 * @return array
+	 */
+	private function get_shortcode_wording() {
+		$settings = WP_MS365_Auth::get_settings();
+		$defaults = array(
+			'calendar_empty_text'      => __( 'No upcoming events found.', 'wp-ms365-graph' ),
+			'calendar_header_date'     => __( 'Date', 'wp-ms365-graph' ),
+			'calendar_header_event'    => __( 'Event', 'wp-ms365-graph' ),
+			'calendar_header_location' => __( 'Location', 'wp-ms365-graph' ),
+			'files_empty_text'         => __( 'No files found.', 'wp-ms365-graph' ),
+			'files_header_file'        => __( 'File', 'wp-ms365-graph' ),
+			'files_header_size'        => __( 'Size', 'wp-ms365-graph' ),
+			'files_header_modified'    => __( 'Modified', 'wp-ms365-graph' ),
+		);
+
+		foreach ( $defaults as $key => $default_value ) {
+			if ( isset( $settings[ $key ] ) && '' !== trim( (string) $settings[ $key ] ) ) {
+				$defaults[ $key ] = (string) $settings[ $key ];
+			}
+		}
+
+		return $defaults;
 	}
 
 	/**

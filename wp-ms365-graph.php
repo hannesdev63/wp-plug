@@ -73,6 +73,14 @@ function wp_ms365_graph_activate() {
 		'client_secret' => '',
 		'specific_user' => '',
 		'custom_css'    => '',
+		'calendar_empty_text'      => '',
+		'calendar_header_date'     => '',
+		'calendar_header_event'    => '',
+		'calendar_header_location' => '',
+		'files_empty_text'         => '',
+		'files_header_file'        => '',
+		'files_header_size'        => '',
+		'files_header_modified'    => '',
 		'redirect_uri'  => admin_url( 'admin.php?page=wp-ms365-graph' ),
 	);
 	add_option( 'wp_ms365_settings', $defaults );
