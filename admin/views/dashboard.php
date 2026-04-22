@@ -10,11 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $is_connected = WP_MS365_Auth::is_connected();
+$configured_user = WP_MS365_Graph::get_configured_user();
+$is_specific_user = '' !== $configured_user;
 ?>
 <div class="wrap ms365-dashboard">
 	<h1 class="ms365-dashboard__heading">
-		<span class="dashicons dashicons-microsoft"></span>
-		<?php esc_html_e( 'Microsoft 365 Graph', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<?php if ( ! $is_connected ) : ?>
@@ -24,8 +26,8 @@ $is_connected = WP_MS365_Auth::is_connected();
 				printf(
 					/* translators: %s: settings page link */
 					esc_html__( 'Microsoft 365 is not connected. Please %s first.', 'wp-ms365-graph' ),
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph' ) ) . '">'
-						. esc_html__( 'configure the plugin', 'wp-ms365-graph' )
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-settings' ) ) . '">'
+						. esc_html__( 'configure credentials and a specific user', 'wp-ms365-graph' )
 					. '</a>'
 				);
 				?>
@@ -34,15 +36,32 @@ $is_connected = WP_MS365_Auth::is_connected();
 	<?php else : ?>
 
 		<!-- User profile card -->
-		<?php $me = WP_MS365_Graph::get_me(); ?>
-		<?php if ( ! is_wp_error( $me ) ) : ?>
+		<?php $selected_user = WP_MS365_Graph::get_target_user_profile(); ?>
+		<?php if ( ! is_wp_error( $selected_user ) ) : ?>
 		<div class="ms365-card ms365-card--profile">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Signed-in User', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
 			<p>
-				<strong><?php echo esc_html( isset( $me['displayName'] ) ? $me['displayName'] : '' ); ?></strong><br />
-				<?php echo esc_html( isset( $me['mail'] ) ? $me['mail'] : ( isset( $me['userPrincipalName'] ) ? $me['userPrincipalName'] : '' ) ); ?><br />
-				<?php if ( ! empty( $me['jobTitle'] ) ) : ?>
-					<em><?php echo esc_html( $me['jobTitle'] ); ?></em>
+				<strong><?php echo esc_html( isset( $selected_user['displayName'] ) ? $selected_user['displayName'] : '' ); ?></strong><br />
+				<?php echo esc_html( isset( $selected_user['mail'] ) ? $selected_user['mail'] : ( isset( $selected_user['userPrincipalName'] ) ? $selected_user['userPrincipalName'] : '' ) ); ?><br />
+				<?php if ( ! empty( $selected_user['jobTitle'] ) ) : ?>
+					<em><?php echo esc_html( $selected_user['jobTitle'] ); ?></em><br />
+				<?php endif; ?>
+				<?php if ( $is_specific_user ) : ?>
+					<?php /* translators: %s: configured user value */ ?>
+					<span><?php printf( esc_html__( 'Configured user: %s', 'wp-ms365-graph' ), esc_html( $configured_user ) ); ?></span>
+				<?php else : ?>
+					<span><?php esc_html_e( 'Set Specific User in plugin settings to query Microsoft Graph.', 'wp-ms365-graph' ); ?></span>
+				<?php endif; ?>
+			</p>
+		</div>
+		<?php else : ?>
+		<div class="ms365-card ms365-card--profile">
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+			<p class="ms365-notice ms365-notice--error">
+				<?php echo esc_html( $selected_user->get_error_message() ); ?>
+				<?php if ( $is_specific_user ) : ?>
+					<br /><br />
+					<small><?php esc_html_e( 'Ensure Microsoft Graph application permission User.Read.All is configured and admin consent is granted.', 'wp-ms365-graph' ); ?></small>
 				<?php endif; ?>
 			</p>
 		</div>
@@ -50,12 +69,20 @@ $is_connected = WP_MS365_Auth::is_connected();
 
 		<!-- Calendar events -->
 		<div class="ms365-card ms365-card--calendar">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Upcoming Calendar Events (next 30 days)', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$events = WP_MS365_Graph::get_calendar_events( 5 );
 			if ( is_wp_error( $events ) ) :
+				$error_msg = $events->get_error_message();
+				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error"><?php echo esc_html( $events->get_error_message() ); ?></p>
+				<p class="ms365-notice ms365-notice--error">
+					<?php echo esc_html( $error_msg ); ?>
+					<?php if ( $is_access_denied && $is_specific_user ) : ?>
+						<br /><br />
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Calendars.Read and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+					<?php endif; ?>
+				</p>
 			<?php elseif ( empty( $events['value'] ) ) : ?>
 				<p><?php esc_html_e( 'No upcoming events.', 'wp-ms365-graph' ); ?></p>
 			<?php else : ?>
@@ -97,12 +124,20 @@ $is_connected = WP_MS365_Auth::is_connected();
 
 		<!-- OneDrive files -->
 		<div class="ms365-card ms365-card--files">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$drive = WP_MS365_Graph::get_drive_items( '', 10 );
 			if ( is_wp_error( $drive ) ) :
+				$error_msg = $drive->get_error_message();
+				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error"><?php echo esc_html( $drive->get_error_message() ); ?></p>
+				<p class="ms365-notice ms365-notice--error">
+					<?php echo esc_html( $error_msg ); ?>
+					<?php if ( $is_access_denied && $is_specific_user ) : ?>
+						<br /><br />
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Files.Read.All and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+					<?php endif; ?>
+				</p>
 			<?php elseif ( empty( $drive['value'] ) ) : ?>
 				<p><?php esc_html_e( 'No files found.', 'wp-ms365-graph' ); ?></p>
 			<?php else : ?>

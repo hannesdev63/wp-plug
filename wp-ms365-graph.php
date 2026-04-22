@@ -36,6 +36,9 @@ spl_autoload_register( function ( $class ) {
 	}
 } );
 
+// Load logger first (used by other classes).
+require_once WP_MS365_PLUGIN_DIR . 'includes/class-ms365-logger.php';
+
 /**
  * Bootstrap the plugin after all plugins have loaded.
  */
@@ -68,6 +71,16 @@ function wp_ms365_graph_activate() {
 		'tenant_id'     => '',
 		'client_id'     => '',
 		'client_secret' => '',
+		'specific_user' => '',
+		'custom_css'    => '',
+		'calendar_empty_text'      => '',
+		'calendar_header_date'     => '',
+		'calendar_header_event'    => '',
+		'calendar_header_location' => '',
+		'files_empty_text'         => '',
+		'files_header_file'        => '',
+		'files_header_size'        => '',
+		'files_header_modified'    => '',
 		'redirect_uri'  => admin_url( 'admin.php?page=wp-ms365-graph' ),
 	);
 	add_option( 'wp_ms365_settings', $defaults );

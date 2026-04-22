@@ -8,12 +8,13 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 
 | Feature | Details |
 |---|---|
-| **OAuth 2.0 Authentication** | Authorization Code flow – securely stores tokens as WordPress transients/options |
+| **App-Only Authentication** | OAuth 2.0 client credentials flow (no interactive sign-in) |
 | **Calendar Events** | `[ms365_calendar]` shortcode – renders upcoming events from Outlook Calendar |
 | **OneDrive Files** | `[ms365_files]` shortcode – renders a file/folder listing from OneDrive |
-| **User Profile** | `[ms365_profile]` shortcode – displays the signed-in user's name, email and job title |
+| **User Profile** | `[ms365_profile]` shortcode – displays the selected user's name, email and job title |
+| **Specific User Targeting** | Configure a Microsoft user (UPN or object ID); profile, calendar, and OneDrive are queried for that user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
-| **Token Refresh** | Automatically refreshes expired access tokens using the stored refresh token |
+| **Automatic Token Retrieval** | Fetches app-only Graph access tokens from tenant/client credentials |
 
 ---
 
@@ -22,8 +23,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - WordPress 5.9+
 - PHP 7.4+
 - An **Azure Active Directory** app registration with the following:
-  - **Redirect URI** (Web): `https://your-site.com/wp-admin/admin.php?page=wp-ms365-graph`
-  - **API permissions**: `User.Read`, `Calendars.Read`, `Files.Read`, `offline_access`
+   - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`
   - A **Client Secret** generated in *Certificates & Secrets*
 
 ---
@@ -45,27 +45,49 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 
 1. Go to [portal.azure.com](https://portal.azure.com/) → **Azure Active Directory → App registrations → New registration**.
 2. Choose a name (e.g. *My WordPress Site*).
-3. Under **Redirect URI**, select **Web** and paste your site's redirect URI (shown in the plugin settings page).
+3. Redirect URI is not required for this plugin flow (app-only client credentials).
 4. After creation, copy the **Directory (tenant) ID** and **Application (client) ID**.
 5. Go to **Certificates & secrets → New client secret** – copy the generated value immediately.
 6. Go to **API permissions → Add a permission → Microsoft Graph** and add:
-   - `User.Read`
-   - `Calendars.Read`
-   - `Files.Read`
-   - `offline_access`
+   - `User.Read.All` (Application)
+   - `Calendars.Read` (Application)
+   - `Files.Read.All` (Application)
 7. Click **Grant admin consent**.
 
 ### 2 – Enter Credentials in WordPress
 
 1. Go to **Microsoft 365 → Settings**.
 2. Fill in **Tenant ID**, **Client ID**, and **Client Secret**.
-3. Click **Save Changes**.
+3. Fill in **Specific User (UPN or ID)** to target the Microsoft account for profile, calendar, and OneDrive.
+4. Click **Save Changes**.
 
-### 3 – Authorize the Connection
+### 3 – Validate Connection
 
-1. After saving, click **Connect to Microsoft 365**.
-2. Sign in with your Microsoft account and grant the requested permissions.
-3. You are redirected back to WordPress with a *Successfully connected!* notice.
+1. Open **Microsoft 365 → Diagnostics**.
+2. Confirm the live checks for user, calendar, and OneDrive are green.
+
+---
+
+## Diagnostics & Troubleshooting
+
+The plugin includes a **Diagnostics** page to help troubleshoot authentication and API issues:
+
+1. Go to **WordPress Admin → Microsoft 365 → Diagnostics**
+2. View system information, authentication configuration status, and debug logs
+3. Enable **WP_DEBUG** in `wp-config.php` to record detailed debug logs:
+   ```php
+   define( 'WP_DEBUG', true );
+   ```
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| **Connection Failed** | Invalid credentials or misconfigured app | Check Tenant ID, Client ID, Client Secret. See Diagnostics page for details. |
+| **Access Denied (403)** | Missing Graph application permission | Add required application permissions (`User.Read.All`, `Calendars.Read`, `Files.Read.All`) and grant admin consent in Azure. |
+| **No files/calendar displayed** | Not connected, wrong user targeted, or resource not provisioned | Verify connection in Settings. Check if configured user has mailbox/OneDrive provisioned. |
+| **Specific User warning shown** | No target user configured | Set Specific User (UPN/object ID) in plugin settings. |
+| **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |
 
 ---
 
@@ -73,7 +95,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 
 ### `[ms365_calendar]`
 
-Displays upcoming calendar events from Outlook Calendar.
+Displays upcoming calendar events from the configured specific user.
 
 | Attribute | Default | Description |
 |---|---|---|
@@ -89,7 +111,7 @@ Displays upcoming calendar events from Outlook Calendar.
 
 ### `[ms365_files]`
 
-Displays a OneDrive file/folder listing.
+Displays a OneDrive file/folder listing from the configured specific user.
 
 | Attribute | Default | Description |
 |---|---|---|
@@ -105,7 +127,7 @@ Displays a OneDrive file/folder listing.
 
 ### `[ms365_profile]`
 
-Displays the signed-in Microsoft 365 user's display name, email, and job title.
+Displays the configured Microsoft 365 user's display name, email, and job title.
 
 ```
 [ms365_profile]
@@ -129,7 +151,7 @@ php tests/test-ms365-auth.php
 wp-ms365-graph/
 ├── wp-ms365-graph.php           Main plugin entry point
 ├── includes/
-│   ├── class-ms365-auth.php     OAuth 2.0 token management
+│   ├── class-ms365-auth.php     App-only token management (client credentials)
 │   ├── class-ms365-graph.php    Graph API HTTP client
 │   ├── class-ms365-admin.php    WordPress admin UI
 │   └── class-ms365-shortcodes.php  Front-end shortcodes

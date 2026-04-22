@@ -1,9 +1,9 @@
 <?php
 /**
- * Microsoft 365 OAuth 2.0 Authentication handler.
+ * Microsoft 365 authentication handler.
  *
- * Implements the Authorization Code flow using WordPress HTTP API and
- * stores tokens securely as WordPress transients / options.
+ * Uses OAuth 2.0 client credentials flow (app-only) so no user interaction
+ * is required at runtime.
  *
  * @package WP_MS365_Graph
  */
@@ -17,79 +17,27 @@ class WP_MS365_Auth {
 	/** Microsoft identity platform base URL. */
 	const AUTHORITY_BASE = 'https://login.microsoftonline.com';
 
-	/** Graph API scopes requested. */
-	const SCOPES = 'offline_access User.Read Calendars.Read Files.Read';
+	/** Graph scope for app-only tokens. */
+	const SCOPES = 'https://graph.microsoft.com/.default';
 
 	// ------------------------------------------------------------------
 	// Public API
 	// ------------------------------------------------------------------
 
 	/**
-	 * Build the authorization URL that the user must visit to grant consent.
-	 *
-	 * @return string
-	 */
-	public static function get_authorization_url() {
-		$settings = self::get_settings();
-		$state    = wp_create_nonce( 'wp_ms365_oauth_state' );
-		update_option( 'wp_ms365_oauth_state', $state );
-
-		$params = array(
-			'client_id'     => $settings['client_id'],
-			'response_type' => 'code',
-			'redirect_uri'  => self::get_redirect_uri(),
-			'response_mode' => 'query',
-			'scope'         => self::SCOPES,
-			'state'         => $state,
-		);
-
-		return sprintf(
-			'%s/%s/oauth2/v2.0/authorize?%s',
-			self::AUTHORITY_BASE,
-			rawurlencode( $settings['tenant_id'] ),
-			http_build_query( $params )
-		);
-	}
-
-	/**
-	 * Exchange an authorization code for access + refresh tokens.
-	 *
-	 * @param  string $code Authorization code from Microsoft.
-	 * @return bool         True on success, false on failure.
-	 */
-	public static function exchange_code_for_token( $code ) {
-		$settings = self::get_settings();
-
-		$response = wp_remote_post(
-			sprintf( '%s/%s/oauth2/v2.0/token', self::AUTHORITY_BASE, rawurlencode( $settings['tenant_id'] ) ),
-			array(
-				'timeout' => 30,
-				'body'    => array(
-					'client_id'     => $settings['client_id'],
-					'client_secret' => $settings['client_secret'],
-					'scope'         => self::SCOPES,
-					'code'          => $code,
-					'redirect_uri'  => self::get_redirect_uri(),
-					'grant_type'    => 'authorization_code',
-				),
-			)
-		);
-
-		return self::process_token_response( $response );
-	}
-
-	/**
-	 * Use the stored refresh token to obtain a new access token.
+	 * Obtain an app-only access token using client credentials flow.
 	 *
 	 * @return bool True on success.
 	 */
 	public static function refresh_access_token() {
 		$settings      = self::get_settings();
-		$refresh_token = get_option( 'wp_ms365_refresh_token', '' );
 
-		if ( empty( $refresh_token ) ) {
+		if ( empty( $settings['tenant_id'] ) || empty( $settings['client_id'] ) || empty( $settings['client_secret'] ) ) {
+			WP_MS365_Logger::log( 'debug', 'Token request skipped: credentials missing' );
 			return false;
 		}
+
+		WP_MS365_Logger::log( 'debug', 'Requesting app-only token via client credentials' );
 
 		$response = wp_remote_post(
 			sprintf( '%s/%s/oauth2/v2.0/token', self::AUTHORITY_BASE, rawurlencode( $settings['tenant_id'] ) ),
@@ -99,11 +47,17 @@ class WP_MS365_Auth {
 					'client_id'     => $settings['client_id'],
 					'client_secret' => $settings['client_secret'],
 					'scope'         => self::SCOPES,
-					'refresh_token' => $refresh_token,
-					'grant_type'    => 'refresh_token',
+					'grant_type'    => 'client_credentials',
 				),
 			)
 		);
+
+		if ( is_wp_error( $response ) ) {
+			WP_MS365_Logger::log( 'error', 'Client credentials token request failed: ' . $response->get_error_message() );
+		} else {
+			$status = wp_remote_retrieve_response_code( $response );
+			WP_MS365_Logger::log( 'debug', 'Client credentials token response', array( 'status' => $status ) );
+		}
 
 		return self::process_token_response( $response );
 	}
@@ -149,53 +103,12 @@ class WP_MS365_Auth {
 	}
 
 	/**
-	 * Hook called during `plugins_loaded` to detect the OAuth callback
-	 * redirect from Microsoft and exchange the code for a token.
+	 * Backward-compatibility no-op from delegated OAuth implementation.
 	 *
 	 * @return void
 	 */
 	public static function maybe_handle_callback() {
-		// Only act on the admin redirect URI page.
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		// phpcs:disable WordPress.Security.NonceVerification.Recommended
-		$page  = isset( $_GET['page'] )  ? sanitize_key( $_GET['page'] )  : '';
-		$code  = isset( $_GET['code'] )  ? sanitize_text_field( wp_unslash( $_GET['code'] ) )  : '';
-		$state = isset( $_GET['state'] ) ? sanitize_text_field( wp_unslash( $_GET['state'] ) ) : '';
-		// phpcs:enable
-
-		if ( 'wp-ms365-graph' !== $page || empty( $code ) ) {
-			return;
-		}
-
-		// Validate state (CSRF protection).
-		$saved_state = get_option( 'wp_ms365_oauth_state', '' );
-		if ( empty( $saved_state ) || ! hash_equals( $saved_state, $state ) ) {
-			add_action( 'admin_notices', function () {
-				echo '<div class="notice notice-error"><p>'
-					. esc_html__( 'Microsoft 365: Invalid OAuth state – possible CSRF attack.', 'wp-ms365-graph' )
-					. '</p></div>';
-			} );
-			return;
-		}
-
-		delete_option( 'wp_ms365_oauth_state' );
-
-		if ( self::exchange_code_for_token( $code ) ) {
-			add_action( 'admin_notices', function () {
-				echo '<div class="notice notice-success"><p>'
-					. esc_html__( 'Microsoft 365: Successfully connected!', 'wp-ms365-graph' )
-					. '</p></div>';
-			} );
-		} else {
-			add_action( 'admin_notices', function () {
-				echo '<div class="notice notice-error"><p>'
-					. esc_html__( 'Microsoft 365: Token exchange failed. Check your credentials.', 'wp-ms365-graph' )
-					. '</p></div>';
-			} );
-		}
+		return;
 	}
 
 	// ------------------------------------------------------------------
@@ -210,12 +123,15 @@ class WP_MS365_Auth {
 	 */
 	private static function process_token_response( $response ) {
 		if ( is_wp_error( $response ) ) {
+			WP_MS365_Logger::log( 'error', 'Token response error: ' . $response->get_error_message() );
 			return false;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( empty( $body['access_token'] ) ) {
+			$error_desc = isset( $body['error_description'] ) ? $body['error_description'] : 'Unknown error';
+			WP_MS365_Logger::log( 'error', 'No access token in response', array( 'error' => $error_desc ) );
 			return false;
 		}
 
@@ -224,36 +140,10 @@ class WP_MS365_Auth {
 		set_transient( 'wp_ms365_access_token', $body['access_token'], $expires_in - 60 );
 		update_option( 'wp_ms365_token_expires', time() + $expires_in );
 
-		// Persist the refresh token for future use.
-		if ( ! empty( $body['refresh_token'] ) ) {
-			update_option( 'wp_ms365_refresh_token', $body['refresh_token'] );
-		}
-
-		// Store basic user info if present (id_token).
-		if ( ! empty( $body['id_token'] ) ) {
-			$parts   = explode( '.', $body['id_token'] );
-			$payload = isset( $parts[1] ) ? json_decode( self::base64_url_decode( $parts[1] ), true ) : array();
-			if ( ! empty( $payload['name'] ) ) {
-				update_option( 'wp_ms365_connected_user', sanitize_text_field( $payload['name'] ) );
-			}
-		}
+		update_option( 'wp_ms365_connected_user', 'app-only' );
+		WP_MS365_Logger::log_auth_event( 'App-only token acquired successfully' );
 
 		return true;
-	}
-
-	/**
-	 * Base64-URL decode (for JWT).
-	 *
-	 * @param  string $data Base64-URL encoded string.
-	 * @return string
-	 */
-	private static function base64_url_decode( $data ) {
-		$remainder = strlen( $data ) % 4;
-		if ( $remainder ) {
-			$data .= str_repeat( '=', 4 - $remainder );
-		}
-		$decoded = base64_decode( strtr( $data, '-_', '+/' ), true );
-		return ( false === $decoded ) ? '' : $decoded;
 	}
 
 	/**
@@ -266,6 +156,16 @@ class WP_MS365_Auth {
 			'tenant_id'     => '',
 			'client_id'     => '',
 			'client_secret' => '',
+			'specific_user' => '',
+			'custom_css'    => '',
+			'calendar_empty_text'      => '',
+			'calendar_header_date'     => '',
+			'calendar_header_event'    => '',
+			'calendar_header_location' => '',
+			'files_empty_text'         => '',
+			'files_header_file'        => '',
+			'files_header_size'        => '',
+			'files_header_modified'    => '',
 		);
 		$settings = get_option( 'wp_ms365_settings', $defaults );
 		return wp_parse_args( $settings, $defaults );
