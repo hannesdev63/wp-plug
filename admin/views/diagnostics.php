@@ -127,9 +127,9 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		<p><?php esc_html_e( 'These scopes are requested during the OAuth flow:', 'wp-ms365-graph' ); ?></p>
 		<code><?php echo esc_html( WP_MS365_Auth::SCOPES ); ?></code>
 		<p class="description">
-			<?php esc_html_e( 'If you are accessing another user\'s calendar/OneDrive, make sure the following scopes are present in your Azure app registration:', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'If you are accessing another user\'s profile/calendar/OneDrive, make sure the following scopes are present in your Azure app registration:', 'wp-ms365-graph' ); ?>
 			<br />
-			<code>Calendars.Read.Shared</code>, <code>Files.Read</code>
+			<code>User.ReadBasic.All</code>, <code>Calendars.Read.Shared</code>, <code>Files.Read</code>
 		</p>
 	</div>
 

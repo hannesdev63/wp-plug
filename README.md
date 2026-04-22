@@ -11,8 +11,8 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 | **OAuth 2.0 Authentication** | Authorization Code flow – securely stores tokens as WordPress transients/options |
 | **Calendar Events** | `[ms365_calendar]` shortcode – renders upcoming events from Outlook Calendar |
 | **OneDrive Files** | `[ms365_files]` shortcode – renders a file/folder listing from OneDrive |
-| **User Profile** | `[ms365_profile]` shortcode – displays the signed-in user's name, email and job title |
-| **Specific User Targeting** | Optionally configure a Microsoft user (UPN or object ID); calendar and OneDrive use that user, otherwise they default to the signed-in user |
+| **User Profile** | `[ms365_profile]` shortcode – displays the selected user's name, email and job title |
+| **Specific User Targeting** | Optionally configure a Microsoft user (UPN or object ID); calendar, OneDrive, and profile use that user, otherwise they default to the signed-in user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
 | **Token Refresh** | Automatically refreshes expired access tokens using the stored refresh token |
 
@@ -24,7 +24,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - PHP 7.4+
 - An **Azure Active Directory** app registration with the following:
   - **Redirect URI** (Web): `https://your-site.com/wp-admin/admin.php?page=wp-ms365-graph`
-  - **API permissions**: `User.Read`, `Calendars.Read`, `Files.Read`, `offline_access`
+   - **API permissions**: `User.Read`, `User.ReadBasic.All`, `Calendars.Read`, `Calendars.Read.Shared`, `Files.Read`, `offline_access`
   - A **Client Secret** generated in *Certificates & Secrets*
 
 ---
@@ -51,6 +51,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 5. Go to **Certificates & secrets → New client secret** – copy the generated value immediately.
 6. Go to **API permissions → Add a permission → Microsoft Graph** and add:
    - `User.Read`
+   - `User.ReadBasic.All` (required for reading another user's profile)
    - `Calendars.Read`
    - `Calendars.Read.Shared` (required for accessing other users' calendars)
    - `Files.Read`
@@ -88,8 +89,8 @@ The plugin includes a **Diagnostics** page to help troubleshoot OAuth and API is
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | **Connection Failed** | Invalid credentials or misconfigured app | Check Tenant ID, Client ID, Client Secret. See Diagnostics page for details. |
-| **Access Denied (403) when accessing another user** | Missing `Calendars.Read.Shared` permission | Add `Calendars.Read.Shared` in Azure app permissions and grant admin consent. Reconnect in Settings. |
-| **No files/calendar displayed** | Not connected or wrong user targeted | Verify connection in Settings. Check if configured user has access. |
+| **Access Denied (403) when accessing another user** | Missing delegated Graph permission | Add required delegated permissions (`User.ReadBasic.All`, `Calendars.Read.Shared`, `Files.Read`) in Azure app permissions and grant admin consent. Reconnect in Settings. |
+| **No files/calendar displayed** | Not connected, wrong user targeted, or resource not provisioned | Verify connection in Settings. Check if configured user has mailbox/OneDrive provisioned. |
 | **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |
 
 ---
@@ -130,7 +131,7 @@ Displays a OneDrive file/folder listing from the selected user. If no specific u
 
 ### `[ms365_profile]`
 
-Displays the signed-in Microsoft 365 user's display name, email, and job title.
+Displays the selected Microsoft 365 user's display name, email, and job title. If no Specific User is configured, the signed-in user is shown.
 
 ```
 [ms365_profile]

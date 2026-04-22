@@ -4,7 +4,7 @@
  *
  * [ms365_calendar]   – renders upcoming calendar events.
  * [ms365_files]      – renders OneDrive file listing.
- * [ms365_profile]    – renders the signed-in user's display name / email.
+ * [ms365_profile]    – renders the selected user's display name / email.
  *
  * @package WP_MS365_Graph
  */
@@ -196,7 +196,7 @@ class WP_MS365_Shortcodes {
 	// ------------------------------------------------------------------
 
 	/**
-	 * Render the signed-in user profile snippet.
+	 * Render the selected user profile snippet.
 	 *
 	 * @param  array $atts Shortcode attributes (none used currently).
 	 * @return string HTML.
@@ -206,7 +206,7 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$me = WP_MS365_Graph::get_me();
+		$me = WP_MS365_Graph::get_target_user_profile();
 		if ( is_wp_error( $me ) ) {
 			return $this->error_notice( $me->get_error_message() );
 		}

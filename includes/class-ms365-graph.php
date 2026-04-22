@@ -257,13 +257,50 @@ class WP_MS365_Graph {
 
 		$raw_message = $error_message;
 		$error_code  = isset( $data['error']['code'] ) ? (string) $data['error']['code'] : '';
+		$raw_message_lc = strtolower( $raw_message );
+		$error_code_lc  = strtolower( $error_code );
 
-		if ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) {
-			if ( strpos( $url, '/drive/' ) !== false ) {
+		$is_drive_endpoint = ( strpos( $url, '/drive/' ) !== false );
+		$is_calendar_endpoint = ( strpos( $url, '/calendar' ) !== false );
+		$is_users_endpoint = ( strpos( $url, '/users/' ) !== false );
+
+		$drive_not_provisioned =
+			( strpos( $raw_message_lc, 'mysite' ) !== false )
+			|| ( strpos( $raw_message_lc, 'unable to retrieve user\'s mysite url' ) !== false )
+			|| ( strpos( $raw_message_lc, 'unable to retrieve mysite url' ) !== false )
+			|| ( strpos( $raw_message_lc, 'site not found' ) !== false && $is_drive_endpoint );
+
+		$calendar_not_provisioned =
+			( strpos( $raw_message_lc, 'mailbox' ) !== false && strpos( $raw_message_lc, 'not enabled' ) !== false )
+			|| ( strpos( $error_code_lc, 'mailboxnotenabledforrestapi' ) !== false )
+			|| ( strpos( $raw_message_lc, 'inactive, soft-deleted, or is hosted on-premise' ) !== false );
+
+		if ( $is_drive_endpoint && $drive_not_provisioned ) {
+			$error_message = __( 'OneDrive for the selected user is not provisioned yet. Assign a license that includes OneDrive/SharePoint and let the user sign in to OneDrive once to complete provisioning.', 'wp-ms365-graph' );
+		}
+
+		if ( $is_calendar_endpoint && $calendar_not_provisioned ) {
+			$error_message = __( 'Mailbox/calendar for the selected user is not provisioned yet. Assign an Exchange Online license and let the user open Outlook on the web once to finish setup.', 'wp-ms365-graph' );
+		}
+
+		$insufficient_privileges =
+			( 403 === $code )
+			&& (
+				( strpos( $raw_message_lc, 'insufficient privileges' ) !== false )
+				|| ( strpos( $raw_message_lc, 'access is denied' ) !== false )
+				|| ( strpos( $error_code_lc, 'authorization_requestdenied' ) !== false )
+			);
+
+		if ( $is_users_endpoint && $insufficient_privileges ) {
+			$error_message = __( 'Insufficient privileges to read the selected user profile. Add Microsoft Graph delegated permission User.ReadBasic.All and grant admin consent, then disconnect/reconnect the plugin.', 'wp-ms365-graph' );
+		}
+
+		if ( ! $drive_not_provisioned && ! $calendar_not_provisioned && ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) ) {
+			if ( $is_drive_endpoint ) {
 				$error_message = __( 'OneDrive for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has OneDrive provisioned.', 'wp-ms365-graph' );
-			} elseif ( strpos( $url, '/calendar' ) !== false ) {
+			} elseif ( $is_calendar_endpoint ) {
 				$error_message = __( 'Calendar for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has a mailbox/calendar in Microsoft 365.', 'wp-ms365-graph' );
-			} elseif ( strpos( $url, '/users/' ) !== false ) {
+			} elseif ( $is_users_endpoint ) {
 				$error_message = __( 'The configured Specific User could not be found. Use a valid user principal name (user@domain.com) or Entra object ID.', 'wp-ms365-graph' );
 			}
 		}

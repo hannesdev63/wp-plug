@@ -54,6 +54,17 @@ $is_specific_user = '' !== $configured_user;
 				<?php endif; ?>
 			</p>
 		</div>
+		<?php else : ?>
+		<div class="ms365-card ms365-card--profile">
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+			<p class="ms365-notice ms365-notice--error">
+				<?php echo esc_html( $selected_user->get_error_message() ); ?>
+				<?php if ( $is_specific_user ) : ?>
+					<br /><br />
+					<small><?php esc_html_e( 'For profile lookups of another user, ensure delegated permission User.ReadBasic.All is configured and admin consent is granted.', 'wp-ms365-graph' ); ?></small>
+				<?php endif; ?>
+			</p>
+		</div>
 		<?php endif; ?>
 
 		<!-- Calendar events -->
