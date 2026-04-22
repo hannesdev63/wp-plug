@@ -137,7 +137,7 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$result = WP_MS365_Graph::get_drive_items( $atts['folder'], (int) $atts['limit'] );
+		$result = WP_MS365_Graph::get_drive_items( $atts['folder'], (int) $atts['limit'], WP_MS365_Graph::get_configured_user() );
 
 		if ( is_wp_error( $result ) ) {
 			return $this->error_notice( $result->get_error_message() );

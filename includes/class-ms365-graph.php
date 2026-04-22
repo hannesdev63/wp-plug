@@ -135,6 +135,20 @@ class WP_MS365_Graph {
 	}
 
 	/**
+	 * Retrieve the target user's default calendar metadata.
+	 *
+	 * Useful for diagnostics: a 200 response confirms the mailbox and calendar
+	 * are provisioned and accessible.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @return array|WP_Error
+	 */
+	public static function get_user_calendar_info( $user = '' ) {
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+		return self::get( $user_prefix . '/calendar', array( '$select' => 'id,name,canEdit' ) );
+	}
+
+	/**
 	 * Retrieve the user's mail messages from the Inbox.
 	 *
 	 * @param  int $limit Maximum number of messages to return.
@@ -268,19 +282,24 @@ class WP_MS365_Graph {
 			( strpos( $raw_message_lc, 'mysite' ) !== false )
 			|| ( strpos( $raw_message_lc, 'unable to retrieve user\'s mysite url' ) !== false )
 			|| ( strpos( $raw_message_lc, 'unable to retrieve mysite url' ) !== false )
-			|| ( strpos( $raw_message_lc, 'site not found' ) !== false && $is_drive_endpoint );
+			|| ( strpos( $raw_message_lc, 'site not found' ) !== false && $is_drive_endpoint )
+			|| ( $is_drive_endpoint && strpos( $error_code_lc, 'itemnotfound' ) !== false )
+			|| ( $is_drive_endpoint && strpos( $error_code_lc, 'erroritemnotfound' ) !== false )
+			|| ( $is_drive_endpoint && strpos( $raw_message_lc, 'object was not found in the store' ) !== false );
 
 		$calendar_not_provisioned =
 			( strpos( $raw_message_lc, 'mailbox' ) !== false && strpos( $raw_message_lc, 'not enabled' ) !== false )
 			|| ( strpos( $error_code_lc, 'mailboxnotenabledforrestapi' ) !== false )
-			|| ( strpos( $raw_message_lc, 'inactive, soft-deleted, or is hosted on-premise' ) !== false );
+			|| ( strpos( $raw_message_lc, 'inactive, soft-deleted, or is hosted on-premise' ) !== false )
+			|| ( $is_calendar_endpoint && strpos( $error_code_lc, 'erroritemnotfound' ) !== false )
+			|| ( $is_calendar_endpoint && strpos( $raw_message_lc, 'object was not found in the store' ) !== false );
 
 		if ( $is_drive_endpoint && $drive_not_provisioned ) {
-			$error_message = __( 'OneDrive for the selected user is not provisioned yet. Assign a license that includes OneDrive/SharePoint and let the user sign in to OneDrive once to complete provisioning.', 'wp-ms365-graph' );
+			$error_message = __( 'OneDrive for the selected user is not provisioned yet. The license may be assigned but OneDrive has not been initialized. Have the user sign into OneDrive (onedrive.live.com or the SharePoint app) once — this triggers drive creation. It may also take up to 24 hours after license assignment.', 'wp-ms365-graph' );
 		}
 
 		if ( $is_calendar_endpoint && $calendar_not_provisioned ) {
-			$error_message = __( 'Mailbox/calendar for the selected user is not provisioned yet. Assign an Exchange Online license and let the user open Outlook on the web once to finish setup.', 'wp-ms365-graph' );
+			$error_message = __( 'Mailbox/calendar for the selected user is not provisioned yet. The license is assigned but Exchange has not initialized the mailbox. Have the user sign into Outlook on the web (outlook.office.com) once — this triggers mailbox creation. It may also take up to 24 hours after license assignment.', 'wp-ms365-graph' );
 		}
 
 		$insufficient_privileges =

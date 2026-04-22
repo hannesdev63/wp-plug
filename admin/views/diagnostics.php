@@ -15,6 +15,16 @@ $logs               = WP_MS365_Logger::get_logs();
 $debug_enabled      = defined( 'WP_DEBUG' ) && WP_DEBUG;
 $configured_user    = WP_MS365_Graph::get_configured_user();
 
+// Live Graph checks – only run when connected and a specific user is configured.
+$diag_user_result     = null;
+$diag_calendar_result = null;
+$diag_drive_result    = null;
+if ( $is_connected && '' !== $configured_user ) {
+	$diag_user_result     = WP_MS365_Graph::get_target_user_profile();
+	$diag_calendar_result = WP_MS365_Graph::get_user_calendar_info();
+	$diag_drive_result    = WP_MS365_Graph::get( WP_MS365_Graph::get_user_endpoint_prefix() . '/drive?$select=id,driveType,quota' );
+}
+
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 $clear_logs = isset( $_GET['clear_logs'] ) && '1' === $_GET['clear_logs'];
 if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
@@ -121,6 +131,109 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		</table>
 	</div>
 
+	<!-- Live Graph Checks -->
+	<?php if ( '' !== $configured_user ) : ?>
+	<div class="ms365-card">
+		<h2><?php esc_html_e( 'Live Graph Checks', 'wp-ms365-graph' ); ?></h2>
+		<?php if ( ! $is_connected ) : ?>
+			<p class="description"><?php esc_html_e( 'Connect the plugin first to run live checks.', 'wp-ms365-graph' ); ?></p>
+		<?php else : ?>
+		<table class="form-table">
+
+			<!-- Check 1: user exists -->
+			<tr>
+				<th scope="row"><?php esc_html_e( 'User exists in Entra ID', 'wp-ms365-graph' ); ?></th>
+				<td>
+					<?php if ( is_wp_error( $diag_user_result ) ) : ?>
+						<span style="color:red;">✗ <?php esc_html_e( 'Failed', 'wp-ms365-graph' ); ?></span>
+						<p class="description"><?php echo esc_html( $diag_user_result->get_error_message() ); ?></p>
+					<?php else : ?>
+						<span style="color:green;">✓ <?php esc_html_e( 'Found', 'wp-ms365-graph' ); ?></span>
+						<?php
+						$display_name = isset( $diag_user_result['displayName'] ) ? $diag_user_result['displayName'] : '';
+						$upn          = isset( $diag_user_result['userPrincipalName'] ) ? $diag_user_result['userPrincipalName'] : '';
+						$object_id    = isset( $diag_user_result['id'] ) ? $diag_user_result['id'] : '';
+						?>
+						<p class="description">
+							<?php if ( $display_name ) echo esc_html( $display_name ) . ' &mdash; '; ?>
+							<?php if ( $upn ) echo esc_html( $upn ); ?>
+							<?php if ( $object_id ) : ?>
+								<br /><code><?php echo esc_html( $object_id ); ?></code>
+							<?php endif; ?>
+						</p>
+					<?php endif; ?>
+				</td>
+			</tr>
+
+			<!-- Check 2: calendar provisioned -->
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Exchange Online / Calendar provisioned', 'wp-ms365-graph' ); ?></th>
+				<td>
+					<?php if ( is_wp_error( $diag_calendar_result ) ) :
+						$cal_msg    = $diag_calendar_result->get_error_message();
+						$cal_data   = $diag_calendar_result->get_error_data();
+						$cal_status = is_array( $cal_data ) && isset( $cal_data['status'] ) ? (int) $cal_data['status'] : 0;
+					?>
+						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'wp-ms365-graph' ); ?></span>
+						<p class="description"><?php echo esc_html( $cal_msg ); ?></p>
+						<?php if ( 403 === $cal_status ) : ?>
+							<p class="description" style="color:red;">
+								<?php esc_html_e( '→ Missing permission. Add delegated Calendars.Read.Shared to your Azure app and grant admin consent, then disconnect/reconnect.', 'wp-ms365-graph' ); ?>
+							</p>
+						<?php elseif ( 404 === $cal_status || 0 === $cal_status ) : ?>
+							<p class="description" style="color:orange;">
+								<?php esc_html_e( '→ License is assigned but Exchange has not initialized the mailbox yet. Have the user open Outlook on the web (outlook.office.com) once — that triggers mailbox creation. Allow up to 24 h after license assignment.', 'wp-ms365-graph' ); ?>
+							</p>
+						<?php endif; ?>
+					<?php else : ?>
+						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'wp-ms365-graph' ); ?></span>
+						<?php if ( ! empty( $diag_calendar_result['name'] ) ) : ?>
+							<p class="description"><?php echo esc_html( $diag_calendar_result['name'] ); ?></p>
+						<?php endif; ?>
+					<?php endif; ?>
+				</td>
+			</tr>
+
+			<!-- Check 3: OneDrive provisioned -->
+			<tr>
+				<th scope="row"><?php esc_html_e( 'OneDrive provisioned', 'wp-ms365-graph' ); ?></th>
+				<td>
+					<?php if ( is_wp_error( $diag_drive_result ) ) :
+						$drv_msg    = $diag_drive_result->get_error_message();
+						$drv_data   = $diag_drive_result->get_error_data();
+						$drv_status = is_array( $drv_data ) && isset( $drv_data['status'] ) ? (int) $drv_data['status'] : 0;
+					?>
+						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'wp-ms365-graph' ); ?></span>
+						<p class="description"><?php echo esc_html( $drv_msg ); ?></p>
+						<?php if ( 403 === $drv_status ) : ?>
+							<p class="description" style="color:red;">
+								<?php esc_html_e( '→ Missing permission. Ensure Files.Read.All is added to your Azure app with admin consent, then disconnect/reconnect.', 'wp-ms365-graph' ); ?>
+							</p>
+						<?php else : ?>
+							<p class="description" style="color:orange;">
+								<?php esc_html_e( '→ OneDrive not initialized. Have the user open OneDrive (onedrive.live.com or SharePoint) once to trigger drive creation. Allow up to 24 h after license assignment.', 'wp-ms365-graph' ); ?>
+							</p>
+						<?php endif; ?>
+					<?php else : ?>
+						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'wp-ms365-graph' ); ?></span>
+						<?php
+						$used  = isset( $diag_drive_result['quota']['used'] ) ? (int) $diag_drive_result['quota']['used'] : null;
+						$total = isset( $diag_drive_result['quota']['total'] ) ? (int) $diag_drive_result['quota']['total'] : null;
+						?>
+						<?php if ( null !== $used && null !== $total ) : ?>
+							<p class="description">
+								<?php echo esc_html( WP_MS365_Shortcodes::format_bytes_public( $used ) . ' / ' . WP_MS365_Shortcodes::format_bytes_public( $total ) ); ?>
+							</p>
+						<?php endif; ?>
+					<?php endif; ?>
+				</td>
+			</tr>
+
+		</table>
+		<?php endif; ?>
+	</div>
+	<?php endif; ?>
+
 	<!-- OAuth Scopes -->
 	<div class="ms365-card">
 		<h2><?php esc_html_e( 'OAuth Scopes Requested', 'wp-ms365-graph' ); ?></h2>
@@ -129,7 +242,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		<p class="description">
 			<?php esc_html_e( 'If you are accessing another user\'s profile/calendar/OneDrive, make sure the following scopes are present in your Azure app registration:', 'wp-ms365-graph' ); ?>
 			<br />
-			<code>User.ReadBasic.All</code>, <code>Calendars.Read.Shared</code>, <code>Files.Read</code>
+			<code>User.ReadBasic.All</code>, <code>Calendars.Read.Shared</code>, <code>Files.Read.All</code>
 		</p>
 	</div>
 
@@ -152,42 +265,27 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 			<?php else : ?>
 				<strong><?php esc_html_e( 'No logs available.', 'wp-ms365-graph' ); ?></strong>
 			<?php endif; ?>
-
-			<?php if ( ! empty( $logs ) ) : ?>
-				&nbsp;&nbsp;
-				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'clear_logs', '1' ), 'wp_ms365_clear_logs' ) ); ?>" class="button button-secondary" onclick="return confirm('<?php esc_attr_e( 'Clear all logs?', 'wp-ms365-graph' ); ?>');">
-					<?php esc_html_e( 'Clear Logs', 'wp-ms365-graph' ); ?>
-				</a>
-			<?php endif; ?>
 		</p>
 
-		<?php echo WP_MS365_Logger::render_logs_table(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+		<?php if ( ! empty( $logs ) ) : ?>
+			<p>
+				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'clear_logs', '1' ), 'wp_ms365_clear_logs' ) ); ?>" class="button button-secondary">
+					<?php esc_html_e( 'Clear Logs', 'wp-ms365-graph' ); ?>
+				</a>
+			</p>
+			<?php WP_MS365_Logger::render_logs_table( $logs ); ?>
+		<?php endif; ?>
 	</div>
 
 	<!-- Troubleshooting Tips -->
 	<div class="ms365-card">
 		<h2><?php esc_html_e( 'Troubleshooting Tips', 'wp-ms365-graph' ); ?></h2>
-		<ul style="list-style: disc; margin-left: 20px;">
-			<li>
-				<strong><?php esc_html_e( 'Connection Failed:', 'wp-ms365-graph' ); ?></strong>
-				<br />
-				<?php esc_html_e( 'Check the logs above. Common issues: invalid Tenant ID, Client ID, or Client Secret. Verify these match your Azure app registration.', 'wp-ms365-graph' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Access Denied (403) when accessing another user:', 'wp-ms365-graph' ); ?></strong>
-				<br />
-				<?php esc_html_e( 'Ensure your Azure app has the required permissions and admin consent has been granted. See the OAuth Scopes section above.', 'wp-ms365-graph' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Token Refresh Failures:', 'wp-ms365-graph' ); ?></strong>
-				<br />
-				<?php esc_html_e( 'The refresh token may be invalid. Try disconnecting and reconnecting in the Settings page.', 'wp-ms365-graph' ); ?>
-			</li>
-			<li>
-				<strong><?php esc_html_e( 'Logs are empty:', 'wp-ms365-graph' ); ?></strong>
-				<br />
-				<?php esc_html_e( 'Enable WP_DEBUG in wp-config.php to start recording debug logs.', 'wp-ms365-graph' ); ?>
-			</li>
+		<ul>
+			<li><?php esc_html_e( 'After changing permissions in Azure, disconnect and reconnect the plugin to get a new token.', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'Calendar and OneDrive require the target user to sign in to Outlook/OneDrive at least once after license assignment.', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'Delegated permissions only work when a user has consented. Use admin consent in Azure for shared access.', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'If the wrong user\'s data shows up, verify the Specific User field contains the correct UPN (user@domain.com).', 'wp-ms365-graph' ); ?></li>
 		</ul>
 	</div>
+
 </div>
