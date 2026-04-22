@@ -62,8 +62,16 @@ $is_specific_user = '' !== $configured_user;
 			<?php
 			$events = WP_MS365_Graph::get_calendar_events( 5 );
 			if ( is_wp_error( $events ) ) :
+				$error_msg = $events->get_error_message();
+				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error"><?php echo esc_html( $events->get_error_message() ); ?></p>
+				<p class="ms365-notice ms365-notice--error">
+					<?php echo esc_html( $error_msg ); ?>
+					<?php if ( $is_access_denied && $is_specific_user ) : ?>
+						<br /><br />
+						<small><?php esc_html_e( 'If accessing a different user\'s calendar, ensure your Azure app has Calendars.Read.Shared permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+					<?php endif; ?>
+				</p>
 			<?php elseif ( empty( $events['value'] ) ) : ?>
 				<p><?php esc_html_e( 'No upcoming events.', 'wp-ms365-graph' ); ?></p>
 			<?php else : ?>
@@ -109,8 +117,16 @@ $is_specific_user = '' !== $configured_user;
 			<?php
 			$drive = WP_MS365_Graph::get_drive_items( '', 10 );
 			if ( is_wp_error( $drive ) ) :
+				$error_msg = $drive->get_error_message();
+				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error"><?php echo esc_html( $drive->get_error_message() ); ?></p>
+				<p class="ms365-notice ms365-notice--error">
+					<?php echo esc_html( $error_msg ); ?>
+					<?php if ( $is_access_denied && $is_specific_user ) : ?>
+						<br /><br />
+						<small><?php esc_html_e( 'If accessing a different user\'s OneDrive, ensure your Azure app has Files.Read.Shared permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+					<?php endif; ?>
+				</p>
 			<?php elseif ( empty( $drive['value'] ) ) : ?>
 				<p><?php esc_html_e( 'No files found.', 'wp-ms365-graph' ); ?></p>
 			<?php else : ?>

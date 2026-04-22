@@ -73,6 +73,18 @@ $auth_url        = WP_MS365_Auth::get_authorization_url();
 		<?php submit_button(); ?>
 	</form>
 
+	<!-- Important note about permissions -->
+	<?php if ( ! empty( $settings['specific_user'] ) ) : ?>
+	<div class="notice notice-info">
+		<p>
+			<strong><?php esc_html_e( 'Note: Accessing another user requires additional permissions.', 'wp-ms365-graph' ); ?></strong><br />
+			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
+			<code>Calendars.Read.Shared</code>, <code>Files.Read.Shared</code>.<br />
+			<?php esc_html_e( 'After adding these permissions, click "Grant admin consent" in Azure and reconnect the plugin.', 'wp-ms365-graph' ); ?>
+		</p>
+	</div>
+	<?php endif; ?>
+
 	<!-- Connect button (only shown when credentials are saved) -->
 	<?php
 	$settings = WP_MS365_Auth::get_settings();

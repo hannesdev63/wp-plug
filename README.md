@@ -52,7 +52,9 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 6. Go to **API permissions → Add a permission → Microsoft Graph** and add:
    - `User.Read`
    - `Calendars.Read`
+   - `Calendars.Read.Shared` (required for accessing other users' calendars)
    - `Files.Read`
+   - `Files.Read.Shared` (required for accessing other users' OneDrive)
    - `offline_access`
 7. Click **Grant admin consent**.
 

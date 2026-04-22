@@ -18,7 +18,7 @@ class WP_MS365_Auth {
 	const AUTHORITY_BASE = 'https://login.microsoftonline.com';
 
 	/** Graph API scopes requested. */
-	const SCOPES = 'offline_access User.Read Calendars.Read Files.Read';
+	const SCOPES = 'offline_access User.Read Calendars.Read Calendars.Read.Shared Files.Read Files.Read.Shared';
 
 	// ------------------------------------------------------------------
 	// Public API

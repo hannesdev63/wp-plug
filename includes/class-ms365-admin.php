@@ -191,7 +191,7 @@ class WP_MS365_Admin {
 
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional. Use a Microsoft user principal name (for example user@contoso.com) or object ID. Leave empty to use the signed-in user.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional. Use a Microsoft user principal name (for example user@contoso.com) or object ID. Leave empty to use the signed-in user. When configured, the app requires Calendars.Read.Shared and Files.Read.Shared permissions (grant admin consent in Azure after updating permissions).', 'wp-ms365-graph' )
 				. '</p>';
 		}
 	}
