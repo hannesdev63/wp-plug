@@ -37,7 +37,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 <div class="wrap ms365-diagnostics">
 	<h1 class="ms365-diagnostics__heading">
 		<span class="dashicons dashicons-tools"></span>
-		<?php esc_html_e( 'Microsoft 365 Graph', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<!-- System Information -->
@@ -70,9 +70,9 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		</table>
 	</div>
 
-	<!-- OAuth Configuration -->
+	<!-- Authentication Configuration -->
 	<div class="ms365-card">
-		<h2><?php esc_html_e( 'OAuth Configuration', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Authentication Configuration', 'wp-ms365-graph' ); ?></h2>
 		<table class="form-table">
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Connected', 'wp-ms365-graph' ); ?></th>
@@ -124,7 +124,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
 						<br /><code><?php echo esc_html( $configured_user ); ?></code>
 					<?php else : ?>
-						<span style="color: orange;">⚠ <?php esc_html_e( 'Not set (using signed-in user)', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'Not set (required for app-only mode)', 'wp-ms365-graph' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
@@ -178,7 +178,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 						<p class="description"><?php echo esc_html( $cal_msg ); ?></p>
 						<?php if ( 403 === $cal_status ) : ?>
 							<p class="description" style="color:red;">
-								<?php esc_html_e( '→ Missing permission. Add delegated Calendars.Read.Shared to your Azure app and grant admin consent, then disconnect/reconnect.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ Missing permission. Add Microsoft Graph application permission Calendars.Read to your Azure app and grant admin consent.', 'wp-ms365-graph' ); ?>
 							</p>
 						<?php elseif ( 404 === $cal_status || 0 === $cal_status ) : ?>
 							<p class="description" style="color:orange;">
@@ -207,7 +207,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 						<p class="description"><?php echo esc_html( $drv_msg ); ?></p>
 						<?php if ( 403 === $drv_status ) : ?>
 							<p class="description" style="color:red;">
-								<?php esc_html_e( '→ Missing permission. Ensure Files.Read.All is added to your Azure app with admin consent, then disconnect/reconnect.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ Missing permission. Ensure Microsoft Graph application permission Files.Read.All is added to your Azure app with admin consent.', 'wp-ms365-graph' ); ?>
 							</p>
 						<?php else : ?>
 							<p class="description" style="color:orange;">
@@ -234,15 +234,15 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	</div>
 	<?php endif; ?>
 
-	<!-- OAuth Scopes -->
+	<!-- Application Scope -->
 	<div class="ms365-card">
-		<h2><?php esc_html_e( 'OAuth Scopes Requested', 'wp-ms365-graph' ); ?></h2>
-		<p><?php esc_html_e( 'These scopes are requested during the OAuth flow:', 'wp-ms365-graph' ); ?></p>
+		<h2><?php esc_html_e( 'Token Scope', 'wp-ms365-graph' ); ?></h2>
+		<p><?php esc_html_e( 'The plugin requests an app-only token using this scope:', 'wp-ms365-graph' ); ?></p>
 		<code><?php echo esc_html( WP_MS365_Auth::SCOPES ); ?></code>
 		<p class="description">
-			<?php esc_html_e( 'If you are accessing another user\'s profile/calendar/OneDrive, make sure the following scopes are present in your Azure app registration:', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Your Azure app registration must include these Microsoft Graph application permissions:', 'wp-ms365-graph' ); ?>
 			<br />
-			<code>User.ReadBasic.All</code>, <code>Calendars.Read.Shared</code>, <code>Files.Read.All</code>
+			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>
 		</p>
 	</div>
 
@@ -281,9 +281,9 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	<div class="ms365-card">
 		<h2><?php esc_html_e( 'Troubleshooting Tips', 'wp-ms365-graph' ); ?></h2>
 		<ul>
-			<li><?php esc_html_e( 'After changing permissions in Azure, disconnect and reconnect the plugin to get a new token.', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'After changing app permissions in Azure, grant admin consent and clear plugin connection once so a new app-only token is fetched.', 'wp-ms365-graph' ); ?></li>
 			<li><?php esc_html_e( 'Calendar and OneDrive require the target user to sign in to Outlook/OneDrive at least once after license assignment.', 'wp-ms365-graph' ); ?></li>
-			<li><?php esc_html_e( 'Delegated permissions only work when a user has consented. Use admin consent in Azure for shared access.', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'Use Microsoft Graph application permissions (not delegated) for no-user-interaction access.', 'wp-ms365-graph' ); ?></li>
 			<li><?php esc_html_e( 'If the wrong user\'s data shows up, verify the Specific User field contains the correct UPN (user@domain.com).', 'wp-ms365-graph' ); ?></li>
 		</ul>
 	</div>

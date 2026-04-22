@@ -50,18 +50,18 @@ class WP_MS365_Graph {
 	// ------------------------------------------------------------------
 
 	/**
-	 * Retrieve the signed-in user's profile.
+	 * Retrieve the configured target user's profile.
 	 *
 	 * @return array|WP_Error
 	 */
 	public static function get_me() {
-		return self::get( '/me' );
+		return self::get_target_user_profile();
 	}
 
 	/**
 	 * Retrieve the configured target user (UPN or object ID), if any.
 	 *
-	 * @return string Empty string means "use signed-in user".
+	 * @return string Empty string means no target user configured.
 	 */
 	public static function get_configured_user() {
 		$settings = WP_MS365_Auth::get_settings();
@@ -77,7 +77,10 @@ class WP_MS365_Graph {
 	public static function get_target_user_profile( $user = '' ) {
 		$effective_user = self::get_effective_user( $user );
 		if ( '' === $effective_user ) {
-			return self::get_me();
+			return new WP_Error(
+				'ms365_missing_specific_user',
+				__( 'Specific User is required for app-only mode. Set a user principal name (user@domain.com) or object ID in plugin settings.', 'wp-ms365-graph' )
+			);
 		}
 
 		return self::get( '/users/' . rawurlencode( $effective_user ) );
@@ -102,9 +105,29 @@ class WP_MS365_Graph {
 				'endDateTime'     => $end,
 				'$top'            => $limit,
 				'$orderby'        => 'start/dateTime',
-				'$select'         => 'subject,start,end,location,webLink,organizer,isAllDay',
+				'$select'         => 'id,subject,start,end,location,webLink,organizer,isAllDay,categories',
 				'Prefer'          => 'outlook.timezone="' . $timezone . '"',
 			)
+		);
+	}
+
+	/**
+	 * Retrieve a specific calendar event.
+	 *
+	 * @param  string $event_id Calendar event ID.
+	 * @param  string $user     Optional explicit user identifier.
+	 * @return array|WP_Error
+	 */
+	public static function get_calendar_event( $event_id, $user = '' ) {
+		$event_id = trim( (string) $event_id );
+		if ( '' === $event_id ) {
+			return new WP_Error( 'ms365_invalid_event_id', __( 'Invalid calendar event ID.', 'wp-ms365-graph' ) );
+		}
+
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+		return self::get(
+			$user_prefix . '/events/' . rawurlencode( $event_id ),
+			array( '$select' => 'id,subject,start,end,location,isAllDay,bodyPreview' )
 		);
 	}
 
@@ -117,9 +140,10 @@ class WP_MS365_Graph {
 	 */
 	public static function get_drive_items( $folder = '', $limit = 20, $user = '' ) {
 		$user_prefix = self::get_user_endpoint_prefix( $user );
+		$folder_path = trim( (string) $folder );
 
-		if ( $folder ) {
-			$endpoint = $user_prefix . '/drive/root:/' . ltrim( $folder, '/' ) . ':/children';
+		if ( '' !== $folder_path ) {
+			$endpoint = $user_prefix . '/drive/root:/' . ltrim( $folder_path, '/' ) . ':/children';
 		} else {
 			$endpoint = $user_prefix . '/drive/root/children';
 		}
@@ -128,9 +152,29 @@ class WP_MS365_Graph {
 			$endpoint,
 			array(
 				'$top'    => $limit,
-				'$select' => 'name,size,lastModifiedDateTime,webUrl,file,folder',
+				'$select' => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
 				'$orderby' => 'name',
 			)
+		);
+	}
+
+	/**
+	 * Retrieve basic metadata for a OneDrive item.
+	 *
+	 * @param  string $item_id OneDrive item ID.
+	 * @param  string $user    Optional explicit user identifier.
+	 * @return array|WP_Error
+	 */
+	public static function get_drive_item_info( $item_id, $user = '' ) {
+		$item_id = trim( (string) $item_id );
+		if ( '' === $item_id ) {
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'wp-ms365-graph' ) );
+		}
+
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+		return self::get(
+			$user_prefix . '/drive/items/' . rawurlencode( $item_id ),
+			array( '$select' => 'id,name,size,file' )
 		);
 	}
 
@@ -167,6 +211,56 @@ class WP_MS365_Graph {
 		);
 	}
 
+	/**
+	 * Resolve a direct download URL for a OneDrive file item.
+	 *
+	 * @param  string $item_id OneDrive item ID.
+	 * @param  string $user    Optional explicit user identifier.
+	 * @return string|WP_Error Redirect target URL or WP_Error.
+	 */
+	public static function get_drive_item_download_url( $item_id, $user = '' ) {
+		$item_id = trim( (string) $item_id );
+		if ( '' === $item_id ) {
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'wp-ms365-graph' ) );
+		}
+
+		$token = WP_MS365_Auth::get_access_token();
+		if ( ! $token ) {
+			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' ) );
+		}
+
+		$user_prefix = self::get_user_endpoint_prefix( $user );
+		$url         = self::build_url( $user_prefix . '/drive/items/' . rawurlencode( $item_id ) . '/content' );
+
+		$args = array(
+			'method'      => 'GET',
+			'timeout'     => 30,
+			'redirection' => 0,
+			'headers'     => array(
+				'Authorization' => 'Bearer ' . $token,
+				'Accept'        => 'application/json',
+			),
+		);
+
+		$response = wp_remote_request( $url, $args );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code     = wp_remote_retrieve_response_code( $response );
+		$location = wp_remote_retrieve_header( $response, 'location' );
+
+		if ( in_array( $code, array( 301, 302, 307, 308 ), true ) && ! empty( $location ) ) {
+			return esc_url_raw( $location );
+		}
+
+		return new WP_Error(
+			'ms365_download_unavailable',
+			__( 'Unable to create download link for this file.', 'wp-ms365-graph' ),
+			array( 'status' => $code )
+		);
+	}
+
 	// ------------------------------------------------------------------
 	// Internal helpers
 	// ------------------------------------------------------------------
@@ -199,7 +293,7 @@ class WP_MS365_Graph {
 		if ( ! $token ) {
 			return new WP_Error(
 				'ms365_not_authenticated',
-				__( 'Not connected to Microsoft 365. Please authenticate first.', 'wp-ms365-graph' )
+				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' )
 			);
 		}
 
@@ -275,6 +369,7 @@ class WP_MS365_Graph {
 		$error_code_lc  = strtolower( $error_code );
 
 		$is_drive_endpoint = ( strpos( $url, '/drive/' ) !== false );
+		$is_drive_folder_children_endpoint = ( strpos( $url, '/drive/root:/' ) !== false && strpos( $url, ':/children' ) !== false );
 		$is_calendar_endpoint = ( strpos( $url, '/calendar' ) !== false );
 		$is_users_endpoint = ( strpos( $url, '/users/' ) !== false );
 
@@ -283,9 +378,17 @@ class WP_MS365_Graph {
 			|| ( strpos( $raw_message_lc, 'unable to retrieve user\'s mysite url' ) !== false )
 			|| ( strpos( $raw_message_lc, 'unable to retrieve mysite url' ) !== false )
 			|| ( strpos( $raw_message_lc, 'site not found' ) !== false && $is_drive_endpoint )
-			|| ( $is_drive_endpoint && strpos( $error_code_lc, 'itemnotfound' ) !== false )
-			|| ( $is_drive_endpoint && strpos( $error_code_lc, 'erroritemnotfound' ) !== false )
-			|| ( $is_drive_endpoint && strpos( $raw_message_lc, 'object was not found in the store' ) !== false );
+			|| ( $is_drive_endpoint && ! $is_drive_folder_children_endpoint && strpos( $error_code_lc, 'itemnotfound' ) !== false )
+			|| ( $is_drive_endpoint && ! $is_drive_folder_children_endpoint && strpos( $error_code_lc, 'erroritemnotfound' ) !== false )
+			|| ( $is_drive_endpoint && ! $is_drive_folder_children_endpoint && strpos( $raw_message_lc, 'object was not found in the store' ) !== false );
+
+		$drive_folder_not_found =
+			$is_drive_folder_children_endpoint
+			&& ( 404 === $code || strpos( $error_code_lc, 'itemnotfound' ) !== false || strpos( $error_code_lc, 'erroritemnotfound' ) !== false );
+
+		if ( $drive_folder_not_found ) {
+			$error_message = __( 'The requested OneDrive folder was not found for the selected user. Verify the folder path used in the shortcode (for example folder="Documents").', 'wp-ms365-graph' );
+		}
 
 		$calendar_not_provisioned =
 			( strpos( $raw_message_lc, 'mailbox' ) !== false && strpos( $raw_message_lc, 'not enabled' ) !== false )
@@ -311,10 +414,10 @@ class WP_MS365_Graph {
 			);
 
 		if ( $is_users_endpoint && $insufficient_privileges ) {
-			$error_message = __( 'Insufficient privileges to read the selected user profile. Add Microsoft Graph delegated permission User.ReadBasic.All and grant admin consent, then disconnect/reconnect the plugin.', 'wp-ms365-graph' );
+			$error_message = __( 'Insufficient privileges to read the selected user profile. Add Microsoft Graph application permission User.Read.All and grant admin consent.', 'wp-ms365-graph' );
 		}
 
-		if ( ! $drive_not_provisioned && ! $calendar_not_provisioned && ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) ) {
+		if ( ! $drive_not_provisioned && ! $calendar_not_provisioned && ! $drive_folder_not_found && ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) ) {
 			if ( $is_drive_endpoint ) {
 				$error_message = __( 'OneDrive for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has OneDrive provisioned.', 'wp-ms365-graph' );
 			} elseif ( $is_calendar_endpoint ) {
@@ -354,12 +457,12 @@ class WP_MS365_Graph {
 	}
 
 	/**
-	 * Get endpoint prefix for either configured user or signed-in user.
+	 * Get endpoint prefix for either explicit user or configured user.
 	 *
 	 * @param  string $user Optional explicit user identifier.
 	 * @return string
 	 */
-	private static function get_user_endpoint_prefix( $user = '' ) {
+	public static function get_user_endpoint_prefix( $user = '' ) {
 		$effective_user = self::get_effective_user( $user );
 		if ( '' === $effective_user ) {
 			return '/me';

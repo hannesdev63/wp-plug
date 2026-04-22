@@ -16,7 +16,7 @@ $is_specific_user = '' !== $configured_user;
 <div class="wrap ms365-dashboard">
 	<h1 class="ms365-dashboard__heading">
 		<span class="dashicons dashicons-microsoft"></span>
-		<?php esc_html_e( 'Microsoft 365 Graph', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<?php if ( ! $is_connected ) : ?>
@@ -26,8 +26,8 @@ $is_specific_user = '' !== $configured_user;
 				printf(
 					/* translators: %s: settings page link */
 					esc_html__( 'Microsoft 365 is not connected. Please %s first.', 'wp-ms365-graph' ),
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph' ) ) . '">'
-						. esc_html__( 'configure the plugin', 'wp-ms365-graph' )
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-settings' ) ) . '">'
+						. esc_html__( 'configure credentials and a specific user', 'wp-ms365-graph' )
 					. '</a>'
 				);
 				?>
@@ -50,7 +50,7 @@ $is_specific_user = '' !== $configured_user;
 					<?php /* translators: %s: configured user value */ ?>
 					<span><?php printf( esc_html__( 'Configured user: %s', 'wp-ms365-graph' ), esc_html( $configured_user ) ); ?></span>
 				<?php else : ?>
-					<span><?php esc_html_e( 'Using signed-in user (default).', 'wp-ms365-graph' ); ?></span>
+					<span><?php esc_html_e( 'Set Specific User in plugin settings to query Microsoft Graph.', 'wp-ms365-graph' ); ?></span>
 				<?php endif; ?>
 			</p>
 		</div>
@@ -61,7 +61,7 @@ $is_specific_user = '' !== $configured_user;
 				<?php echo esc_html( $selected_user->get_error_message() ); ?>
 				<?php if ( $is_specific_user ) : ?>
 					<br /><br />
-					<small><?php esc_html_e( 'For profile lookups of another user, ensure delegated permission User.ReadBasic.All is configured and admin consent is granted.', 'wp-ms365-graph' ); ?></small>
+					<small><?php esc_html_e( 'Ensure Microsoft Graph application permission User.Read.All is configured and admin consent is granted.', 'wp-ms365-graph' ); ?></small>
 				<?php endif; ?>
 			</p>
 		</div>
@@ -80,7 +80,7 @@ $is_specific_user = '' !== $configured_user;
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
-						<small><?php esc_html_e( 'If accessing a different user\'s calendar, ensure your Azure app has Calendars.Read.Shared permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Calendars.Read and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
 					<?php endif; ?>
 				</p>
 			<?php elseif ( empty( $events['value'] ) ) : ?>
@@ -135,7 +135,7 @@ $is_specific_user = '' !== $configured_user;
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
-						<small><?php esc_html_e( 'If accessing a different user\'s OneDrive, ensure your Azure app has Files.Read permission and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Files.Read.All and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
 					<?php endif; ?>
 				</p>
 			<?php elseif ( empty( $drive['value'] ) ) : ?>

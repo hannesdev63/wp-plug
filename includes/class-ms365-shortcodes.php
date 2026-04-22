@@ -20,6 +20,214 @@ class WP_MS365_Shortcodes {
 		add_shortcode( 'ms365_files',    array( $this, 'render_files' ) );
 		add_shortcode( 'ms365_profile',  array( $this, 'render_profile' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'init', array( $this, 'maybe_handle_download' ) );
+	}
+
+	/**
+	 * Handle public download requests for OneDrive files.
+	 *
+	 * @return void
+	 */
+	public function maybe_handle_download() {
+		if ( isset( $_GET['ms365_download'] ) ) {
+			$this->handle_drive_download();
+			return;
+		}
+
+		if ( isset( $_GET['ms365_calendar_ics'] ) ) {
+			$this->handle_calendar_ics_download();
+		}
+	}
+
+	/**
+	 * Stream OneDrive file content to anonymous visitors.
+	 *
+	 * @return void
+	 */
+	private function handle_drive_download() {
+		$item_id = $this->decode_local_token_param( 'ms365_download' );
+		if ( '' === $item_id ) {
+			wp_die( esc_html__( 'Invalid download request.', 'wp-ms365-graph' ), 400 );
+		}
+
+		$item_info = WP_MS365_Graph::get_drive_item_info( $item_id, WP_MS365_Graph::get_configured_user() );
+		$filename  = 'download.bin';
+		$mime_type = '';
+		if ( ! is_wp_error( $item_info ) ) {
+			if ( ! empty( $item_info['name'] ) ) {
+				$filename = (string) $item_info['name'];
+			}
+			if ( ! empty( $item_info['file']['mimeType'] ) ) {
+				$mime_type = (string) $item_info['file']['mimeType'];
+			}
+		}
+
+		$download_url = WP_MS365_Graph::get_drive_item_download_url( $item_id, WP_MS365_Graph::get_configured_user() );
+		if ( is_wp_error( $download_url ) ) {
+			wp_die( esc_html( $download_url->get_error_message() ), 403 );
+		}
+
+		$response = wp_remote_get(
+			$download_url,
+			array(
+				'timeout'     => 60,
+				'redirection' => 5,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			wp_die( esc_html( $response->get_error_message() ), 500 );
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( $code < 200 || $code >= 300 ) {
+			wp_die( esc_html__( 'Unable to download this file right now.', 'wp-ms365-graph' ), 502 );
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		if ( '' === $body ) {
+			wp_die( esc_html__( 'Downloaded file was empty.', 'wp-ms365-graph' ), 404 );
+		}
+
+		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
+		$disposition  = wp_remote_retrieve_header( $response, 'content-disposition' );
+		$content_len  = wp_remote_retrieve_header( $response, 'content-length' );
+		$safe_name    = str_replace( '"', '', $filename );
+
+		nocache_headers();
+		header( 'Content-Type: ' . ( $content_type ? $content_type : ( $mime_type ? $mime_type : 'application/octet-stream' ) ) );
+		if ( $disposition ) {
+			header( 'Content-Disposition: ' . $disposition );
+		} else {
+			header( 'Content-Disposition: attachment; filename="' . $safe_name . '"; filename*=UTF-8\'\'' . rawurlencode( $filename ) );
+		}
+		if ( $content_len ) {
+			header( 'Content-Length: ' . $content_len );
+		}
+		echo $body;
+		exit;
+	}
+
+	/**
+	 * Export a calendar event as ICS for anonymous visitors.
+	 *
+	 * @return void
+	 */
+	private function handle_calendar_ics_download() {
+		$event_id = $this->decode_local_token_param( 'ms365_calendar_ics' );
+		if ( '' === $event_id ) {
+			wp_die( esc_html__( 'Invalid calendar export request.', 'wp-ms365-graph' ), 400 );
+		}
+
+		$event = WP_MS365_Graph::get_calendar_event( $event_id, WP_MS365_Graph::get_configured_user() );
+		if ( is_wp_error( $event ) ) {
+			wp_die( esc_html( $event->get_error_message() ), 403 );
+		}
+
+		$ics      = $this->build_ics_content( $event );
+		$subject  = isset( $event['subject'] ) ? (string) $event['subject'] : 'event';
+		$filename = sanitize_file_name( $subject ) . '.ics';
+
+		nocache_headers();
+		header( 'Content-Type: text/calendar; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		echo $ics;
+		exit;
+	}
+
+	/**
+	 * Build ICS content from a Graph event payload.
+	 *
+	 * @param  array $event Graph event payload.
+	 * @return string
+	 */
+	private function build_ics_content( array $event ) {
+		$subject  = isset( $event['subject'] ) ? $this->escape_ics_text( (string) $event['subject'] ) : 'Event';
+		$location = isset( $event['location']['displayName'] ) ? $this->escape_ics_text( (string) $event['location']['displayName'] ) : '';
+		$preview  = isset( $event['bodyPreview'] ) ? $this->escape_ics_text( (string) $event['bodyPreview'] ) : '';
+		$uid      = isset( $event['id'] ) ? $this->escape_ics_text( (string) $event['id'] ) . '@wp-ms365-graph' : wp_generate_uuid4() . '@wp-ms365-graph';
+
+		$start_dt = isset( $event['start']['dateTime'] ) ? (string) $event['start']['dateTime'] : '';
+		$end_dt   = isset( $event['end']['dateTime'] ) ? (string) $event['end']['dateTime'] : '';
+		$is_all_day = ! empty( $event['isAllDay'] );
+
+		if ( $is_all_day ) {
+			$dtstart = 'DTSTART;VALUE=DATE:' . gmdate( 'Ymd', strtotime( $start_dt ) );
+			$dtend   = 'DTEND;VALUE=DATE:' . gmdate( 'Ymd', strtotime( $end_dt ) );
+		} else {
+			$dtstart = 'DTSTART:' . gmdate( 'Ymd\THis\Z', strtotime( $start_dt ) );
+			$dtend   = 'DTEND:' . gmdate( 'Ymd\THis\Z', strtotime( $end_dt ) );
+		}
+
+		$lines   = array(
+			'BEGIN:VCALENDAR',
+			'VERSION:2.0',
+			'PRODID:-//WP Microsoft 365 Graph//EN',
+			'BEGIN:VEVENT',
+			'UID:' . $uid,
+			'DTSTAMP:' . gmdate( 'Ymd\THis\Z' ),
+			$dtstart,
+			$dtend,
+			'SUMMARY:' . $subject,
+		);
+
+		if ( '' !== $location ) {
+			$lines[] = 'LOCATION:' . $location;
+		}
+
+		if ( '' !== $preview ) {
+			$lines[] = 'DESCRIPTION:' . $preview;
+		}
+
+		$lines[] = 'END:VEVENT';
+		$lines[] = 'END:VCALENDAR';
+
+		return implode( "\r\n", $lines ) . "\r\n";
+	}
+
+	/**
+	 * Escape text for ICS output.
+	 *
+	 * @param  string $text Raw text.
+	 * @return string
+	 */
+	private function escape_ics_text( $text ) {
+		$text = str_replace( array( '\\', ';', ',', "\r\n", "\n", "\r" ), array( '\\\\', '\\;', '\\,', '\\n', '\\n', '\\n' ), (string) $text );
+		return trim( $text );
+	}
+
+	/**
+	 * Encode a local query param payload safely for URLs.
+	 *
+	 * @param  string $value Raw identifier.
+	 * @return string
+	 */
+	private function encode_local_token_param( $value ) {
+		return rtrim( strtr( base64_encode( (string) $value ), '+/', '-_' ), '=' );
+	}
+
+	/**
+	 * Decode a local query param payload previously encoded with base64url.
+	 *
+	 * @param  string $key Query parameter key.
+	 * @return string
+	 */
+	private function decode_local_token_param( $key ) {
+		if ( ! isset( $_GET[ $key ] ) ) {
+			return '';
+		}
+
+		$encoded = trim( (string) wp_unslash( $_GET[ $key ] ) );
+		if ( '' === $encoded ) {
+			return '';
+		}
+
+		$decoded = base64_decode( strtr( $encoded, '-_', '+/' ), true );
+		if ( false !== $decoded ) {
+			return trim( $decoded );
+		}
+
+		return '';
 	}
 
 	// ------------------------------------------------------------------
@@ -33,6 +241,8 @@ class WP_MS365_Shortcodes {
 	 *   limit    – max number of events (default 5)
 	 *   timezone – IANA timezone string (default UTC)
 	 *   title    – heading text (default "Upcoming Events")
+	 *   calendar_link_mode – link behavior: "ics" or "none" (default "ics")
+	 *   categories – comma-separated category names to include (default: all)
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -40,13 +250,28 @@ class WP_MS365_Shortcodes {
 	public function render_calendar( $atts ) {
 		$atts = shortcode_atts(
 			array(
-				'limit'    => 5,
-				'timezone' => 'UTC',
-				'title'    => __( 'Upcoming Events', 'wp-ms365-graph' ),
+				'limit'              => 5,
+				'timezone'           => 'UTC',
+				'title'              => '',
+				'calendar_link_mode' => 'ics',
+				'categories'         => '',
 			),
 			$atts,
 			'ms365_calendar'
 		);
+
+		$link_mode = strtolower( trim( (string) $atts['calendar_link_mode'] ) );
+		if ( ! in_array( $link_mode, array( 'ics', 'none' ), true ) ) {
+			$link_mode = 'ics';
+		}
+
+		$category_filter = array_filter(
+			array_map( 'trim', explode( ',', (string) $atts['categories'] ) ),
+			function ( $category ) {
+				return '' !== $category;
+			}
+		);
+		$category_filter = array_map( 'strtolower', $category_filter );
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
@@ -59,6 +284,22 @@ class WP_MS365_Shortcodes {
 		}
 
 		$items = isset( $events['value'] ) ? $events['value'] : array();
+
+		if ( ! empty( $category_filter ) ) {
+			$items = array_values(
+				array_filter(
+					$items,
+					function ( $event ) use ( $category_filter ) {
+						if ( empty( $event['categories'] ) || ! is_array( $event['categories'] ) ) {
+							return false;
+						}
+
+						$event_categories = array_map( 'strtolower', array_map( 'trim', $event['categories'] ) );
+						return count( array_intersect( $category_filter, $event_categories ) ) > 0;
+					}
+				)
+			);
+		}
 
 		ob_start();
 		?>
@@ -77,7 +318,10 @@ class WP_MS365_Shortcodes {
 						$start    = isset( $event['start']['dateTime'] ) ? $event['start']['dateTime'] : '';
 						$end      = isset( $event['end']['dateTime'] )   ? $event['end']['dateTime']   : '';
 						$location = isset( $event['location']['displayName'] ) ? $event['location']['displayName'] : '';
-						$web_link = isset( $event['webLink'] ) ? $event['webLink'] : '';
+						$event_link = '';
+						if ( 'ics' === $link_mode && isset( $event['id'] ) && '' !== (string) $event['id'] ) {
+							$event_link = add_query_arg( 'ms365_calendar_ics', $this->encode_local_token_param( (string) $event['id'] ), home_url( '/' ) );
+						}
 						$all_day  = ! empty( $event['isAllDay'] );
 
 						$start_display = $start
@@ -88,8 +332,8 @@ class WP_MS365_Shortcodes {
 						?>
 						<li class="ms365-calendar__item">
 							<span class="ms365-calendar__date"><?php echo esc_html( $start_display ); ?></span>
-							<?php if ( $web_link ) : ?>
-								<a class="ms365-calendar__subject" href="<?php echo esc_url( $web_link ); ?>" target="_blank" rel="noopener noreferrer">
+							<?php if ( $event_link ) : ?>
+								<a class="ms365-calendar__subject" href="<?php echo esc_url( $event_link ); ?>" rel="nofollow">
 									<?php echo esc_html( $subject ); ?>
 								</a>
 							<?php else : ?>
@@ -127,7 +371,7 @@ class WP_MS365_Shortcodes {
 			array(
 				'limit'  => 10,
 				'folder' => '',
-				'title'  => __( 'My Files', 'wp-ms365-graph' ),
+				'title'  => '',
 			),
 			$atts,
 			'ms365_files'
@@ -137,13 +381,22 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$result = WP_MS365_Graph::get_drive_items( $atts['folder'], (int) $atts['limit'], WP_MS365_Graph::get_configured_user() );
+		$folder = trim( (string) $atts['folder'] );
+		$result = WP_MS365_Graph::get_drive_items( $folder, (int) $atts['limit'], WP_MS365_Graph::get_configured_user() );
 
 		if ( is_wp_error( $result ) ) {
 			return $this->error_notice( $result->get_error_message() );
 		}
 
 		$items = isset( $result['value'] ) ? $result['value'] : array();
+		$items = array_values(
+			array_filter(
+				$items,
+				function ( $item ) {
+					return ! isset( $item['folder'] );
+				}
+			)
+		);
 
 		ob_start();
 		?>
@@ -159,18 +412,18 @@ class WP_MS365_Shortcodes {
 					<?php foreach ( $items as $item ) : ?>
 						<?php
 						$name     = isset( $item['name'] ) ? $item['name'] : '';
-						$web_url  = isset( $item['webUrl'] ) ? $item['webUrl'] : '';
-						$is_folder = isset( $item['folder'] );
-						$size     = ! $is_folder && isset( $item['size'] ) ? self::format_bytes( $item['size'] ) : '';
+						$size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
 						$modified = isset( $item['lastModifiedDateTime'] )
 							? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
 							: '';
-						$icon_class = $is_folder ? 'ms365-files__icon--folder' : 'ms365-files__icon--file';
+						$download_link = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
+							? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
+							: '';
 						?>
 						<li class="ms365-files__item">
-							<span class="ms365-files__icon <?php echo esc_attr( $icon_class ); ?>"></span>
-							<?php if ( $web_url ) : ?>
-								<a class="ms365-files__name" href="<?php echo esc_url( $web_url ); ?>" target="_blank" rel="noopener noreferrer">
+							<span class="ms365-files__icon ms365-files__icon--file"></span>
+							<?php if ( $download_link ) : ?>
+								<a class="ms365-files__name" href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
 									<?php echo esc_html( $name ); ?>
 								</a>
 							<?php else : ?>
@@ -240,12 +493,17 @@ class WP_MS365_Shortcodes {
 	 * Enqueue front-end stylesheet.
 	 */
 	public function enqueue_assets() {
-		wp_enqueue_style(
-			'wp-ms365-graph',
-			WP_MS365_PLUGIN_URL . 'assets/css/ms365.css',
-			array(),
-			WP_MS365_VERSION
-		);
+		// Intentionally do not load a default stylesheet so shortcode output inherits
+		// typography and spacing from the parent block/theme.
+		wp_register_style( 'wp-ms365-graph', false, array(), WP_MS365_VERSION );
+		wp_enqueue_style( 'wp-ms365-graph' );
+
+		$settings   = WP_MS365_Auth::get_settings();
+		$custom_css = isset( $settings['custom_css'] ) ? trim( (string) $settings['custom_css'] ) : '';
+
+		if ( '' !== $custom_css ) {
+			wp_add_inline_style( 'wp-ms365-graph', $custom_css );
+		}
 	}
 
 	// ------------------------------------------------------------------
