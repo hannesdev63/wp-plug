@@ -1,0 +1,90 @@
+/* =============================================================================
+   WP Microsoft 365 Graph – Admin Styles
+   ============================================================================= */
+
+.ms365-settings__heading,
+.ms365-dashboard__heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+/* ---------- Connection status banner ---------- */
+.ms365-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+.ms365-status--connected {
+    background: #edfaed;
+    border: 1px solid #46b450;
+    color: #1e4620;
+}
+
+.ms365-status--disconnected {
+    background: #fef7f0;
+    border: 1px solid #f0a500;
+    color: #5c3000;
+}
+
+.ms365-status__dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.ms365-status--connected .ms365-status__dot {
+    background: #46b450;
+}
+
+.ms365-status--disconnected .ms365-status__dot {
+    background: #f0a500;
+}
+
+/* ---------- Settings form ---------- */
+.ms365-settings__form {
+    max-width: 700px;
+}
+
+/* ---------- Shortcode reference table ---------- */
+.ms365-shortcode-table {
+    max-width: 900px;
+    margin-top: 12px;
+}
+
+.ms365-shortcode-table code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* ---------- Dashboard cards ---------- */
+.ms365-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    max-width: 960px;
+}
+
+.ms365-card__title {
+    margin-top: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f1;
+    font-size: 16px;
+}
+
+.ms365-card--profile p {
+    font-size: 14px;
+    line-height: 1.8;
+}
