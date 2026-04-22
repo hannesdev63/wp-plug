@@ -1,25 +1,19 @@
-# CakePHP 3
+# WordPress plugin – dependencies & build artifacts
 
-/vendor/*
-/config/app.php
+# PHP / Composer
+/vendor/
+composer.lock
 
-/tmp/cache/models/*
-!/tmp/cache/models/empty
-/tmp/cache/persistent/*
-!/tmp/cache/persistent/empty
-/tmp/cache/views/*
-!/tmp/cache/views/empty
-/tmp/sessions/*
-!/tmp/sessions/empty
-/tmp/tests/*
-!/tmp/tests/empty
+# Node / npm (if tooling is added later)
+node_modules/
+/dist/
 
-/logs/*
-!/logs/empty
+# WordPress upload cache
+*.cache
 
-# CakePHP 2
+# macOS
+.DS_Store
 
-/app/tmp/*
-/app/Config/core.php
-/app/Config/database.php
-/vendors/*
+# PHPUnit
+.phpunit.result.cache
+/coverage/

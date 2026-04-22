@@ -1,0 +1,186 @@
+/* =============================================================================
+   WP Microsoft 365 Graph – Front-end Styles
+   ============================================================================= */
+
+/* ---------- Shared notices ---------- */
+.ms365-notice {
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+.ms365-notice--warning {
+    background: #fff8e5;
+    border-left: 4px solid #dba617;
+    color: #5c3d00;
+}
+
+.ms365-notice--error {
+    background: #fde8e8;
+    border-left: 4px solid #d63638;
+    color: #5c0000;
+}
+
+/* ---------- Calendar shortcode ---------- */
+.ms365-calendar {
+    margin: 16px 0;
+    font-size: 15px;
+}
+
+.ms365-calendar__title {
+    font-size: 1.3em;
+    margin-bottom: 12px;
+}
+
+.ms365-calendar__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ms365-calendar__item {
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    align-items: baseline;
+    gap: 8px 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ms365-calendar__item:last-child {
+    border-bottom: none;
+}
+
+.ms365-calendar__date {
+    color: #646970;
+    font-size: 0.875em;
+    white-space: nowrap;
+}
+
+.ms365-calendar__subject {
+    font-weight: 500;
+    color: inherit;
+}
+
+a.ms365-calendar__subject {
+    text-decoration: none;
+    color: #0073aa;
+}
+
+a.ms365-calendar__subject:hover {
+    text-decoration: underline;
+}
+
+.ms365-calendar__location {
+    font-size: 0.85em;
+    color: #646970;
+}
+
+.ms365-calendar__empty {
+    color: #646970;
+    font-style: italic;
+}
+
+/* ---------- Files shortcode ---------- */
+.ms365-files {
+    margin: 16px 0;
+    font-size: 15px;
+}
+
+.ms365-files__title {
+    font-size: 1.3em;
+    margin-bottom: 12px;
+}
+
+.ms365-files__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ms365-files__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ms365-files__item:last-child {
+    border-bottom: none;
+}
+
+.ms365-files__icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-repeat: no-repeat;
+    background-size: contain;
+    flex-shrink: 0;
+}
+
+.ms365-files__icon--folder::before {
+    content: "📁";
+    font-size: 18px;
+}
+
+.ms365-files__icon--file::before {
+    content: "📄";
+    font-size: 18px;
+}
+
+.ms365-files__name {
+    flex: 1;
+    font-weight: 500;
+    color: inherit;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+a.ms365-files__name {
+    color: #0073aa;
+}
+
+a.ms365-files__name:hover {
+    text-decoration: underline;
+}
+
+.ms365-files__meta {
+    font-size: 0.85em;
+    color: #646970;
+    white-space: nowrap;
+}
+
+.ms365-files__empty {
+    color: #646970;
+    font-style: italic;
+}
+
+/* ---------- Profile shortcode ---------- */
+.ms365-profile {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14px;
+}
+
+.ms365-profile__name {
+    font-weight: 600;
+}
+
+.ms365-profile__email {
+    color: #646970;
+}
+
+.ms365-profile__job-title {
+    font-style: italic;
+    color: #646970;
+}
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 480px) {
+    .ms365-calendar__item {
+        grid-template-columns: 1fr;
+    }
+}
