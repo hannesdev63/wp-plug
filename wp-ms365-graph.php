@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name:       WP Microsoft 365 Graph
+ * Plugin Name:       Graph Connect for WordPress
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
- * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
- * Version:           1.0.1
+ * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
+ * Version:           1.0.4
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            hannesdev63
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       wp-ms365-graph
+ * Text Domain:       graph-connect-for-wordpress
  * Domain Path:       /languages
  */
 
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'WP_MS365_VERSION',     '1.0.1' );
+define( 'WP_MS365_VERSION',     '1.0.4' );
 define( 'WP_MS365_PLUGIN_FILE', __FILE__ );
 define( 'WP_MS365_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'WP_MS365_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );

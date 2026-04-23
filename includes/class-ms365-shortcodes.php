@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class WP_MS365_Shortcodes {
+	const RENDER_COUNTS_OPTION = 'wp_ms365_shortcode_render_counts';
 
 	public function __construct() {
 		add_shortcode( 'ms365_calendar', array( $this, 'render_calendar' ) );
@@ -386,6 +387,8 @@ class WP_MS365_Shortcodes {
 	 * @return string HTML output.
 	 */
 	public function render_calendar( $atts ) {
+		$this->track_shortcode_render( 'ms365_calendar' );
+
 		$default_timezone = $this->get_default_calendar_timezone();
 		$wording          = $this->get_shortcode_wording();
 
@@ -459,78 +462,78 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$limit     = max( 1, (int) $atts['limit'] );
-		$past_days = max( 0, (int) $atts['past_days'] );
+		$limit           = max( 1, (int) $atts['limit'] );
+		$past_days       = max( 0, (int) $atts['past_days'] );
+		$configured_user = WP_MS365_Graph::get_configured_user();
 
-		// Pull a somewhat wider lookback window so currently-running events
-		// that started earlier are still visible when filtering by end time.
-		$query_limit     = min( max( $limit * 4, 30 ), 200 );
-		$query_past_days = max( $past_days, 30 );
-
-		$events = WP_MS365_Graph::get_calendar_events( $query_limit, $atts['timezone'], '', $query_past_days );
-
-		if ( is_wp_error( $events ) ) {
-			return $this->error_notice( $events->get_error_message() );
-		}
-
-		$items = isset( $events['value'] ) ? $events['value'] : array();
-
-		$threshold_timestamp = time() - ( $past_days * DAY_IN_SECONDS );
-		$items               = array_values(
-			array_filter(
-				$items,
-				function ( $event ) use ( $threshold_timestamp ) {
-					$end_raw = isset( $event['end']['dateTime'] ) ? (string) $event['end']['dateTime'] : '';
-					$end_ts  = strtotime( $end_raw );
-
-					if ( false === $end_ts ) {
-						return false;
-					}
-
-					// Upcoming means event has not finished yet. When past_days > 0,
-					// include recently finished events within that lookback window.
-					return $end_ts >= $threshold_timestamp;
-				}
+		$calendar_cache_key = $this->get_shortcode_cache_key(
+			'calendar',
+			array(
+				'limit'      => $limit,
+				'timezone'   => (string) $atts['timezone'],
+				'past_days'  => $past_days,
+				'categories' => $category_filter,
+				'user'       => $configured_user,
 			)
 		);
 
-		if ( ! empty( $category_filter ) ) {
-			$items = array_values(
-				array_filter(
-					$items,
-					function ( $event ) use ( $category_filter ) {
-						if ( empty( $event['categories'] ) || ! is_array( $event['categories'] ) ) {
-							return false;
-						}
-
-						$event_categories = array_map( 'strtolower', array_map( 'trim', $event['categories'] ) );
-						return count( array_intersect( $category_filter, $event_categories ) ) > 0;
-					}
-				)
-			);
+		$cache_busted = $this->is_cache_busted();
+		if ( $cache_busted ) {
+			delete_transient( $calendar_cache_key );
 		}
 
-		usort(
-			$items,
-			function ( $a, $b ) {
-				$a_start = isset( $a['start']['dateTime'] ) ? strtotime( (string) $a['start']['dateTime'] ) : false;
-				$b_start = isset( $b['start']['dateTime'] ) ? strtotime( (string) $b['start']['dateTime'] ) : false;
+		$items = $cache_busted ? false : get_transient( $calendar_cache_key );
+		if ( false === $items || ! is_array( $items ) ) {
+			// Fast-first-paint strategy: fetch a smaller horizon and stop early
+			// once enough rows are gathered for the requested output limit.
+			$query_limit_multiplier = empty( $category_filter ) ? 2 : 4;
+			$query_limit_max        = empty( $category_filter ) ? 60 : 120;
+			$query_limit            = min( max( $limit * $query_limit_multiplier, 12 ), $query_limit_max );
+			$query_past_days        = max( $past_days, 14 );
 
-				if ( false === $a_start && false === $b_start ) {
-					return 0;
-				}
-				if ( false === $a_start ) {
-					return 1;
-				}
-				if ( false === $b_start ) {
-					return -1;
-				}
-
-				return $a_start - $b_start;
+			$events = WP_MS365_Graph::get_calendar_events( $query_limit, $atts['timezone'], '', $query_past_days );
+			if ( is_wp_error( $events ) ) {
+				return $this->error_notice( $events->get_error_message() );
 			}
-		);
 
-		$items = array_slice( $items, 0, $limit );
+			$raw_items           = isset( $events['value'] ) && is_array( $events['value'] ) ? $events['value'] : array();
+			$threshold_timestamp = time() - ( $past_days * DAY_IN_SECONDS );
+			$items               = array();
+
+			foreach ( $raw_items as $event ) {
+				$event_timezone = isset( $event['start']['timeZone'] ) ? (string) $event['start']['timeZone'] : (string) $atts['timezone'];
+				$end_raw        = isset( $event['end']['dateTime'] ) ? (string) $event['end']['dateTime'] : '';
+				$end_ts         = $this->parse_graph_datetime_to_timestamp( $end_raw, $event_timezone );
+
+				if ( false === $end_ts ) {
+					continue;
+				}
+
+				// Upcoming means event has not finished yet. When past_days > 0,
+				// include recently finished events within that lookback window.
+				if ( $end_ts < $threshold_timestamp ) {
+					continue;
+				}
+
+				if ( ! empty( $category_filter ) ) {
+					if ( empty( $event['categories'] ) || ! is_array( $event['categories'] ) ) {
+						continue;
+					}
+
+					$event_categories = array_map( 'strtolower', array_map( 'trim', $event['categories'] ) );
+					if ( 0 === count( array_intersect( $category_filter, $event_categories ) ) ) {
+						continue;
+					}
+				}
+
+				$items[] = $event;
+				if ( count( $items ) >= $limit ) {
+					break;
+				}
+			}
+
+			set_transient( $calendar_cache_key, $items, $this->get_shortcode_cache_ttl() );
+		}
 
 		ob_start();
 		?>
@@ -802,7 +805,7 @@ class WP_MS365_Shortcodes {
 	 * Render a OneDrive file listing.
 	 *
 	 * Attributes:
-	 *   limit  – max number of items (default 10)
+	 *   limit  – max number of items (default 50)
 	 *   folder – OneDrive folder path (default: root)
 	 *   title  – heading text (default "My Files")
 	 *   show_headers – whether to render table headers (default true)
@@ -811,11 +814,13 @@ class WP_MS365_Shortcodes {
 	 * @return string HTML output.
 	 */
 	public function render_files( $atts ) {
+		$this->track_shortcode_render( 'ms365_files' );
+
 		$wording = $this->get_shortcode_wording();
 
 		$atts = shortcode_atts(
 			array(
-				'limit'  => 10,
+				'limit'  => 50,
 				'folder' => '',
 				'title'  => '',
 				'show_headers' => 'true',
@@ -830,22 +835,42 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$folder = trim( (string) $atts['folder'] );
-		$result = WP_MS365_Graph::get_drive_items( $folder, (int) $atts['limit'], WP_MS365_Graph::get_configured_user() );
-
-		if ( is_wp_error( $result ) ) {
-			return $this->error_notice( $result->get_error_message() );
-		}
-
-		$items = isset( $result['value'] ) ? $result['value'] : array();
-		$items = array_values(
-			array_filter(
-				$items,
-				function ( $item ) {
-					return ! isset( $item['folder'] );
-				}
+		$folder          = trim( (string) $atts['folder'] );
+		$limit           = max( 1, (int) $atts['limit'] );
+		$configured_user = WP_MS365_Graph::get_configured_user();
+		$files_cache_key = $this->get_shortcode_cache_key(
+			'files',
+			array(
+				'folder' => $folder,
+				'limit'  => $limit,
+				'user'   => $configured_user,
 			)
 		);
+
+		$cache_busted = $this->is_cache_busted();
+		if ( $cache_busted ) {
+			delete_transient( $files_cache_key );
+		}
+
+		$items = $cache_busted ? false : get_transient( $files_cache_key );
+		if ( false === $items || ! is_array( $items ) ) {
+			$result = WP_MS365_Graph::get_drive_items( $folder, $limit, $configured_user );
+			if ( is_wp_error( $result ) ) {
+				return $this->error_notice( $result->get_error_message() );
+			}
+
+			$items = isset( $result['value'] ) ? $result['value'] : array();
+			$items = array_values(
+				array_filter(
+					$items,
+					function ( $item ) {
+						return ! isset( $item['folder'] );
+					}
+				)
+			);
+
+			set_transient( $files_cache_key, $items, $this->get_shortcode_cache_ttl() );
+		}
 
 		ob_start();
 		?>
@@ -920,13 +945,15 @@ class WP_MS365_Shortcodes {
 	 * @return string HTML output.
 	 */
 	public function render_sharepoint_library( $atts ) {
+		$this->track_shortcode_render( 'ms365_sharepoint_library' );
+
 		$wording = $this->get_shortcode_wording();
 
 		$atts = shortcode_atts(
 			array(
 				'site_id'      => '',
 				'drive_id'     => '',
-				'limit'        => 10,
+				'limit'        => 50,
 				'folder'       => '',
 				'title'        => '',
 				'show_headers' => 'true',
@@ -948,21 +975,41 @@ class WP_MS365_Shortcodes {
 			return $this->not_connected_notice();
 		}
 
-		$result = WP_MS365_Graph::get_sharepoint_library_items( $site_id, $drive_id, $folder, (int) $atts['limit'] );
-
-		if ( is_wp_error( $result ) ) {
-			return $this->error_notice( $result->get_error_message() );
-		}
-
-		$items = isset( $result['value'] ) ? $result['value'] : array();
-		$items = array_values(
-			array_filter(
-				$items,
-				function ( $item ) {
-					return ! isset( $item['folder'] );
-				}
+		$limit = max( 1, (int) $atts['limit'] );
+		$sp_files_cache_key = $this->get_shortcode_cache_key(
+			'sharepoint_library',
+			array(
+				'site_id'  => $site_id,
+				'drive_id' => $drive_id,
+				'folder'   => $folder,
+				'limit'    => $limit,
 			)
 		);
+
+		$cache_busted = $this->is_cache_busted();
+		if ( $cache_busted ) {
+			delete_transient( $sp_files_cache_key );
+		}
+
+		$items = $cache_busted ? false : get_transient( $sp_files_cache_key );
+		if ( false === $items || ! is_array( $items ) ) {
+			$result = WP_MS365_Graph::get_sharepoint_library_items( $site_id, $drive_id, $folder, $limit );
+			if ( is_wp_error( $result ) ) {
+				return $this->error_notice( $result->get_error_message() );
+			}
+
+			$items = isset( $result['value'] ) ? $result['value'] : array();
+			$items = array_values(
+				array_filter(
+					$items,
+					function ( $item ) {
+						return ! isset( $item['folder'] );
+					}
+				)
+			);
+
+			set_transient( $sp_files_cache_key, $items, $this->get_shortcode_cache_ttl() );
+		}
 
 		ob_start();
 		?>
@@ -1042,6 +1089,8 @@ class WP_MS365_Shortcodes {
 	 * @return string HTML.
 	 */
 	public function render_profile( $atts ) {
+		$this->track_shortcode_render( 'ms365_profile' );
+
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
 		}
@@ -1207,6 +1256,101 @@ class WP_MS365_Shortcodes {
 		}
 
 		return $default;
+	}
+
+	/**
+	 * Return tracked shortcodes and default counts.
+	 *
+	 * @return array
+	 */
+	private static function get_tracked_shortcodes() {
+		return array(
+			'ms365_calendar'           => 0,
+			'ms365_files'              => 0,
+			'ms365_sharepoint_library' => 0,
+			'ms365_profile'            => 0,
+		);
+	}
+
+	/**
+	 * Get total render counts for each tracked shortcode.
+	 *
+	 * @return array
+	 */
+	public static function get_render_counts() {
+		$defaults = self::get_tracked_shortcodes();
+		$stored   = get_option( self::RENDER_COUNTS_OPTION, array() );
+
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
+		}
+
+		$counts = array();
+		foreach ( $defaults as $shortcode => $default_value ) {
+			$counts[ $shortcode ] = isset( $stored[ $shortcode ] ) ? max( 0, (int) $stored[ $shortcode ] ) : $default_value;
+		}
+
+		return $counts;
+	}
+
+	/**
+	 * Reset total render counts for all tracked shortcodes.
+	 *
+	 * @return void
+	 */
+	public static function reset_render_counts() {
+		update_option( self::RENDER_COUNTS_OPTION, self::get_tracked_shortcodes(), false );
+	}
+
+	/**
+	 * Increment total render counter for a shortcode.
+	 *
+	 * @param string $shortcode Shortcode tag.
+	 * @return void
+	 */
+	private function track_shortcode_render( $shortcode ) {
+		$shortcode = trim( (string) $shortcode );
+		$defaults  = self::get_tracked_shortcodes();
+
+		if ( '' === $shortcode || ! isset( $defaults[ $shortcode ] ) ) {
+			return;
+		}
+
+		$counts               = self::get_render_counts();
+		$counts[ $shortcode ] = isset( $counts[ $shortcode ] ) ? ( (int) $counts[ $shortcode ] + 1 ) : 1;
+
+		update_option( self::RENDER_COUNTS_OPTION, $counts, false );
+	}
+
+	/**
+	 * Build a stable cache key for shortcode payloads.
+	 *
+	 * @param  string $scope Cache scope.
+	 * @param  array  $payload Key payload.
+	 * @return string
+	 */
+	private function get_shortcode_cache_key( $scope, array $payload = array() ) {
+		return 'wp_ms365_sc_' . md5( (string) $scope . '|' . wp_json_encode( $payload ) );
+	}
+
+	/**
+	 * Whether the current request should bypass the shortcode cache.
+	 * Only honoured for users with manage_options capability.
+	 *
+	 * @return bool
+	 */
+	private function is_cache_busted() {
+		return isset( $_GET['ms365_cache_bust'] ) && current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Get shortcode cache TTL in seconds.
+	 *
+	 * @return int
+	 */
+	private function get_shortcode_cache_ttl() {
+		$ttl = (int) apply_filters( 'wp_ms365_shortcode_cache_ttl', 60 );
+		return max( 10, $ttl );
 	}
 
 	/**

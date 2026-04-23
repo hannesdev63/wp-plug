@@ -161,6 +161,7 @@ class WP_MS365_Auth {
 			'calendar_empty_text'      => '',
 			'calendar_header_date'     => '',
 			'calendar_header_event'    => '',
+			'calendar_header_duration' => '',
 			'calendar_header_location' => '',
 			'files_empty_text'         => '',
 			'files_header_file'        => '',

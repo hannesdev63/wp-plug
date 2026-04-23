@@ -145,6 +145,7 @@ class WP_MS365_Graph {
 	 * @return array|WP_Error
 	 */
 	public static function get_drive_items( $folder = '', $limit = 20, $user = '' ) {
+		$limit       = max( 1, (int) $limit );
 		$user_prefix = self::get_user_endpoint_prefix( $user );
 		$folder_path = trim( (string) $folder );
 
@@ -154,14 +155,52 @@ class WP_MS365_Graph {
 			$endpoint = $user_prefix . '/drive/root/children';
 		}
 
-		return self::get(
+		// Use an oversized page to reduce round-trips: fetch up to 3× the requested
+		// limit per page so folders don't eat into visible quota.
+		$page_size = min( max( $limit * 3, 20 ), 999 );
+
+		$result = self::get(
 			$endpoint,
 			array(
-				'$top'    => $limit,
-				'$select' => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
+				'$top'     => $page_size,
+				'$select'  => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
 				'$orderby' => 'name',
 			)
 		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$files      = array();
+		$page_guard = 0;
+
+		do {
+			$raw = isset( $result['value'] ) && is_array( $result['value'] ) ? $result['value'] : array();
+
+			foreach ( $raw as $item ) {
+				if ( isset( $item['folder'] ) ) {
+					continue; // skip folders
+				}
+				$files[] = $item;
+				if ( count( $files ) >= $limit ) {
+					break 2; // filled quota — stop paging
+				}
+			}
+
+			$next_link = isset( $result['@odata.nextLink'] ) ? (string) $result['@odata.nextLink'] : '';
+			if ( '' === $next_link ) {
+				break;
+			}
+
+			$result = self::request( 'GET', $next_link );
+			if ( is_wp_error( $result ) ) {
+				break;
+			}
+			$page_guard++;
+		} while ( $page_guard < 10 );
+
+		return array( 'value' => $files );
 	}
 
 	/**
@@ -220,36 +259,120 @@ class WP_MS365_Graph {
 			return new WP_Error( 'ms365_invalid_site_id', __( 'SharePoint site ID is required.', 'wp-ms365-graph' ) );
 		}
 
-		return self::get(
+		$result = self::get(
 			'/sites/' . rawurlencode( $site_id ) . '/drives',
-			array( '$select' => 'id,name,driveType,webUrl' )
+			array(
+				'$select' => 'id,name,driveType,webUrl',
+				'$top'    => 999,
+			)
 		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$all_drives = array();
+		if ( ! empty( $result['value'] ) && is_array( $result['value'] ) ) {
+			$all_drives = $result['value'];
+		}
+
+		$next_link = isset( $result['@odata.nextLink'] ) ? (string) $result['@odata.nextLink'] : '';
+		$page_guard = 0;
+
+		while ( '' !== $next_link && $page_guard < 20 ) {
+			$next_page = self::request( 'GET', $next_link );
+			if ( is_wp_error( $next_page ) ) {
+				return $next_page;
+			}
+
+			if ( ! empty( $next_page['value'] ) && is_array( $next_page['value'] ) ) {
+				$all_drives = array_merge( $all_drives, $next_page['value'] );
+			}
+
+			$next_link = isset( $next_page['@odata.nextLink'] ) ? (string) $next_page['@odata.nextLink'] : '';
+			$page_guard++;
+		}
+
+		if ( ! empty( $all_drives ) ) {
+			usort(
+				$all_drives,
+				function ( $a, $b ) {
+					$a_name = isset( $a['name'] ) ? (string) $a['name'] : '';
+					$b_name = isset( $b['name'] ) ? (string) $b['name'] : '';
+					return strcasecmp( $a_name, $b_name );
+				}
+			);
+		}
+
+		$result['value'] = $all_drives;
+		unset( $result['@odata.nextLink'] );
+
+		return $result;
 	}
 
 	public static function get_sharepoint_library_items( $site_id, $drive_id, $folder = '', $limit = 20 ) {
 		$site_id     = trim( (string) $site_id );
 		$drive_id    = trim( (string) $drive_id );
 		$folder_path = trim( (string) $folder );
+		$limit       = max( 1, (int) $limit );
 
 		if ( '' === $site_id || '' === $drive_id ) {
 			return new WP_Error( 'ms365_invalid_sharepoint_context', __( 'SharePoint site ID and drive ID are required.', 'wp-ms365-graph' ) );
 		}
 
-		$site_path  = '/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id );
+		$site_path = '/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id );
 		if ( '' !== $folder_path ) {
 			$endpoint = $site_path . '/root:/' . ltrim( $folder_path, '/' ) . ':/children';
 		} else {
 			$endpoint = $site_path . '/root/children';
 		}
 
-		return self::get(
+		// Use an oversized page to reduce round-trips when the folder contains
+		// sub-folders that would otherwise consume quota from the visible limit.
+		$page_size = min( max( $limit * 3, 20 ), 999 );
+
+		$result = self::get(
 			$endpoint,
 			array(
-				'$top'    => $limit,
-				'$select' => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
+				'$top'     => $page_size,
+				'$select'  => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
 				'$orderby' => 'name',
 			)
 		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$files      = array();
+		$page_guard = 0;
+
+		do {
+			$raw = isset( $result['value'] ) && is_array( $result['value'] ) ? $result['value'] : array();
+
+			foreach ( $raw as $item ) {
+				if ( isset( $item['folder'] ) ) {
+					continue; // skip folders
+				}
+				$files[] = $item;
+				if ( count( $files ) >= $limit ) {
+					break 2; // filled quota — stop paging
+				}
+			}
+
+			$next_link = isset( $result['@odata.nextLink'] ) ? (string) $result['@odata.nextLink'] : '';
+			if ( '' === $next_link ) {
+				break;
+			}
+
+			$result = self::request( 'GET', $next_link );
+			if ( is_wp_error( $result ) ) {
+				break;
+			}
+			$page_guard++;
+		} while ( $page_guard < 10 );
+
+		return array( 'value' => $files );
 	}
 
 	/**

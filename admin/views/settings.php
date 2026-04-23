@@ -13,6 +13,9 @@ $is_connected    = WP_MS365_Auth::is_connected();
 $settings        = WP_MS365_Auth::get_settings();
 $connected_user  = get_option( 'wp_ms365_connected_user', '' );
 $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_requested']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$operation       = isset( $_GET['op'] ) ? sanitize_key( wp_unslash( $_GET['op'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$op_status       = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['reason'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 ?>
 <div class="wrap ms365-settings">
 	<h1 class="ms365-settings__heading">
@@ -23,6 +26,53 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 	<?php if ( $token_requested ) : ?>
 		<div class="notice notice-success is-dismissible">
 			<p><?php esc_html_e( 'Requested a new token. A fresh app-only token will be retrieved automatically on the next Graph request.', 'wp-ms365-graph' ); ?></p>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( 'success' === $op_status && 'import' === $operation ) : ?>
+		<div class="notice notice-success is-dismissible">
+			<p><?php esc_html_e( 'Settings import completed successfully.', 'wp-ms365-graph' ); ?></p>
+		</div>
+	<?php elseif ( 'error' === $op_status && 'import' === $operation ) : ?>
+		<div class="notice notice-error is-dismissible">
+			<p>
+				<?php
+				switch ( $op_reason ) {
+					case 'missing_password':
+						esc_html_e( 'Import failed: please provide the decryption password.', 'wp-ms365-graph' );
+						break;
+					case 'missing_file':
+						esc_html_e( 'Import failed: please choose an encrypted settings file.', 'wp-ms365-graph' );
+						break;
+					case 'upload_failed':
+						esc_html_e( 'Import failed: file upload error.', 'wp-ms365-graph' );
+						break;
+					case 'invalid_size':
+						esc_html_e( 'Import failed: file size is invalid.', 'wp-ms365-graph' );
+						break;
+					case 'decrypt_failed':
+						esc_html_e( 'Import failed: invalid password or corrupted settings file.', 'wp-ms365-graph' );
+						break;
+					default:
+						esc_html_e( 'Import failed. Please verify your file and password.', 'wp-ms365-graph' );
+						break;
+				}
+				?>
+			</p>
+		</div>
+	<?php elseif ( 'error' === $op_status && 'export' === $operation ) : ?>
+		<div class="notice notice-error is-dismissible">
+			<p>
+				<?php
+				if ( 'missing_password' === $op_reason ) {
+					esc_html_e( 'Export failed: please provide an encryption password.', 'wp-ms365-graph' );
+				} elseif ( 'password_mismatch' === $op_reason ) {
+					esc_html_e( 'Export failed: the password and confirmation do not match.', 'wp-ms365-graph' );
+				} else {
+					esc_html_e( 'Export failed. Encryption may not be available on this server.', 'wp-ms365-graph' );
+				}
+				?>
+			</p>
 		</div>
 	<?php endif; ?>
 
@@ -88,39 +138,132 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials). No interactive Microsoft sign-in is required.', 'wp-ms365-graph' ); ?>
 	</p>
 
-	<!-- Usage guide -->
 	<hr />
-	<h2><?php esc_html_e( 'Shortcodes', 'wp-ms365-graph' ); ?></h2>
-	<p><?php esc_html_e( 'Use these shortcodes in any post, page, or widget:', 'wp-ms365-graph' ); ?></p>
-	<table class="widefat striped ms365-shortcode-table">
-		<thead>
-			<tr>
-				<th><?php esc_html_e( 'Shortcode', 'wp-ms365-graph' ); ?></th>
-				<th><?php esc_html_e( 'Description', 'wp-ms365-graph' ); ?></th>
-				<th><?php esc_html_e( 'Example', 'wp-ms365-graph' ); ?></th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td><code>[ms365_calendar]</code></td>
-				<td><?php esc_html_e( 'Displays upcoming calendar events from the configured specific user.', 'wp-ms365-graph' ); ?></td>
-				<td><code>[ms365_calendar limit="5" timezone="Europe/London" past_days="0" title="My Calendar"]</code></td>
-			</tr>
-			<tr>
-				<td><code>[ms365_files]</code></td>
-				<td><?php esc_html_e( 'Displays a file listing from the configured specific user OneDrive.', 'wp-ms365-graph' ); ?></td>
-				<td><code>[ms365_files limit="10" folder="Documents" title="My Files"]</code></td>
-			</tr>
-			<tr>
-				<td><code>[ms365_sharepoint_library]</code></td>
-				<td><?php esc_html_e( 'Displays a file listing from a SharePoint document library.', 'wp-ms365-graph' ); ?></td>
-				<td><code>[ms365_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]</code></td>
-			</tr>
-			<tr>
-				<td><code>[ms365_profile]</code></td>
-				<td><?php esc_html_e( 'Displays the configured specific Microsoft 365 user profile.', 'wp-ms365-graph' ); ?></td>
-				<td><code>[ms365_profile]</code></td>
-			</tr>
-		</tbody>
-	</table>
+	<h2><?php esc_html_e( 'Import / Export', 'wp-ms365-graph' ); ?></h2>
+	<p>
+		<?php esc_html_e( 'Export creates an encrypted file containing plugin settings and shortcode wording. Import decrypts and restores the same data.', 'wp-ms365-graph' ); ?>
+	</p>
+
+	<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; align-items:start;">
+		<div class="ms365-card" style="margin:0;">
+			<h3><?php esc_html_e( 'Export Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="wp_ms365_export_settings" />
+				<?php wp_nonce_field( 'wp_ms365_export_settings' ); ?>
+				<p>
+					<label for="wp_ms365_export_password"><strong><?php esc_html_e( 'Encryption password', 'wp-ms365-graph' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_export_password" name="export_password" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+				</p>
+				<p>
+					<label for="wp_ms365_export_password_confirm"><strong><?php esc_html_e( 'Confirm password', 'wp-ms365-graph' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_export_password_confirm" name="export_password_confirm" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+				</p>
+				<p class="description">
+					<?php esc_html_e( 'Keep this password safe. It is required to decrypt the export during import.', 'wp-ms365-graph' ); ?>
+				</p>
+				<?php submit_button( __( 'Export Encrypted File', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+			</form>
+		</div>
+
+		<div class="ms365-card" style="margin:0;">
+			<h3><?php esc_html_e( 'Import Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+				<input type="hidden" name="action" value="wp_ms365_import_settings" />
+				<?php wp_nonce_field( 'wp_ms365_import_settings' ); ?>
+				<p>
+					<label for="wp_ms365_import_file"><strong><?php esc_html_e( 'Encrypted settings file', 'wp-ms365-graph' ); ?></strong></label><br />
+					<label for="wp_ms365_import_file" class="ms365-dropzone" data-dropzone>
+						<span class="ms365-dropzone__title"><?php esc_html_e( 'Drag and drop your encrypted settings file here', 'wp-ms365-graph' ); ?></span>
+						<span class="ms365-dropzone__meta"><?php esc_html_e( 'or click to choose a file', 'wp-ms365-graph' ); ?></span>
+						<span class="ms365-dropzone__filename" data-dropzone-filename><?php esc_html_e( 'No file selected', 'wp-ms365-graph' ); ?></span>
+					</label>
+					<input type="file" id="wp_ms365_import_file" name="import_file" class="ms365-dropzone__input" accept=".json,.enc" required data-dropzone-input data-filename-target="[data-dropzone-filename]" />
+				</p>
+				<p>
+					<label for="wp_ms365_import_password"><strong><?php esc_html_e( 'Decryption password', 'wp-ms365-graph' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+				</p>
+				<p class="description">
+					<?php esc_html_e( 'Import replaces current plugin settings and wording values.', 'wp-ms365-graph' ); ?>
+				</p>
+				<?php submit_button( __( 'Import Encrypted File', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var root = document.querySelector('.ms365-settings');
+			if (!root) {
+				return;
+			}
+
+			root.querySelectorAll('input[type="password"]').forEach(function (input) {
+				if (input.dataset.toggleReady === '1') {
+					return;
+				}
+
+				var wrapper = document.createElement('span');
+				wrapper.className = 'ms365-password-field';
+				input.parentNode.insertBefore(wrapper, input);
+				wrapper.appendChild(input);
+
+				var button = document.createElement('button');
+				button.type = 'button';
+				button.className = 'button button-secondary ms365-password-toggle';
+				button.textContent = input.dataset.toggleLabelShow || 'Show';
+				button.setAttribute('aria-label', button.textContent);
+				button.addEventListener('click', function () {
+					var isHidden = input.type === 'password';
+					input.type = isHidden ? 'text' : 'password';
+					button.textContent = isHidden ? (input.dataset.toggleLabelHide || 'Hide') : (input.dataset.toggleLabelShow || 'Show');
+					button.setAttribute('aria-label', button.textContent);
+				});
+				wrapper.appendChild(button);
+				input.dataset.toggleReady = '1';
+			});
+
+			root.querySelectorAll('[data-dropzone]').forEach(function (dropzone) {
+				var fileInput = document.querySelector(dropzone.getAttribute('for') ? '#' + dropzone.getAttribute('for') : '');
+				var filenameNode = dropzone.querySelector('[data-dropzone-filename]');
+				if (!fileInput) {
+					return;
+				}
+
+				var updateFilename = function () {
+					var fileName = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '<?php echo esc_js( __( 'No file selected', 'wp-ms365-graph' ) ); ?>';
+					if (filenameNode) {
+						filenameNode.textContent = fileName;
+					}
+				};
+
+				['dragenter', 'dragover'].forEach(function (eventName) {
+					dropzone.addEventListener(eventName, function (event) {
+						event.preventDefault();
+						dropzone.classList.add('is-dragover');
+					});
+				});
+
+				['dragleave', 'dragend', 'drop'].forEach(function (eventName) {
+					dropzone.addEventListener(eventName, function (event) {
+						event.preventDefault();
+						dropzone.classList.remove('is-dragover');
+					});
+				});
+
+				dropzone.addEventListener('drop', function (event) {
+					var files = event.dataTransfer && event.dataTransfer.files;
+					if (!files || !files.length) {
+						return;
+					}
+
+					fileInput.files = files;
+					updateFilename();
+				});
+
+				fileInput.addEventListener('change', updateFilename);
+				updateFilename();
+			});
+		});
+	</script>
 </div>
