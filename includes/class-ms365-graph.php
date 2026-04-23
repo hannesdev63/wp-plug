@@ -90,12 +90,15 @@ class WP_MS365_Graph {
 	/**
 	 * Retrieve upcoming calendar events.
 	 *
-	 * @param  int    $limit    Maximum number of events to return.
-	 * @param  string $timezone IANA timezone string (default UTC).
+	 * @param  int    $limit     Maximum number of events to return.
+	 * @param  string $timezone  IANA timezone string (default UTC).
+	 * @param  string $user      Optional explicit user identifier.
+	 * @param  int    $past_days Include events that started in this many past days.
 	 * @return array|WP_Error   Array with 'value' key containing events.
 	 */
-	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '' ) {
-		$start = gmdate( 'Y-m-d\TH:i:s\Z' );
+	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '', $past_days = 0 ) {
+		$past_days   = max( 0, (int) $past_days );
+		$start       = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '-' . $past_days . ' days' ) );
 		$end   = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days' ) );
 		$user_prefix = self::get_user_endpoint_prefix( $user );
 
@@ -162,6 +165,94 @@ class WP_MS365_Graph {
 	}
 
 	/**
+	 * Retrieve items from a SharePoint document library drive.
+	 *
+	 * @param  string $site_id  SharePoint site ID.
+	 * @param  string $drive_id SharePoint library drive ID.
+	 * @param  string $folder   Relative path inside the drive (default: root).
+	 * @param  int    $limit    Maximum number of items to return.
+	 * @return array|WP_Error
+	 */
+
+	/**
+	 * Retrieve all SharePoint sites accessible to the app.
+	 *
+	 * @param  string $search Keyword to filter sites by (default: * = all).
+	 * @return array|WP_Error Array with 'value' key containing site objects.
+	 */
+	public static function get_sharepoint_sites( $search = '*' ) {
+		$search = trim( (string) $search );
+		if ( '' === $search ) {
+			$search = '*';
+		}
+
+		$result = self::get(
+			'/sites',
+			array(
+				'search'  => $search,
+				'$select' => 'id,displayName,name,webUrl',
+			)
+		);
+
+		// Sort sites alphabetically by displayName in PHP because the Graph
+		// /sites?search= endpoint does not support $orderby.
+		if ( ! is_wp_error( $result ) && ! empty( $result['value'] ) ) {
+			usort( $result['value'], function ( $a, $b ) {
+				return strcasecmp(
+					isset( $a['displayName'] ) ? $a['displayName'] : '',
+					isset( $b['displayName'] ) ? $b['displayName'] : ''
+				);
+			} );
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Retrieve all document library drives for a SharePoint site.
+	 *
+	 * @param  string $site_id SharePoint site ID.
+	 * @return array|WP_Error Array with 'value' key containing drive objects.
+	 */
+	public static function get_sharepoint_site_drives( $site_id ) {
+		$site_id = trim( (string) $site_id );
+		if ( '' === $site_id ) {
+			return new WP_Error( 'ms365_invalid_site_id', __( 'SharePoint site ID is required.', 'wp-ms365-graph' ) );
+		}
+
+		return self::get(
+			'/sites/' . rawurlencode( $site_id ) . '/drives',
+			array( '$select' => 'id,name,driveType,webUrl' )
+		);
+	}
+
+	public static function get_sharepoint_library_items( $site_id, $drive_id, $folder = '', $limit = 20 ) {
+		$site_id     = trim( (string) $site_id );
+		$drive_id    = trim( (string) $drive_id );
+		$folder_path = trim( (string) $folder );
+
+		if ( '' === $site_id || '' === $drive_id ) {
+			return new WP_Error( 'ms365_invalid_sharepoint_context', __( 'SharePoint site ID and drive ID are required.', 'wp-ms365-graph' ) );
+		}
+
+		$site_path  = '/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id );
+		if ( '' !== $folder_path ) {
+			$endpoint = $site_path . '/root:/' . ltrim( $folder_path, '/' ) . ':/children';
+		} else {
+			$endpoint = $site_path . '/root/children';
+		}
+
+		return self::get(
+			$endpoint,
+			array(
+				'$top'    => $limit,
+				'$select' => 'id,name,size,lastModifiedDateTime,webUrl,file,folder',
+				'$orderby' => 'name',
+			)
+		);
+	}
+
+	/**
 	 * Retrieve basic metadata for a OneDrive item.
 	 *
 	 * @param  string $item_id OneDrive item ID.
@@ -177,6 +268,29 @@ class WP_MS365_Graph {
 		$user_prefix = self::get_user_endpoint_prefix( $user );
 		return self::get(
 			$user_prefix . '/drive/items/' . rawurlencode( $item_id ),
+			array( '$select' => 'id,name,size,file' )
+		);
+	}
+
+	/**
+	 * Retrieve basic metadata for a SharePoint library item.
+	 *
+	 * @param  string $site_id  SharePoint site ID.
+	 * @param  string $drive_id SharePoint library drive ID.
+	 * @param  string $item_id  Drive item ID.
+	 * @return array|WP_Error
+	 */
+	public static function get_sharepoint_library_item_info( $site_id, $drive_id, $item_id ) {
+		$site_id  = trim( (string) $site_id );
+		$drive_id = trim( (string) $drive_id );
+		$item_id  = trim( (string) $item_id );
+
+		if ( '' === $site_id || '' === $drive_id || '' === $item_id ) {
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'wp-ms365-graph' ) );
+		}
+
+		return self::get(
+			'/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id ) . '/items/' . rawurlencode( $item_id ),
 			array( '$select' => 'id,name,size,file' )
 		);
 	}
@@ -234,6 +348,61 @@ class WP_MS365_Graph {
 
 		$user_prefix = self::get_user_endpoint_prefix( $user );
 		$url         = self::build_url( $user_prefix . '/drive/items/' . rawurlencode( $item_id ) . '/content' );
+
+		$args = array(
+			'method'      => 'GET',
+			'timeout'     => 30,
+			'redirection' => 0,
+			'headers'     => array(
+				'Authorization' => 'Bearer ' . $token,
+				'Accept'        => 'application/json',
+			),
+		);
+
+		$response = wp_remote_request( $url, $args );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$code     = wp_remote_retrieve_response_code( $response );
+		$location = wp_remote_retrieve_header( $response, 'location' );
+
+		if ( in_array( $code, array( 301, 302, 307, 308 ), true ) && ! empty( $location ) ) {
+			return esc_url_raw( $location );
+		}
+
+		return new WP_Error(
+			'ms365_download_unavailable',
+			__( 'Unable to create download link for this file.', 'wp-ms365-graph' ),
+			array( 'status' => $code )
+		);
+	}
+
+	/**
+	 * Resolve a direct download URL for a SharePoint library item.
+	 *
+	 * @param  string $site_id  SharePoint site ID.
+	 * @param  string $drive_id SharePoint library drive ID.
+	 * @param  string $item_id  Drive item ID.
+	 * @return string|WP_Error Redirect target URL or WP_Error.
+	 */
+	public static function get_sharepoint_library_item_download_url( $site_id, $drive_id, $item_id ) {
+		$site_id  = trim( (string) $site_id );
+		$drive_id = trim( (string) $drive_id );
+		$item_id  = trim( (string) $item_id );
+
+		if ( '' === $site_id || '' === $drive_id || '' === $item_id ) {
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'wp-ms365-graph' ) );
+		}
+
+		$token = WP_MS365_Auth::get_access_token();
+		if ( ! $token ) {
+			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' ) );
+		}
+
+		$url = self::build_url(
+			'/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id ) . '/items/' . rawurlencode( $item_id ) . '/content'
+		);
 
 		$args = array(
 			'method'      => 'GET',

@@ -11,6 +11,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 | **App-Only Authentication** | OAuth 2.0 client credentials flow (no interactive sign-in) |
 | **Calendar Events** | `[ms365_calendar]` shortcode – renders upcoming events from Outlook Calendar |
 | **OneDrive Files** | `[ms365_files]` shortcode – renders a file/folder listing from OneDrive |
+| **SharePoint Library Files** | `[ms365_sharepoint_library]` shortcode – renders a file/folder listing from a SharePoint document library |
 | **User Profile** | `[ms365_profile]` shortcode – displays the selected user's name, email and job title |
 | **Specific User Targeting** | Configure a Microsoft user (UPN or object ID); profile, calendar, and OneDrive are queried for that user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
@@ -23,8 +24,8 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - WordPress 5.9+
 - PHP 7.4+
 - An **Azure Active Directory** app registration with the following:
-   - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`
-  - A **Client Secret** generated in *Certificates & Secrets*
+   - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`
+   - A **Client Secret** generated in *Certificates & Secrets*
 
 ---
 
@@ -52,6 +53,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
    - `User.Read.All` (Application)
    - `Calendars.Read` (Application)
    - `Files.Read.All` (Application)
+   - `Sites.Read.All` (Application, required for SharePoint library shortcode)
 7. Click **Grant admin consent**.
 
 ### 2 – Enter Credentials in WordPress
@@ -121,6 +123,24 @@ Displays a OneDrive file/folder listing from the configured specific user.
 
 ```
 [ms365_files limit="20" folder="Documents" title="Project Docs"]
+```
+
+---
+
+### `[ms365_sharepoint_library]`
+
+Displays a SharePoint document library file/folder listing.
+
+| Attribute | Default | Description |
+|---|---|---|
+| `site_id` | *(required)* | SharePoint site ID |
+| `drive_id` | *(required)* | Document library drive ID |
+| `limit` | `10` | Maximum number of items |
+| `folder` | *(root)* | Library folder path (e.g. `Shared Documents/Team`) |
+| `title` | *(empty)* | Heading text |
+
+```
+[ms365_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]
 ```
 
 ---
