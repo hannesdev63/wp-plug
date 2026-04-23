@@ -35,6 +35,12 @@ $is_specific_user = '' !== $configured_user;
 		</div>
 	<?php else : ?>
 
+		<?php if ( isset( $_GET['counts_reset'] ) && '1' === (string) $_GET['counts_reset'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+			<div class="notice notice-success is-dismissible">
+				<p><?php esc_html_e( 'Shortcode render counters were reset.', 'wp-ms365-graph' ); ?></p>
+			</div>
+		<?php endif; ?>
+
 		<!-- User profile card -->
 		<?php $selected_user = WP_MS365_Graph::get_target_user_profile(); ?>
 		<?php if ( ! is_wp_error( $selected_user ) ) : ?>
@@ -185,6 +191,43 @@ $is_specific_user = '' !== $configured_user;
 					</tbody>
 				</table>
 			<?php endif; ?>
+		</div>
+
+		<!-- Shortcode render usage -->
+		<div class="ms365-card ms365-card--usage">
+			<h2 class="ms365-card__title"><?php esc_html_e( 'Shortcode Render Totals', 'wp-ms365-graph' ); ?></h2>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:12px;">
+				<input type="hidden" name="action" value="wp_ms365_reset_shortcode_counts" />
+				<?php wp_nonce_field( 'wp_ms365_reset_shortcode_counts' ); ?>
+				<button type="submit" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Reset all shortcode render counters?', 'wp-ms365-graph' ) ); ?>');">
+					<?php esc_html_e( 'Reset Counters', 'wp-ms365-graph' ); ?>
+				</button>
+			</form>
+			<?php
+			$render_counts = WP_MS365_Shortcodes::get_render_counts();
+			$render_labels = array(
+				'ms365_calendar'           => '[ms365_calendar]',
+				'ms365_files'              => '[ms365_files]',
+				'ms365_sharepoint_library' => '[ms365_sharepoint_library]',
+				'ms365_profile'            => '[ms365_profile]',
+			);
+			?>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Shortcode', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Total renders', 'wp-ms365-graph' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $render_labels as $shortcode => $label ) : ?>
+					<tr>
+						<td><code><?php echo esc_html( $label ); ?></code></td>
+						<td><?php echo esc_html( number_format_i18n( isset( $render_counts[ $shortcode ] ) ? (int) $render_counts[ $shortcode ] : 0 ) ); ?></td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
 		</div>
 
 	<?php endif; ?>

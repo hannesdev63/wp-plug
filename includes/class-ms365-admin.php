@@ -12,13 +12,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class WP_MS365_Admin {
+	const SETTINGS_EXPORT_FILENAME_PREFIX = 'wp-ms365-settings';
+	const SETTINGS_EXPORT_FORMAT          = 'wp-ms365-encrypted-settings';
+	const SETTINGS_EXPORT_VERSION         = 1;
 
 	public function __construct() {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_init',            array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_wp_ms365_request_new_token', array( $this, 'handle_request_new_token' ) );
+		add_action( 'admin_post_wp_ms365_export_settings', array( $this, 'handle_export_settings' ) );
+		add_action( 'admin_post_wp_ms365_import_settings', array( $this, 'handle_import_settings' ) );
 		add_action( 'admin_post_wp_ms365_disconnect', array( $this, 'handle_request_new_token' ) );
+		add_action( 'admin_post_wp_ms365_reset_shortcode_counts', array( $this, 'handle_reset_shortcode_counts' ) );
 		add_action( 'wp_ajax_wp_ms365_sp_site_drives', array( $this, 'ajax_get_sharepoint_site_drives' ) );
 	}
 
@@ -250,6 +256,7 @@ class WP_MS365_Admin {
 		$tabs = array(
 			'dashboard'  => __( 'Dashboard', 'wp-ms365-graph' ),
 			'settings'   => __( 'Settings', 'wp-ms365-graph' ),
+			'documentation' => __( 'Documentation', 'wp-ms365-graph' ),
 			'sp-explorer'=> __( 'SP Explorer', 'wp-ms365-graph' ),
 			'wording'    => __( 'Wording', 'wp-ms365-graph' ),
 			'diagnostics'=> __( 'Diagnostics', 'wp-ms365-graph' ),
@@ -282,6 +289,9 @@ class WP_MS365_Admin {
 		switch ( $tab ) {
 			case 'settings':
 				$this->render_page();
+				break;
+			case 'documentation':
+				$this->render_documentation();
 				break;
 			case 'sp-explorer':
 				$this->render_sharepoint_explorer();
@@ -355,6 +365,17 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Render the shortcode documentation page.
+	 */
+	public function render_documentation() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		$this->render_specific_user_required_notice();
+		include WP_MS365_PLUGIN_DIR . 'admin/views/documentation.php';
+	}
+
+	/**
 	 * Show a warning when Specific User is missing in app-only mode.
 	 *
 	 * @return void
@@ -416,14 +437,26 @@ class WP_MS365_Admin {
 			return;
 		}
 
-		$type     = ( 'client_secret' === $key ) ? 'password' : 'text';
+		$type          = ( 'client_secret' === $key ) ? 'password' : 'text';
+		$extra_class   = ( 'client_secret' === $key ) ? ' ms365-password-input' : '';
+		$extra_data    = '';
+
+		if ( 'client_secret' === $key ) {
+			$extra_data = sprintf(
+				' data-toggle-label-show="%1$s" data-toggle-label-hide="%2$s"',
+				esc_attr__( 'Show', 'wp-ms365-graph' ),
+				esc_attr__( 'Hide', 'wp-ms365-graph' )
+			);
+		}
 
 		printf(
-			'<input type="%s" id="wp_ms365_%s" name="wp_ms365_settings[%s]" value="%s" class="regular-text" autocomplete="off" />',
+			'<input type="%s" id="wp_ms365_%s" name="wp_ms365_settings[%s]" value="%s" class="regular-text%s" autocomplete="off"%s />',
 			esc_attr( $type ),
 			esc_attr( $key ),
 			esc_attr( $key ),
-			esc_attr( $value )
+			esc_attr( $value ),
+			esc_attr( $extra_class ),
+			$extra_data
 		);
 
 		if ( 'specific_user' === $key ) {
@@ -483,6 +516,261 @@ class WP_MS365_Admin {
 					'page'            => 'wp-ms365-graph',
 					'tab'             => 'settings',
 					'token_requested' => '1',
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Export encrypted plugin settings bundle.
+	 *
+	 * @return void
+	 */
+	public function handle_export_settings() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+		}
+
+		check_admin_referer( 'wp_ms365_export_settings' );
+
+		$password         = isset( $_POST['export_password'] ) ? (string) wp_unslash( $_POST['export_password'] ) : '';
+		$password_confirm = isset( $_POST['export_password_confirm'] ) ? (string) wp_unslash( $_POST['export_password_confirm'] ) : '';
+		if ( '' === $password ) {
+			$this->redirect_to_settings_with_import_export_notice( 'export', 'error', 'missing_password' );
+		}
+
+		if ( $password !== $password_confirm ) {
+			$this->redirect_to_settings_with_import_export_notice( 'export', 'error', 'password_mismatch' );
+		}
+
+		$settings = WP_MS365_Auth::get_settings();
+		$payload  = $this->encrypt_settings_blob( $settings, $password );
+
+		if ( is_wp_error( $payload ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'export', 'error', 'encryption_failed' );
+		}
+
+		$timestamp = gmdate( 'Ymd_His' );
+		$filename  = self::SETTINGS_EXPORT_FILENAME_PREFIX . '_' . $timestamp . '.enc.json';
+
+		nocache_headers();
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $filename ) . '"' );
+		echo $payload;
+		exit;
+	}
+
+	/**
+	 * Import encrypted plugin settings bundle.
+	 *
+	 * @return void
+	 */
+	public function handle_import_settings() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+		}
+
+		check_admin_referer( 'wp_ms365_import_settings' );
+
+		$password = isset( $_POST['import_password'] ) ? (string) wp_unslash( $_POST['import_password'] ) : '';
+		if ( '' === $password ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'missing_password' );
+		}
+
+		if ( empty( $_FILES['import_file']['tmp_name'] ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'missing_file' );
+		}
+
+		if ( ! empty( $_FILES['import_file']['error'] ) && UPLOAD_ERR_OK !== (int) $_FILES['import_file']['error'] ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'upload_failed' );
+		}
+
+		$tmp_file = (string) $_FILES['import_file']['tmp_name'];
+		if ( ! is_readable( $tmp_file ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'unreadable_file' );
+		}
+
+		$file_size = isset( $_FILES['import_file']['size'] ) ? (int) $_FILES['import_file']['size'] : 0;
+		if ( $file_size <= 0 || $file_size > 1024 * 1024 ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'invalid_size' );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		$encrypted_blob = file_get_contents( $tmp_file );
+		if ( false === $encrypted_blob || '' === trim( (string) $encrypted_blob ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'invalid_file' );
+		}
+
+		$decrypted_settings = $this->decrypt_settings_blob( (string) $encrypted_blob, $password );
+		if ( is_wp_error( $decrypted_settings ) || ! is_array( $decrypted_settings ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'decrypt_failed' );
+		}
+
+		$clean = $this->sanitize_settings( $decrypted_settings );
+		update_option( 'wp_ms365_settings', $clean, false );
+
+		$this->redirect_to_settings_with_import_export_notice( 'import', 'success' );
+	}
+
+	/**
+	 * Redirect to the settings tab with an import/export status indicator.
+	 *
+	 * @param string $operation Operation key (import|export).
+	 * @param string $status    Status key (success|error).
+	 * @param string $reason    Optional error reason.
+	 * @return void
+	 */
+	private function redirect_to_settings_with_import_export_notice( $operation, $status, $reason = '' ) {
+		$args = array(
+			'page'   => 'wp-ms365-graph',
+			'tab'    => 'settings',
+			'op'     => sanitize_key( (string) $operation ),
+			'status' => sanitize_key( (string) $status ),
+		);
+
+		if ( '' !== $reason ) {
+			$args['reason'] = sanitize_key( (string) $reason );
+		}
+
+		wp_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Encrypt settings array using password-derived key.
+	 *
+	 * @param  array  $settings Settings payload.
+	 * @param  string $password Export password.
+	 * @return string|WP_Error
+	 */
+	private function encrypt_settings_blob( array $settings, $password ) {
+		if ( ! function_exists( 'openssl_encrypt' ) ) {
+			return new WP_Error( 'ms365_encrypt_unavailable', __( 'OpenSSL is not available.', 'wp-ms365-graph' ) );
+		}
+
+		$plaintext = wp_json_encode(
+			array(
+				'format'      => self::SETTINGS_EXPORT_FORMAT,
+				'version'     => self::SETTINGS_EXPORT_VERSION,
+				'exported_at' => gmdate( 'c' ),
+				'settings'    => $settings,
+			)
+		);
+
+		if ( false === $plaintext || '' === $plaintext ) {
+			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to encode settings payload.', 'wp-ms365-graph' ) );
+		}
+
+		$iterations = 120000;
+
+		try {
+			$salt = random_bytes( 16 );
+			$iv   = random_bytes( 16 );
+		} catch ( Exception $e ) {
+			return new WP_Error( 'ms365_export_random_failed', __( 'Failed to generate encryption material.', 'wp-ms365-graph' ) );
+		}
+
+		$key        = hash_pbkdf2( 'sha256', (string) $password, $salt, $iterations, 32, true );
+		$ciphertext = openssl_encrypt( $plaintext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		if ( false === $ciphertext ) {
+			return new WP_Error( 'ms365_export_encrypt_failed', __( 'Failed to encrypt settings payload.', 'wp-ms365-graph' ) );
+		}
+
+		$hmac = hash_hmac( 'sha256', $ciphertext, $key, true );
+
+		$package = array(
+			'format'     => self::SETTINGS_EXPORT_FORMAT,
+			'version'    => self::SETTINGS_EXPORT_VERSION,
+			'cipher'     => 'aes-256-cbc',
+			'kdf'        => 'pbkdf2-sha256',
+			'iterations' => $iterations,
+			'salt'       => base64_encode( $salt ),
+			'iv'         => base64_encode( $iv ),
+			'hmac'       => base64_encode( $hmac ),
+			'data'       => base64_encode( $ciphertext ),
+		);
+
+		$encoded_package = wp_json_encode( $package, JSON_PRETTY_PRINT );
+		if ( false === $encoded_package || '' === $encoded_package ) {
+			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to finalize encrypted settings payload.', 'wp-ms365-graph' ) );
+		}
+
+		return $encoded_package;
+	}
+
+	/**
+	 * Decrypt encrypted settings payload and return settings array.
+	 *
+	 * @param  string $encrypted_blob Encrypted JSON package.
+	 * @param  string $password       Import password.
+	 * @return array|WP_Error
+	 */
+	private function decrypt_settings_blob( $encrypted_blob, $password ) {
+		if ( ! function_exists( 'openssl_decrypt' ) ) {
+			return new WP_Error( 'ms365_decrypt_unavailable', __( 'OpenSSL is not available.', 'wp-ms365-graph' ) );
+		}
+
+		$package = json_decode( (string) $encrypted_blob, true );
+		if ( ! is_array( $package ) ) {
+			return new WP_Error( 'ms365_import_invalid_json', __( 'Invalid settings file format.', 'wp-ms365-graph' ) );
+		}
+
+		if ( ! isset( $package['format'] ) || self::SETTINGS_EXPORT_FORMAT !== (string) $package['format'] ) {
+			return new WP_Error( 'ms365_import_invalid_format', __( 'Unsupported settings file format.', 'wp-ms365-graph' ) );
+		}
+
+		$iterations = isset( $package['iterations'] ) ? (int) $package['iterations'] : 0;
+		$salt       = isset( $package['salt'] ) ? base64_decode( (string) $package['salt'], true ) : false;
+		$iv         = isset( $package['iv'] ) ? base64_decode( (string) $package['iv'], true ) : false;
+		$hmac       = isset( $package['hmac'] ) ? base64_decode( (string) $package['hmac'], true ) : false;
+		$ciphertext = isset( $package['data'] ) ? base64_decode( (string) $package['data'], true ) : false;
+
+		if ( $iterations < 50000 || false === $salt || false === $iv || false === $hmac || false === $ciphertext ) {
+			return new WP_Error( 'ms365_import_invalid_payload', __( 'The settings file is corrupted or incomplete.', 'wp-ms365-graph' ) );
+		}
+
+		$key           = hash_pbkdf2( 'sha256', (string) $password, $salt, $iterations, 32, true );
+		$computed_hmac = hash_hmac( 'sha256', $ciphertext, $key, true );
+
+		if ( ! hash_equals( $hmac, $computed_hmac ) ) {
+			return new WP_Error( 'ms365_import_invalid_password', __( 'Invalid password or tampered settings file.', 'wp-ms365-graph' ) );
+		}
+
+		$plaintext = openssl_decrypt( $ciphertext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+		if ( false === $plaintext || '' === $plaintext ) {
+			return new WP_Error( 'ms365_import_decrypt_failed', __( 'Unable to decrypt the settings file.', 'wp-ms365-graph' ) );
+		}
+
+		$decoded = json_decode( $plaintext, true );
+		if ( ! is_array( $decoded ) || empty( $decoded['settings'] ) || ! is_array( $decoded['settings'] ) ) {
+			return new WP_Error( 'ms365_import_invalid_content', __( 'Decrypted settings payload is invalid.', 'wp-ms365-graph' ) );
+		}
+
+		return $decoded['settings'];
+	}
+
+	/**
+	 * Handle reset request for shortcode render counters.
+	 *
+	 * @return void
+	 */
+	public function handle_reset_shortcode_counts() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+		}
+
+		check_admin_referer( 'wp_ms365_reset_shortcode_counts' );
+		WP_MS365_Shortcodes::reset_render_counts();
+
+		wp_redirect(
+			add_query_arg(
+				array(
+					'page'         => 'wp-ms365-graph',
+					'tab'          => 'dashboard',
+					'counts_reset' => '1',
 				),
 				admin_url( 'admin.php' )
 			)
