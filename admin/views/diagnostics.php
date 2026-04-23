@@ -34,14 +34,14 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 // phpcs:enable
 ?>
 
-<div class="wrap ms365-diagnostics">
-	<h1 class="ms365-diagnostics__heading">
-		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
+<div class="wrap msgraph_diagnostics">
+	<h1 class="msgraph_diagnostics__heading">
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<!-- System Information -->
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'System Information', 'wp-ms365-graph' ); ?></h2>
 		<table class="form-table">
 			<tr>
@@ -71,7 +71,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	</div>
 
 	<!-- Authentication Configuration -->
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'Authentication Configuration', 'wp-ms365-graph' ); ?></h2>
 		<table class="form-table">
 			<tr>
@@ -133,7 +133,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 	<!-- Live Graph Checks -->
 	<?php if ( '' !== $configured_user ) : ?>
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'Live Graph Checks', 'wp-ms365-graph' ); ?></h2>
 		<?php if ( ! $is_connected ) : ?>
 			<p class="description"><?php esc_html_e( 'Connect the plugin first to run live checks.', 'wp-ms365-graph' ); ?></p>
@@ -235,7 +235,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	<?php endif; ?>
 
 	<!-- Application Scope -->
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'Token Scope', 'wp-ms365-graph' ); ?></h2>
 		<p><?php esc_html_e( 'The plugin requests an app-only token using this scope:', 'wp-ms365-graph' ); ?></p>
 		<code><?php echo esc_html( WP_MS365_Auth::SCOPES ); ?></code>
@@ -247,7 +247,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	</div>
 
 	<!-- Debug Logs -->
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'Debug Logs', 'wp-ms365-graph' ); ?></h2>
 
 		<?php if ( ! $debug_enabled ) : ?>
@@ -278,7 +278,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	</div>
 
 	<!-- Troubleshooting Tips -->
-	<div class="ms365-card">
+	<div class="msgraph_card">
 		<h2><?php esc_html_e( 'Troubleshooting Tips', 'wp-ms365-graph' ); ?></h2>
 		<ul>
 			<li><?php esc_html_e( 'After changing app permissions in Azure, grant admin consent and clear plugin connection once so a new app-only token is fetched.', 'wp-ms365-graph' ); ?></li>

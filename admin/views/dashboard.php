@@ -13,11 +13,19 @@ $is_connected = WP_MS365_Auth::is_connected();
 $configured_user = WP_MS365_Graph::get_configured_user();
 $is_specific_user = '' !== $configured_user;
 ?>
-<div class="wrap ms365-dashboard">
-	<h1 class="ms365-dashboard__heading">
-		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
+<div class="wrap msgraph_dashboard">
+	<h1 class="msgraph_dashboard__heading">
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
 	</h1>
+	<p class="description">
+		<?php
+		printf(
+			esc_html__( 'Version %s', 'wp-ms365-graph' ),
+			esc_html( WP_MS365_VERSION )
+		);
+		?>
+	</p>
 
 	<?php if ( ! $is_connected ) : ?>
 		<div class="notice notice-warning">
@@ -44,26 +52,26 @@ $is_specific_user = '' !== $configured_user;
 		<!-- User profile card -->
 		<?php $selected_user = WP_MS365_Graph::get_target_user_profile(); ?>
 		<?php if ( ! is_wp_error( $selected_user ) ) : ?>
-		<div class="ms365-card ms365-card--profile">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+		<div class="msgraph_card msgraph_card--profile">
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
 			<p>
 				<strong><?php echo esc_html( isset( $selected_user['displayName'] ) ? $selected_user['displayName'] : '' ); ?></strong><br />
 				<?php echo esc_html( isset( $selected_user['mail'] ) ? $selected_user['mail'] : ( isset( $selected_user['userPrincipalName'] ) ? $selected_user['userPrincipalName'] : '' ) ); ?><br />
 				<?php if ( ! empty( $selected_user['jobTitle'] ) ) : ?>
 					<em><?php echo esc_html( $selected_user['jobTitle'] ); ?></em><br />
 				<?php endif; ?>
-				<?php if ( $is_specific_user ) : ?>
+				<!-- <?php if ( $is_specific_user ) : ?>
 					<?php /* translators: %s: configured user value */ ?>
 					<span><?php printf( esc_html__( 'Configured user: %s', 'wp-ms365-graph' ), esc_html( $configured_user ) ); ?></span>
 				<?php else : ?>
 					<span><?php esc_html_e( 'Set Specific User in plugin settings to query Microsoft Graph.', 'wp-ms365-graph' ); ?></span>
-				<?php endif; ?>
+				<?php endif; ?> -->
 			</p>
 		</div>
 		<?php else : ?>
-		<div class="ms365-card ms365-card--profile">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
-			<p class="ms365-notice ms365-notice--error">
+		<div class="msgraph_card msgraph_card--profile">
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+			<p class="msgraph_notice msgraph_notice--error">
 				<?php echo esc_html( $selected_user->get_error_message() ); ?>
 				<?php if ( $is_specific_user ) : ?>
 					<br /><br />
@@ -74,15 +82,15 @@ $is_specific_user = '' !== $configured_user;
 		<?php endif; ?>
 
 		<!-- Calendar events -->
-		<div class="ms365-card ms365-card--calendar">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'wp-ms365-graph' ); ?></h2>
+		<div class="msgraph_card msgraph_card--calendar">
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$events = WP_MS365_Graph::get_calendar_events( 5 );
 			if ( is_wp_error( $events ) ) :
 				$error_msg = $events->get_error_message();
 				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error">
+				<p class="msgraph_notice msgraph_notice--error">
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
@@ -129,15 +137,15 @@ $is_specific_user = '' !== $configured_user;
 		</div>
 
 		<!-- OneDrive files -->
-		<div class="ms365-card ms365-card--files">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
+		<div class="msgraph_card msgraph_card--files">
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
 			<?php
 			$drive = WP_MS365_Graph::get_drive_items( '', 10 );
 			if ( is_wp_error( $drive ) ) :
 				$error_msg = $drive->get_error_message();
 				$is_access_denied = ( strpos( $error_msg, '403' ) !== false || strpos( $error_msg, 'Access Denied' ) !== false );
 			?>
-				<p class="ms365-notice ms365-notice--error">
+				<p class="msgraph_notice msgraph_notice--error">
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
@@ -194,8 +202,8 @@ $is_specific_user = '' !== $configured_user;
 		</div>
 
 		<!-- Shortcode render usage -->
-		<div class="ms365-card ms365-card--usage">
-			<h2 class="ms365-card__title"><?php esc_html_e( 'Shortcode Render Totals', 'wp-ms365-graph' ); ?></h2>
+		<div class="msgraph_card msgraph_card--usage">
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Shortcode Render Totals', 'wp-ms365-graph' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:12px;">
 				<input type="hidden" name="action" value="wp_ms365_reset_shortcode_counts" />
 				<?php wp_nonce_field( 'wp_ms365_reset_shortcode_counts' ); ?>
@@ -206,10 +214,9 @@ $is_specific_user = '' !== $configured_user;
 			<?php
 			$render_counts = WP_MS365_Shortcodes::get_render_counts();
 			$render_labels = array(
-				'ms365_calendar'           => '[ms365_calendar]',
-				'ms365_files'              => '[ms365_files]',
-				'ms365_sharepoint_library' => '[ms365_sharepoint_library]',
-				'ms365_profile'            => '[ms365_profile]',
+				'msgraph_calendar'           => '[msgraph_calendar]',
+				'msgraph_files'              => '[msgraph_files]',
+				'msgraph_sharepoint_library' => '[msgraph_sharepoint_library]',
 			);
 			?>
 			<table class="widefat striped">

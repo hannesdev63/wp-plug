@@ -28,13 +28,13 @@ if ( $is_connected ) {
 	$sites_result = WP_MS365_Graph::get_sharepoint_sites( $search_query );
 }
 ?>
-<div class="wrap ms365-sp-explorer">
-	<h1 class="ms365-sp-explorer__heading">
-		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'wp-ms365-graph' ); ?>
+<div class="wrap msgraph_sp-explorer">
+	<h1 class="msgraph_sp-explorer__heading">
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'wp-ms365-graph' ); ?>
 	</h1>
 
-	<p><?php esc_html_e( 'Use this page to look up the site_id and drive_id values for the [ms365_sharepoint_library] shortcode.', 'wp-ms365-graph' ); ?></p>
+	<p><?php esc_html_e( 'Use this page to look up the site_id and drive_id values for the [msgraph_sharepoint_library] shortcode.', 'wp-ms365-graph' ); ?></p>
 
 	<?php if ( ! $is_connected ) : ?>
 		<div class="notice notice-error">
@@ -43,7 +43,7 @@ if ( $is_connected ) {
 	<?php else : ?>
 
 		<!-- Search form -->
-		<form method="get" action="" class="ms365-sp-explorer__search">
+		<form method="get" action="" class="msgraph_sp-explorer__search">
 			<input type="hidden" name="page" value="wp-ms365-graph" />
 			<input type="hidden" name="tab" value="sp-explorer" />
 			<label for="ms365_sp_search"><strong><?php esc_html_e( 'Filter sites by name:', 'wp-ms365-graph' ); ?></strong></label>
@@ -88,7 +88,7 @@ if ( $is_connected ) {
 					continue;
 				}
 				?>
-				<div class="ms365-card ms365-sp-explorer__site" data-site-id="<?php echo esc_attr( $sid ); ?>" style="margin-bottom:1.5em;">
+				<div class="msgraph_card msgraph_sp-explorer__site" data-site-id="<?php echo esc_attr( $sid ); ?>" style="margin-bottom:1.5em;">
 					<h3 style="margin-top:0;">
 						<?php echo esc_html( $s_name ); ?>
 						<?php if ( $s_url ) : ?>
@@ -98,14 +98,14 @@ if ( $is_connected ) {
 						<?php endif; ?>
 					</h3>
 
-					<table class="form-table ms365-sp-explorer__meta" style="margin-top:0;">
+					<table class="form-table msgraph_sp-explorer__meta" style="margin-top:0;">
 						<tr>
 							<th scope="row" style="width:120px;"><?php esc_html_e( 'site_id', 'wp-ms365-graph' ); ?></th>
 							<td>
-								<code class="ms365-sp-explorer__copyable"><?php echo esc_html( $sid ); ?></code>
+								<code class="msgraph_sp-explorer__copyable"><?php echo esc_html( $sid ); ?></code>
 								<button
 									type="button"
-									class="button button-small ms365-copy-btn"
+									class="button button-small msgraph_copy-btn"
 									data-copy="<?php echo esc_attr( $sid ); ?>"
 									title="<?php esc_attr_e( 'Copy site_id', 'wp-ms365-graph' ); ?>"
 								><?php esc_html_e( 'Copy', 'wp-ms365-graph' ); ?></button>
@@ -114,13 +114,13 @@ if ( $is_connected ) {
 					</table>
 
 					<h4><?php esc_html_e( 'Document Libraries (drives)', 'wp-ms365-graph' ); ?></h4>
-					<div class="ms365-sp-explorer__drives-container" data-state="loading">
-						<div class="ms365-sp-skeleton" aria-hidden="true">
-							<div class="ms365-sp-skeleton__line ms365-sp-skeleton__line--lg"></div>
-							<div class="ms365-sp-skeleton__line"></div>
-							<div class="ms365-sp-skeleton__line"></div>
+					<div class="msgraph_sp-explorer__drives-container" data-state="loading">
+						<div class="msgraph_sp-skeleton" aria-hidden="true">
+							<div class="msgraph_sp-skeleton__line msgraph_sp-skeleton__line--lg"></div>
+							<div class="msgraph_sp-skeleton__line"></div>
+							<div class="msgraph_sp-skeleton__line"></div>
 						</div>
-						<p class="description ms365-sp-explorer__loading-text"><?php esc_html_e( 'Loading drives...', 'wp-ms365-graph' ); ?></p>
+						<p class="description msgraph_sp-explorer__loading-text"><?php esc_html_e( 'Loading drives...', 'wp-ms365-graph' ); ?></p>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -134,7 +134,7 @@ if ( $is_connected ) {
 ( function () {
 	var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
 	var nonce = <?php echo wp_json_encode( wp_create_nonce( 'wp_ms365_sp_explorer' ) ); ?>;
-	var cards = Array.prototype.slice.call( document.querySelectorAll( '.ms365-sp-explorer__site[data-site-id]' ) );
+	var cards = Array.prototype.slice.call( document.querySelectorAll( '.msgraph_sp-explorer__site[data-site-id]' ) );
 	var hiddenDueToPermissions = 0;
 
 	function escapeHtml( value ) {
@@ -172,7 +172,7 @@ if ( $is_connected ) {
 	}
 
 	document.addEventListener( 'click', function ( evt ) {
-		var btn = evt.target.closest( '.ms365-copy-btn' );
+		var btn = evt.target.closest( '.msgraph_copy-btn' );
 		if ( ! btn ) {
 			return;
 		}
@@ -189,7 +189,7 @@ if ( $is_connected ) {
 			return;
 		}
 
-		var visibleCount = document.querySelectorAll( '.ms365-sp-explorer__site[data-site-id]' ).length;
+		var visibleCount = document.querySelectorAll( '.msgraph_sp-explorer__site[data-site-id]' ).length;
 		var label = visibleCount === 1 ? 'Found 1 site.' : 'Found ' + visibleCount + ' sites.';
 
 		if ( hiddenDueToPermissions > 0 ) {
@@ -209,7 +209,7 @@ if ( $is_connected ) {
 			var driveName = String( drive.name || '—' );
 			var driveType = String( drive.driveType || '' );
 			var driveUrl = String( drive.webUrl || '' );
-			var snippet = '[ms365_sharepoint_library site_id="' + siteId + '" drive_id="' + driveId + '" title="' + driveName + '" folder=""]';
+			var snippet = '[msgraph_sharepoint_library site_id="' + siteId + '" drive_id="' + driveId + '" title="' + driveName + '" folder=""]';
 			var openLink = driveUrl
 				? ' <a href="' + escapeHtml( driveUrl ) + '" target="_blank" rel="noopener noreferrer" title="<?php echo esc_js( __( 'Open library', 'wp-ms365-graph' ) ); ?>">↗</a>'
 				: '';
@@ -220,13 +220,13 @@ if ( $is_connected ) {
 				+ '<td><code>' + escapeHtml( driveType ) + '</code></td>'
 				+ '<td>'
 				+ '<code style="word-break:break-all;">' + escapeHtml( snippet ) + '</code> '
-				+ '<button type="button" class="button button-small ms365-copy-btn" data-copy="' + escapeHtml( snippet ) + '"><?php echo esc_js( __( 'Copy', 'wp-ms365-graph' ) ); ?></button>'
+				+ '<button type="button" class="button button-small msgraph_copy-btn" data-copy="' + escapeHtml( snippet ) + '"><?php echo esc_js( __( 'Copy', 'wp-ms365-graph' ) ); ?></button>'
 				+ '</td>'
 				+ '</tr>';
 		} ).join( '' );
 
 		return ''
-			+ '<table class="widefat striped ms365-sp-explorer__drives">'
+			+ '<table class="widefat striped msgraph_sp-explorer__drives">'
 			+ '<thead><tr>'
 			+ '<th><?php echo esc_js( __( 'Library Name', 'wp-ms365-graph' ) ); ?></th>'
 			+ '<th><?php echo esc_js( __( 'Type', 'wp-ms365-graph' ) ); ?></th>'
@@ -238,7 +238,7 @@ if ( $is_connected ) {
 
 	function loadDrivesForCard( card ) {
 		var siteId = card.getAttribute( 'data-site-id' );
-		var container = card.querySelector( '.ms365-sp-explorer__drives-container' );
+		var container = card.querySelector( '.msgraph_sp-explorer__drives-container' );
 		if ( ! siteId || ! container ) {
 			return Promise.resolve();
 		}

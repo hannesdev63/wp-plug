@@ -9,10 +9,9 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 | Feature | Details |
 |---|---|
 | **App-Only Authentication** | OAuth 2.0 client credentials flow (no interactive sign-in) |
-| **Calendar Events** | `[ms365_calendar]` shortcode – renders upcoming events from Outlook Calendar |
-| **OneDrive Files** | `[ms365_files]` shortcode – renders a file/folder listing from OneDrive |
-| **SharePoint Library Files** | `[ms365_sharepoint_library]` shortcode – renders a file/folder listing from a SharePoint document library |
-| **User Profile** | `[ms365_profile]` shortcode – displays the selected user's name, email and job title |
+| **Calendar Events** | `[msgraph_calendar]` shortcode – renders upcoming events from Outlook Calendar |
+| **OneDrive Files** | `[msgraph_files]` shortcode – renders a file/folder listing from OneDrive |
+| **SharePoint Library Files** | `[msgraph_sharepoint_library]` shortcode – renders a file/folder listing from a SharePoint document library |
 | **Specific User Targeting** | Configure a Microsoft user (UPN or object ID); profile, calendar, and OneDrive are queried for that user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
 | **Automatic Token Retrieval** | Fetches app-only Graph access tokens from tenant/client credentials |
@@ -95,7 +94,7 @@ The plugin includes a **Diagnostics** page to help troubleshoot authentication a
 
 ## Shortcodes
 
-### `[ms365_calendar]`
+### `[msgraph_calendar]`
 
 Displays upcoming calendar events from the configured specific user.
 
@@ -106,12 +105,12 @@ Displays upcoming calendar events from the configured specific user.
 | `title` | `Upcoming Events` | Heading text (empty string = no heading) |
 
 ```
-[ms365_calendar limit="5" timezone="America/New_York" title="My Schedule"]
+[msgraph_calendar limit="5" timezone="America/New_York" title="My Schedule"]
 ```
 
 ---
 
-### `[ms365_files]`
+### `[msgraph_files]`
 
 Displays a OneDrive file/folder listing from the configured specific user.
 
@@ -122,12 +121,12 @@ Displays a OneDrive file/folder listing from the configured specific user.
 | `title` | `My Files` | Heading text |
 
 ```
-[ms365_files limit="20" folder="Documents" title="Project Docs"]
+[msgraph_files limit="20" folder="Documents" title="Project Docs"]
 ```
 
 ---
 
-### `[ms365_sharepoint_library]`
+### `[msgraph_sharepoint_library]`
 
 Displays a SharePoint document library file/folder listing.
 
@@ -140,17 +139,7 @@ Displays a SharePoint document library file/folder listing.
 | `title` | *(empty)* | Heading text |
 
 ```
-[ms365_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]
-```
-
----
-
-### `[ms365_profile]`
-
-Displays the configured Microsoft 365 user's display name, email, and job title.
-
-```
-[ms365_profile]
+[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]
 ```
 
 ---

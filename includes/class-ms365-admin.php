@@ -61,8 +61,8 @@ class WP_MS365_Admin {
 	 */
 	public function register_menu() {
 		add_menu_page(
-			__( 'Entra ID Connect', 'wp-ms365-graph' ),
-			__( 'Entra ID Connect', 'wp-ms365-graph' ),
+			__( 'MS Graph Connect', 'wp-ms365-graph' ),
+			__( 'MS Graph Connect', 'wp-ms365-graph' ),
 			'manage_options',
 			'wp-ms365-graph',
 			array( $this, 'render_main_page' ),
@@ -389,7 +389,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '<div class="notice notice-warning"><p>'
-			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in Entra ID Connect settings to enable profile, calendar, and OneDrive queries.', 'wp-ms365-graph' )
+			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in MS Graph Connect settings to enable profile, calendar, and OneDrive queries.', 'wp-ms365-graph' )
 			. '</p></div>';
 	}
 
@@ -426,19 +426,19 @@ class WP_MS365_Admin {
 
 		if ( 'custom_css' === $key ) {
 			printf(
-				'<textarea id="wp_ms365_%s" name="wp_ms365_settings[%s]" class="large-text code" rows="10" placeholder=".ms365-calendar { ... }&#10;.ms365-files { ... }">%s</textarea>',
+				'<textarea id="wp_ms365_%s" name="wp_ms365_settings[%s]" class="large-text code" rows="10" placeholder=".msgraph_calendar { ... }&#10;.msgraph_files { ... }">%s</textarea>',
 				esc_attr( $key ),
 				esc_attr( $key ),
 				esc_textarea( $value )
 			);
 			echo '<p class="description">'
-				. esc_html__( 'Optional CSS loaded on the frontend for shortcode markup. Useful selectors: .ms365-calendar, .ms365-calendar__item, .ms365-files, .ms365-files__item.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional CSS loaded on the frontend for shortcode markup. Useful selectors: .msgraph_calendar, .msgraph_calendar__item, .msgraph_files, .msgraph_files__item.', 'wp-ms365-graph' )
 				. '</p>';
 			return;
 		}
 
 		$type          = ( 'client_secret' === $key ) ? 'password' : 'text';
-		$extra_class   = ( 'client_secret' === $key ) ? ' ms365-password-input' : '';
+		$extra_class   = ( 'client_secret' === $key ) ? ' msgraph_password-input' : '';
 		$extra_data    = '';
 
 		if ( 'client_secret' === $key ) {

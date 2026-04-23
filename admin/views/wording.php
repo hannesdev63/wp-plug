@@ -9,15 +9,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
-<div class="wrap ms365-settings">
-	<h1 class="ms365-settings__heading">
-		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Wording', 'wp-ms365-graph' ); ?>
+<div class="wrap msgraph_settings">
+	<h1 class="msgraph_settings__heading">
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Wording', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<?php settings_errors( 'wp_ms365_settings' ); ?>
 
-	<form method="post" action="options.php" class="ms365-settings__form">
+	<form method="post" action="options.php" class="msgraph_settings__form">
 		<?php settings_fields( 'wp_ms365_settings_group' ); ?>
 		<?php do_settings_sections( 'wp-ms365-wording' ); ?>
 
