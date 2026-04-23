@@ -1,0 +1,383 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: wp-ms365-graph 1.0.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-23 00:00+0000\n"
+"PO-Revision-Date: 2026-04-23 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: German\n"
+"Language: de_DE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: wp-ms365-graph\n"
+
+msgid "MS Graph Connect"
+msgstr "MS Graph Connect"
+
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Settings"
+msgstr "Einstellungen"
+
+msgid "Documentation"
+msgstr "Dokumentation"
+
+msgid "SharePoint Explorer"
+msgstr "SharePoint-Explorer"
+
+msgid "Wording"
+msgstr "Texte"
+
+msgid "Diagnostics"
+msgstr "Diagnose"
+
+msgid "Version %s"
+msgstr "Version %s"
+
+msgid "Microsoft 365 is not connected. Please %s first."
+msgstr "Microsoft 365 ist nicht verbunden. Bitte zuerst %s."
+
+msgid "configure credentials and a specific user"
+msgstr "Anmeldedaten und einen bestimmten Benutzer konfigurieren"
+
+msgid "Shortcode render counters were reset."
+msgstr "Die Shortcode-Aufrufzähler wurden zurückgesetzt."
+
+msgid "Selected User"
+msgstr "Ausgewählter Benutzer"
+
+msgid "Configured user: %s"
+msgstr "Konfigurierter Benutzer: %s"
+
+msgid "Set Specific User in plugin settings to query Microsoft Graph."
+msgstr "Legen Sie in den Plugin-Einstellungen einen bestimmten Benutzer fest, um Microsoft Graph abzufragen."
+
+msgid "Ensure Microsoft Graph application permission User.Read.All is configured and admin consent is granted."
+msgstr "Stellen Sie sicher, dass die Microsoft-Graph-Anwendungsberechtigung User.Read.All konfiguriert ist und die Admin-Einwilligung erteilt wurde."
+
+msgid "Selected User Calendar (next 30 days)"
+msgstr "Kalender des ausgewählten Benutzers (nächste 30 Tage)"
+
+msgid "Date"
+msgstr "Datum"
+
+msgid "Subject"
+msgstr "Betreff"
+
+msgid "Location"
+msgstr "Ort"
+
+msgid "No upcoming events."
+msgstr "Keine bevorstehenden Termine."
+
+msgid "Ensure your Azure app has Microsoft Graph application permission Calendars.Read and admin consent has been granted."
+msgstr "Stellen Sie sicher, dass Ihre Azure-App die Microsoft-Graph-Anwendungsberechtigung Calendars.Read hat und die Admin-Einwilligung erteilt wurde."
+
+msgid "Selected User OneDrive Root Files"
+msgstr "OneDrive-Stammdateien des ausgewählten Benutzers"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Size"
+msgstr "Größe"
+
+msgid "Modified"
+msgstr "Geändert"
+
+msgid "No files found."
+msgstr "Keine Dateien gefunden."
+
+msgid "Ensure your Azure app has Microsoft Graph application permission Files.Read.All and admin consent has been granted."
+msgstr "Stellen Sie sicher, dass Ihre Azure-App die Microsoft-Graph-Anwendungsberechtigung Files.Read.All hat und die Admin-Einwilligung erteilt wurde."
+
+msgid "Shortcode Render Totals"
+msgstr "Shortcode-Aufrufe gesamt"
+
+msgid "Reset Counters"
+msgstr "Zähler zurücksetzen"
+
+msgid "Reset all shortcode render counters?"
+msgstr "Alle Shortcode-Aufrufzähler zurücksetzen?"
+
+msgid "Shortcode"
+msgstr "Shortcode"
+
+msgid "Total renders"
+msgstr "Gesamtaufrufe"
+
+msgid "Connected (app-only)"
+msgstr "Verbunden (nur App)"
+
+msgid "Not connected"
+msgstr "Nicht verbunden"
+
+msgid "Save valid credentials to enable automatic app-only token retrieval."
+msgstr "Speichern Sie gültige Anmeldedaten, um die automatische Token-Abfrage im App-Only-Modus zu aktivieren."
+
+msgid "Request New Token"
+msgstr "Neues Token anfordern"
+
+msgid "Requested a new token. A fresh app-only token will be retrieved automatically on the next Graph request."
+msgstr "Ein neues Token wurde angefordert. Beim nächsten Graph-Aufruf wird automatisch ein frisches App-Only-Token abgerufen."
+
+msgid "Import / Export"
+msgstr "Import / Export"
+
+msgid "Export Encrypted Settings"
+msgstr "Verschlüsselte Einstellungen exportieren"
+
+msgid "Import Encrypted Settings"
+msgstr "Verschlüsselte Einstellungen importieren"
+
+msgid "Encryption password"
+msgstr "Verschlüsselungspasswort"
+
+msgid "Confirm password"
+msgstr "Passwort bestätigen"
+
+msgid "Encrypted settings file"
+msgstr "Verschlüsselte Einstellungsdatei"
+
+msgid "Decryption password"
+msgstr "Entschlüsselungspasswort"
+
+msgid "Keep this password safe. It is required to decrypt the export during import."
+msgstr "Bewahren Sie dieses Passwort sicher auf. Es wird benötigt, um den Export beim Import zu entschlüsseln."
+
+msgid "Import replaces current plugin settings and wording values."
+msgstr "Der Import ersetzt die aktuellen Plugin-Einstellungen und Textwerte."
+
+msgid "Drag and drop your encrypted settings file here"
+msgstr "Verschlüsselte Einstellungsdatei hierher ziehen und ablegen"
+
+msgid "or click to choose a file"
+msgstr "oder klicken, um eine Datei auszuwählen"
+
+msgid "No file selected"
+msgstr "Keine Datei ausgewählt"
+
+msgid "Show"
+msgstr "Anzeigen"
+
+msgid "Hide"
+msgstr "Ausblenden"
+
+msgid "Use this page to look up the site_id and drive_id values for the [msgraph_sharepoint_library] shortcode."
+msgstr "Verwenden Sie diese Seite, um die Werte site_id und drive_id für den Shortcode [msgraph_sharepoint_library] zu ermitteln."
+
+msgid "Filter sites by name:"
+msgstr "Websites nach Namen filtern:"
+
+msgid "Search"
+msgstr "Suchen"
+
+msgid "Found"
+msgstr "Gefunden"
+
+msgid "No SharePoint sites found. The app may need the Sites.Read.All application permission (with admin consent) to list sites."
+msgstr "Keine SharePoint-Websites gefunden. Die App benötigt möglicherweise die Anwendungsberechtigung Sites.Read.All (mit Admin-Einwilligung), um Websites aufzulisten."
+
+msgid "Document Libraries (drives)"
+msgstr "Dokumentbibliotheken (Drives)"
+
+msgid "Loading drives..."
+msgstr "Drives werden geladen..."
+
+msgid "Could not load drives."
+msgstr "Drives konnten nicht geladen werden."
+
+msgid "No drives found for this site."
+msgstr "Für diese Website wurden keine Drives gefunden."
+
+msgid "Library Name"
+msgstr "Bibliotheksname"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Shortcode snippet"
+msgstr "Shortcode-Snippet"
+
+msgid "Copy"
+msgstr "Kopieren"
+
+msgid "Open library"
+msgstr "Bibliothek öffnen"
+
+msgid "Open site ↗"
+msgstr "Website öffnen ↗"
+
+msgid "System Information"
+msgstr "Systeminformationen"
+
+msgid "WordPress Version"
+msgstr "WordPress-Version"
+
+msgid "PHP Version"
+msgstr "PHP-Version"
+
+msgid "Plugin Version"
+msgstr "Plugin-Version"
+
+msgid "WP_DEBUG Enabled"
+msgstr "WP_DEBUG aktiviert"
+
+msgid "Authentication Configuration"
+msgstr "Authentifizierungskonfiguration"
+
+msgid "Connection Mode"
+msgstr "Verbindungsmodus"
+
+msgid "Specific User Configured"
+msgstr "Bestimmter Benutzer konfiguriert"
+
+msgid "Tenant ID Configured"
+msgstr "Tenant-ID konfiguriert"
+
+msgid "Client ID Configured"
+msgstr "Client-ID konfiguriert"
+
+msgid "Client Secret Configured"
+msgstr "Client-Secret konfiguriert"
+
+msgid "Live Graph Checks"
+msgstr "Live-Graph-Prüfungen"
+
+msgid "Token Scope"
+msgstr "Token-Scope"
+
+msgid "Debug Logs"
+msgstr "Debug-Logs"
+
+msgid "Clear Logs"
+msgstr "Logs löschen"
+
+msgid "Logs cleared."
+msgstr "Logs gelöscht."
+
+msgid "No logs available."
+msgstr "Keine Logs verfügbar."
+
+msgid "Troubleshooting Tips"
+msgstr "Fehlerbehebungstipps"
+
+msgid "You do not have permission to view this page."
+msgstr "Sie haben keine Berechtigung, diese Seite anzuzeigen."
+
+msgid "Specific User (UPN or ID)"
+msgstr "Bestimmter Benutzer (UPN oder ID)"
+
+msgid "Directory (Tenant) ID"
+msgstr "Verzeichnis- (Tenant-) ID"
+
+msgid "Application (Client) ID"
+msgstr "Anwendungs- (Client-) ID"
+
+msgid "Client Secret"
+msgstr "Client-Secret"
+
+msgid "Azure App Registration"
+msgstr "Azure-App-Registrierung"
+
+msgid "Custom CSS (Calendar/OneDrive)"
+msgstr "Benutzerdefiniertes CSS (Kalender/OneDrive)"
+
+msgid "Shortcode Wording"
+msgstr "Shortcode-Texte"
+
+msgid "Calendar: No items found"
+msgstr "Kalender: Keine Einträge gefunden"
+
+msgid "Calendar: Header Date"
+msgstr "Kalender: Spaltenkopf Datum"
+
+msgid "Calendar: Header Event"
+msgstr "Kalender: Spaltenkopf Termin"
+
+msgid "Calendar: Header Duration"
+msgstr "Kalender: Spaltenkopf Dauer"
+
+msgid "Calendar: Header Location"
+msgstr "Kalender: Spaltenkopf Ort"
+
+msgid "Files: No items found"
+msgstr "Dateien: Keine Einträge gefunden"
+
+msgid "Files: Header File"
+msgstr "Dateien: Spaltenkopf Datei"
+
+msgid "Files: Header Size"
+msgstr "Dateien: Spaltenkopf Größe"
+
+msgid "Files: Header Modified"
+msgstr "Dateien: Spaltenkopf Geändert"
+
+msgid "Samples"
+msgstr "Beispiele"
+
+msgid "Parameter"
+msgstr "Parameter"
+
+msgid "Default"
+msgstr "Standard"
+
+msgid "Description"
+msgstr "Beschreibung"
+
+msgid "Displays upcoming events from the configured Specific User calendar."
+msgstr "Zeigt bevorstehende Termine aus dem Kalender des konfigurierten bestimmten Benutzers an."
+
+msgid "Displays file-only results from the configured Specific User OneDrive."
+msgstr "Zeigt nur Dateien aus dem OneDrive des konfigurierten bestimmten Benutzers an."
+
+msgid "Displays file-only results from a SharePoint document library."
+msgstr "Zeigt nur Dateien aus einer SharePoint-Dokumentbibliothek an."
+
+msgid "Tip"
+msgstr "Hinweis"
+
+msgid "No"
+msgstr "Nein"
+
+msgid "Yes"
+msgstr "Ja"
+
+msgid "Not available"
+msgstr "Nicht verfügbar"
+
+msgid "Connected"
+msgstr "Verbunden"
+
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+msgid "Provisioned"
+msgstr "Bereitgestellt"
+
+msgid "Not connected to Microsoft 365. Configure credentials in Settings before using this page."
+msgstr "Nicht mit Microsoft 365 verbunden. Konfigurieren Sie die Anmeldedaten in den Einstellungen, bevor Sie diese Seite verwenden."
+
+msgid "Settings import completed successfully."
+msgstr "Einstellungsimport erfolgreich abgeschlossen."
+
+msgid "Import failed. Please verify your file and password."
+msgstr "Import fehlgeschlagen. Bitte überprüfen Sie Datei und Passwort."
+
+msgid "Export failed: please provide an encryption password."
+msgstr "Export fehlgeschlagen: Bitte geben Sie ein Verschlüsselungspasswort an."
+
+msgid "Export failed: the password and confirmation do not match."
+msgstr "Export fehlgeschlagen: Passwort und Bestätigung stimmen nicht überein."
+
+msgid "OpenSSL is not available."
+msgstr "OpenSSL ist nicht verfügbar."
+
+msgid "mode: %s"
+msgstr "Modus: %s"
+
+msgid "—"
+msgstr "—"

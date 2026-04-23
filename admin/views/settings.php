@@ -17,10 +17,10 @@ $operation       = isset( $_GET['op'] ) ? sanitize_key( wp_unslash( $_GET['op'] 
 $op_status       = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['reason'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 ?>
-<div class="wrap ms365-settings">
-	<h1 class="ms365-settings__heading">
-		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="ms365-page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'Entra ID Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Settings', 'wp-ms365-graph' ); ?>
+<div class="wrap msgraph_settings">
+	<h1 class="msgraph_settings__heading">
+		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
+		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Settings', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<?php if ( $token_requested ) : ?>
@@ -79,9 +79,9 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<?php settings_errors( 'wp_ms365_settings' ); ?>
 
 	<!-- Connection status banner -->
-	<div class="ms365-status <?php echo $is_connected ? 'ms365-status--connected' : 'ms365-status--disconnected'; ?>">
+	<div class="msgraph_status <?php echo $is_connected ? 'msgraph_status--connected' : 'msgraph_status--disconnected'; ?>">
 		<?php if ( $is_connected ) : ?>
-			<span class="ms365-status__dot"></span>
+			<span class="msgraph_status__dot"></span>
 			<strong><?php esc_html_e( 'Connected (app-only)', 'wp-ms365-graph' ); ?></strong>
 			<?php if ( $connected_user ) : ?>
 				&nbsp;<?php /* translators: %s: connection mode label */ ?>
@@ -91,19 +91,19 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
 				<input type="hidden" name="action" value="wp_ms365_request_new_token" />
 				<?php wp_nonce_field( 'wp_ms365_request_new_token' ); ?>
-				<button type="submit" class="button button-small ms365-status__disconnect">
+				<button type="submit" class="button button-small msgraph_status__disconnect">
 					<?php esc_html_e( 'Request New Token', 'wp-ms365-graph' ); ?>
 				</button>
 			</form>
 		<?php else : ?>
-			<span class="ms365-status__dot"></span>
+			<span class="msgraph_status__dot"></span>
 			<strong><?php esc_html_e( 'Not connected', 'wp-ms365-graph' ); ?></strong>
 			<span><?php esc_html_e( 'Save valid credentials to enable automatic app-only token retrieval.', 'wp-ms365-graph' ); ?></span>
 		<?php endif; ?>
 	</div>
 
 	<!-- Settings form -->
-	<form method="post" action="options.php" class="ms365-settings__form">
+	<form method="post" action="options.php" class="msgraph_settings__form">
 		<?php settings_fields( 'wp_ms365_settings_group' ); ?>
 		<?php do_settings_sections( 'wp-ms365-graph' ); ?>
 
@@ -145,18 +145,18 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	</p>
 
 	<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; align-items:start;">
-		<div class="ms365-card" style="margin:0;">
+		<div class="msgraph_card" style="margin:0;">
 			<h3><?php esc_html_e( 'Export Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_export_settings" />
 				<?php wp_nonce_field( 'wp_ms365_export_settings' ); ?>
 				<p>
 					<label for="wp_ms365_export_password"><strong><?php esc_html_e( 'Encryption password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_export_password" name="export_password" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<input type="password" id="wp_ms365_export_password" name="export_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
 				</p>
 				<p>
 					<label for="wp_ms365_export_password_confirm"><strong><?php esc_html_e( 'Confirm password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_export_password_confirm" name="export_password_confirm" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<input type="password" id="wp_ms365_export_password_confirm" name="export_password_confirm" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
 				</p>
 				<p class="description">
 					<?php esc_html_e( 'Keep this password safe. It is required to decrypt the export during import.', 'wp-ms365-graph' ); ?>
@@ -165,23 +165,23 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 			</form>
 		</div>
 
-		<div class="ms365-card" style="margin:0;">
+		<div class="msgraph_card" style="margin:0;">
 			<h3><?php esc_html_e( 'Import Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 				<input type="hidden" name="action" value="wp_ms365_import_settings" />
 				<?php wp_nonce_field( 'wp_ms365_import_settings' ); ?>
 				<p>
 					<label for="wp_ms365_import_file"><strong><?php esc_html_e( 'Encrypted settings file', 'wp-ms365-graph' ); ?></strong></label><br />
-					<label for="wp_ms365_import_file" class="ms365-dropzone" data-dropzone>
-						<span class="ms365-dropzone__title"><?php esc_html_e( 'Drag and drop your encrypted settings file here', 'wp-ms365-graph' ); ?></span>
-						<span class="ms365-dropzone__meta"><?php esc_html_e( 'or click to choose a file', 'wp-ms365-graph' ); ?></span>
-						<span class="ms365-dropzone__filename" data-dropzone-filename><?php esc_html_e( 'No file selected', 'wp-ms365-graph' ); ?></span>
+					<label for="wp_ms365_import_file" class="msgraph_dropzone" data-dropzone>
+						<span class="msgraph_dropzone__title"><?php esc_html_e( 'Drag and drop your encrypted settings file here', 'wp-ms365-graph' ); ?></span>
+						<span class="msgraph_dropzone__meta"><?php esc_html_e( 'or click to choose a file', 'wp-ms365-graph' ); ?></span>
+						<span class="msgraph_dropzone__filename" data-dropzone-filename><?php esc_html_e( 'No file selected', 'wp-ms365-graph' ); ?></span>
 					</label>
-					<input type="file" id="wp_ms365_import_file" name="import_file" class="ms365-dropzone__input" accept=".json,.enc" required data-dropzone-input data-filename-target="[data-dropzone-filename]" />
+					<input type="file" id="wp_ms365_import_file" name="import_file" class="msgraph_dropzone__input" accept=".json,.enc" required data-dropzone-input data-filename-target="[data-dropzone-filename]" />
 				</p>
 				<p>
 					<label for="wp_ms365_import_password"><strong><?php esc_html_e( 'Decryption password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text ms365-password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
 				</p>
 				<p class="description">
 					<?php esc_html_e( 'Import replaces current plugin settings and wording values.', 'wp-ms365-graph' ); ?>
@@ -193,7 +193,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 
 	<script>
 		document.addEventListener('DOMContentLoaded', function () {
-			var root = document.querySelector('.ms365-settings');
+			var root = document.querySelector('.msgraph_settings');
 			if (!root) {
 				return;
 			}
@@ -204,13 +204,13 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 				}
 
 				var wrapper = document.createElement('span');
-				wrapper.className = 'ms365-password-field';
+				wrapper.className = 'msgraph_password-field';
 				input.parentNode.insertBefore(wrapper, input);
 				wrapper.appendChild(input);
 
 				var button = document.createElement('button');
 				button.type = 'button';
-				button.className = 'button button-secondary ms365-password-toggle';
+				button.className = 'button button-secondary msgraph_password-toggle';
 				button.textContent = input.dataset.toggleLabelShow || 'Show';
 				button.setAttribute('aria-label', button.textContent);
 				button.addEventListener('click', function () {

@@ -2,16 +2,16 @@
    WP Microsoft 365 Graph – Admin Styles
    ============================================================================= */
 
-.ms365-settings__heading,
-.ms365-dashboard__heading,
-.ms365-diagnostics__heading {
+.msgraph_settings__heading,
+.msgraph_dashboard__heading,
+.msgraph_diagnostics__heading {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 20px;
 }
 
-.ms365-page-icon {
+.msgraph_page-icon {
     width: 28px;
     height: 28px;
     flex-shrink: 0;
@@ -27,7 +27,7 @@
 }
 
 /* ---------- Connection status banner ---------- */
-.ms365-status {
+.msgraph_status {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -37,19 +37,19 @@
     font-size: 14px;
 }
 
-.ms365-status--connected {
+.msgraph_status--connected {
     background: #edfaed;
     border: 1px solid #46b450;
     color: #1e4620;
 }
 
-.ms365-status--disconnected {
+.msgraph_status--disconnected {
     background: #fef7f0;
     border: 1px solid #f0a500;
     color: #5c3000;
 }
 
-.ms365-status__dot {
+.msgraph_status__dot {
     display: inline-block;
     width: 10px;
     height: 10px;
@@ -57,20 +57,20 @@
     flex-shrink: 0;
 }
 
-.ms365-status--connected .ms365-status__dot {
+.msgraph_status--connected .msgraph_status__dot {
     background: #46b450;
 }
 
-.ms365-status--disconnected .ms365-status__dot {
+.msgraph_status--disconnected .msgraph_status__dot {
     background: #f0a500;
 }
 
 /* ---------- Settings form ---------- */
-.ms365-settings__form {
+.msgraph_settings__form {
     max-width: 700px;
 }
 
-.ms365-password-field {
+.msgraph_password-field {
     display: inline-flex;
     align-items: stretch;
     gap: 8px;
@@ -78,16 +78,16 @@
     width: 100%;
 }
 
-.ms365-password-field .regular-text {
+.msgraph_password-field .regular-text {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.ms365-password-toggle {
+.msgraph_password-toggle {
     white-space: nowrap;
 }
 
-.ms365-dropzone {
+.msgraph_dropzone {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -102,29 +102,29 @@
     box-sizing: border-box;
 }
 
-.ms365-dropzone:hover,
-.ms365-dropzone:focus,
-.ms365-dropzone.is-dragover {
+.msgraph_dropzone:hover,
+.msgraph_dropzone:focus,
+.msgraph_dropzone.is-dragover {
     border-color: #2271b1;
     background: #f0f6fc;
     box-shadow: 0 0 0 1px #2271b1;
 }
 
-.ms365-dropzone__title {
+.msgraph_dropzone__title {
     font-weight: 600;
 }
 
-.ms365-dropzone__meta,
-.ms365-dropzone__filename {
+.msgraph_dropzone__meta,
+.msgraph_dropzone__filename {
     color: #50575e;
 }
 
-.ms365-dropzone__filename {
+.msgraph_dropzone__filename {
     font-family: monospace;
     word-break: break-all;
 }
 
-.ms365-dropzone__input {
+.msgraph_dropzone__input {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -137,12 +137,12 @@
 }
 
 /* ---------- Shortcode reference table ---------- */
-.ms365-shortcode-table {
+.msgraph_shortcode-table {
     max-width: 900px;
     margin-top: 12px;
 }
 
-.ms365-shortcode-table code {
+.msgraph_shortcode-table code {
     background: #f0f0f1;
     padding: 2px 6px;
     border-radius: 3px;
@@ -150,7 +150,7 @@
 }
 
 /* ---------- Dashboard cards ---------- */
-.ms365-card {
+.msgraph_card {
     background: #fff;
     border: 1px solid #c3c4c7;
     border-radius: 4px;
@@ -159,44 +159,44 @@
     max-width: 960px;
 }
 
-.ms365-card__title {
+.msgraph_card__title {
     margin-top: 0;
     padding-bottom: 12px;
     border-bottom: 1px solid #f0f0f1;
     font-size: 16px;
 }
 
-.ms365-card--profile p {
+.msgraph_card--profile p {
     font-size: 14px;
     line-height: 1.8;
 }
 
 /* ---------- SharePoint Explorer ---------- */
-.ms365-sp-explorer__drives-container {
+.msgraph_sp-explorer__drives-container {
     min-height: 64px;
 }
 
-.ms365-sp-skeleton {
+.msgraph_sp-skeleton {
     display: grid;
     gap: 8px;
     margin-top: 6px;
     margin-bottom: 8px;
 }
 
-.ms365-sp-skeleton__line {
+.msgraph_sp-skeleton__line {
     height: 12px;
     border-radius: 6px;
     background: linear-gradient(90deg, #eceef1 0%, #f7f8fa 50%, #eceef1 100%);
     background-size: 200% 100%;
-    animation: ms365-sp-skeleton-pulse 1.2s ease-in-out infinite;
+    animation: msgraph_sp-skeleton-pulse 1.2s ease-in-out infinite;
 }
 
-.ms365-sp-skeleton__line--lg {
+.msgraph_sp-skeleton__line--lg {
     height: 16px;
     width: 68%;
 }
 
-@keyframes ms365-sp-skeleton-pulse {
+@keyframes msgraph_sp-skeleton-pulse {
     from {
         background-position: 200% 0;
     }

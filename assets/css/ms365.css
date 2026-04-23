@@ -3,43 +3,43 @@
    ============================================================================= */
 
 /* ---------- Shared notices ---------- */
-.ms365-notice {
+.msgraph_notice {
     padding: 10px 14px;
     border-radius: 4px;
     font-size: 14px;
     margin: 8px 0;
 }
 
-.ms365-notice--warning {
+.msgraph_notice--warning {
     background: #fff8e5;
     border-left: 4px solid #dba617;
     color: #5c3d00;
 }
 
-.ms365-notice--error {
+.msgraph_notice--error {
     background: #fde8e8;
     border-left: 4px solid #d63638;
     color: #5c0000;
 }
 
 /* ---------- Calendar shortcode ---------- */
-.ms365-calendar {
+.msgraph_calendar {
     margin: 16px 0;
     font-size: 15px;
 }
 
-.ms365-calendar__title {
+.msgraph_calendar__title {
     font-size: 1.3em;
     margin-bottom: 12px;
 }
 
-.ms365-calendar__list {
+.msgraph_calendar__list {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.ms365-calendar__item {
+.msgraph_calendar__item {
     display: grid;
     grid-template-columns: 160px 1fr auto;
     align-items: baseline;
@@ -48,58 +48,65 @@
     border-bottom: 1px solid #f0f0f1;
 }
 
-.ms365-calendar__item:last-child {
+.msgraph_calendar__item:last-child {
     border-bottom: none;
 }
 
-.ms365-calendar__date {
+.msgraph_calendar__date {
     color: #646970;
     font-size: 0.875em;
     white-space: nowrap;
 }
 
-.ms365-calendar__subject {
+.msgraph_calendar__subject {
     font-weight: 500;
     color: inherit;
 }
 
-a.ms365-calendar__subject {
+a.msgraph_calendar__subject {
     text-decoration: none;
     color: #0073aa;
 }
 
-a.ms365-calendar__subject:hover {
+a.msgraph_calendar__subject:hover {
     text-decoration: underline;
 }
 
-.ms365-calendar__location {
+.msgraph_calendar__location {
     font-size: 0.85em;
     color: #646970;
 }
 
-.ms365-calendar__empty {
+.msgraph_calendar__empty {
     color: #646970;
     font-style: italic;
 }
 
+/* Grouped (group_by_date) date header row */
+.msgraph_calendar__group-heading > .msgraph_calendar__group-date {
+    font-weight: 600;
+    background-color: #f6f7f7;
+    padding: 6px 8px;
+}
+
 /* ---------- Files shortcode ---------- */
-.ms365-files {
+.msgraph_files {
     margin: 16px 0;
     font-size: 15px;
 }
 
-.ms365-files__title {
+.msgraph_files__title {
     font-size: 1.3em;
     margin-bottom: 12px;
 }
 
-.ms365-files__list {
+.msgraph_files__list {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.ms365-files__item {
+.msgraph_files__item {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -107,11 +114,11 @@ a.ms365-calendar__subject:hover {
     border-bottom: 1px solid #f0f0f1;
 }
 
-.ms365-files__item:last-child {
+.msgraph_files__item:last-child {
     border-bottom: none;
 }
 
-.ms365-files__icon {
+.msgraph_files__icon {
     display: inline-block;
     width: 20px;
     height: 20px;
@@ -120,17 +127,17 @@ a.ms365-calendar__subject:hover {
     flex-shrink: 0;
 }
 
-.ms365-files__icon--folder::before {
+.msgraph_files__icon--folder::before {
     content: "📁";
     font-size: 18px;
 }
 
-.ms365-files__icon--file::before {
+.msgraph_files__icon--file::before {
     content: "📄";
     font-size: 18px;
 }
 
-.ms365-files__name {
+.msgraph_files__name {
     flex: 1;
     font-weight: 500;
     color: inherit;
@@ -138,49 +145,49 @@ a.ms365-calendar__subject:hover {
     word-break: break-word;
 }
 
-a.ms365-files__name {
+a.msgraph_files__name {
     color: #0073aa;
 }
 
-a.ms365-files__name:hover {
+a.msgraph_files__name:hover {
     text-decoration: underline;
 }
 
-.ms365-files__meta {
+.msgraph_files__meta {
     font-size: 0.85em;
     color: #646970;
     white-space: nowrap;
 }
 
-.ms365-files__empty {
+.msgraph_files__empty {
     color: #646970;
     font-style: italic;
 }
 
 /* ---------- Profile shortcode ---------- */
-.ms365-profile {
+.msgraph_profile {
     display: inline-flex;
     flex-direction: column;
     gap: 2px;
     font-size: 14px;
 }
 
-.ms365-profile__name {
+.msgraph_profile__name {
     font-weight: 600;
 }
 
-.ms365-profile__email {
+.msgraph_profile__email {
     color: #646970;
 }
 
-.ms365-profile__job-title {
+.msgraph_profile__job-title {
     font-style: italic;
     color: #646970;
 }
 
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 480px) {
-    .ms365-calendar__item {
+    .msgraph_calendar__item {
         grid-template-columns: 1fr;
     }
 }

@@ -109,7 +109,7 @@ class WP_MS365_Graph {
 				'endDateTime'     => $end,
 				'$top'            => $limit,
 				'$orderby'        => 'start/dateTime',
-				'$select'         => 'id,subject,start,end,location,webLink,organizer,isAllDay,categories',
+				'$select'         => 'id,subject,start,end,location,webLink,organizer,isAllDay,categories,bodyPreview',
 			),
 			array(
 				'Prefer' => 'outlook.timezone="' . $timezone . '"',
