@@ -242,7 +242,7 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		<p class="description">
 			<?php esc_html_e( 'Your Azure app registration must include these Microsoft Graph application permissions:', 'wp-ms365-graph' ); ?>
 			<br />
-			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>
+			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code>
 		</p>
 	</div>
 

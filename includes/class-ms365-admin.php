@@ -19,6 +19,7 @@ class WP_MS365_Admin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_wp_ms365_request_new_token', array( $this, 'handle_request_new_token' ) );
 		add_action( 'admin_post_wp_ms365_disconnect', array( $this, 'handle_request_new_token' ) );
+		add_action( 'wp_ajax_wp_ms365_sp_site_drives', array( $this, 'ajax_get_sharepoint_site_drives' ) );
 	}
 
 	// ------------------------------------------------------------------
@@ -58,7 +59,7 @@ class WP_MS365_Admin {
 			__( 'Entra ID Connect', 'wp-ms365-graph' ),
 			'manage_options',
 			'wp-ms365-graph',
-			array( $this, 'render_dashboard' ),
+			array( $this, 'render_main_page' ),
 			self::get_menu_icon_uri(),
 			80
 		);
@@ -69,34 +70,7 @@ class WP_MS365_Admin {
 			__( 'Dashboard', 'wp-ms365-graph' ),
 			'manage_options',
 			'wp-ms365-graph',
-			array( $this, 'render_dashboard' )
-		);
-
-		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Settings', 'wp-ms365-graph' ),
-			__( 'Settings', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-settings',
-			array( $this, 'render_page' )
-		);
-
-		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Wording', 'wp-ms365-graph' ),
-			__( 'Wording', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-wording',
-			array( $this, 'render_wording_page' )
-		);
-
-		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Diags', 'wp-ms365-graph' ),
-			__( 'Diags', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-diagnostics',
-			array( $this, 'render_diagnostics' )
+			array( $this, 'render_main_page' )
 		);
 	}
 
@@ -153,6 +127,7 @@ class WP_MS365_Admin {
 			'calendar_empty_text'     => __( 'Calendar: No items found', 'wp-ms365-graph' ),
 			'calendar_header_date'    => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
 			'calendar_header_event'   => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
+			'calendar_header_duration'=> __( 'Calendar: Header Duration', 'wp-ms365-graph' ),
 			'calendar_header_location'=> __( 'Calendar: Header Location', 'wp-ms365-graph' ),
 			'files_empty_text'        => __( 'Files: No items found', 'wp-ms365-graph' ),
 			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
@@ -214,6 +189,10 @@ class WP_MS365_Admin {
 			$clean['calendar_header_event'] = sanitize_text_field( $input['calendar_header_event'] );
 		}
 
+		if ( isset( $input['calendar_header_duration'] ) ) {
+			$clean['calendar_header_duration'] = sanitize_text_field( $input['calendar_header_duration'] );
+		}
+
 		if ( isset( $input['calendar_header_location'] ) ) {
 			$clean['calendar_header_location'] = sanitize_text_field( $input['calendar_header_location'] );
 		}
@@ -260,6 +239,69 @@ class WP_MS365_Admin {
 	// ------------------------------------------------------------------
 
 	/**
+	 * Render the main plugin page with tab navigation.
+	 */
+	public function render_main_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
+		$tabs = array(
+			'dashboard'  => __( 'Dashboard', 'wp-ms365-graph' ),
+			'settings'   => __( 'Settings', 'wp-ms365-graph' ),
+			'sp-explorer'=> __( 'SP Explorer', 'wp-ms365-graph' ),
+			'wording'    => __( 'Wording', 'wp-ms365-graph' ),
+			'diagnostics'=> __( 'Diagnostics', 'wp-ms365-graph' ),
+		);
+
+		if ( ! isset( $tabs[ $tab ] ) ) {
+			$tab = 'dashboard';
+		}
+
+		echo '<div class="wrap">';
+		echo '<h2 class="nav-tab-wrapper">';
+		foreach ( $tabs as $tab_key => $tab_label ) {
+			$tab_url = add_query_arg(
+				array(
+					'page' => 'wp-ms365-graph',
+					'tab'  => $tab_key,
+				),
+				admin_url( 'admin.php' )
+			);
+			$tab_class = ( $tab_key === $tab ) ? 'nav-tab nav-tab-active' : 'nav-tab';
+			printf(
+				'<a href="%1$s" class="%2$s">%3$s</a>',
+				esc_url( $tab_url ),
+				esc_attr( $tab_class ),
+				esc_html( $tab_label )
+			);
+		}
+		echo '</h2>';
+
+		switch ( $tab ) {
+			case 'settings':
+				$this->render_page();
+				break;
+			case 'sp-explorer':
+				$this->render_sharepoint_explorer();
+				break;
+			case 'wording':
+				$this->render_wording_page();
+				break;
+			case 'diagnostics':
+				$this->render_diagnostics();
+				break;
+			case 'dashboard':
+			default:
+				$this->render_dashboard();
+				break;
+		}
+
+		echo '</div>';
+	}
+
+	/**
 	 * Render the main settings / connect page.
 	 */
 	public function render_page() {
@@ -300,6 +342,16 @@ class WP_MS365_Admin {
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/diagnostics.php';
+	}
+
+	/**
+	 * Render the SharePoint Explorer page.
+	 */
+	public function render_sharepoint_explorer() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		include WP_MS365_PLUGIN_DIR . 'admin/views/sharepoint-explorer.php';
 	}
 
 	/**
@@ -397,13 +449,6 @@ class WP_MS365_Admin {
 	public function enqueue_assets( $hook ) {
 		$allowed_hooks = array(
 			'toplevel_page_wp-ms365-graph',
-			'entra-id-connect_page_wp-ms365-settings',
-			'entra-id-connect_page_wp-ms365-wording',
-			'entra-id-connect_page_wp-ms365-diagnostics',
-			'microsoft-365_page_wp-ms365-dashboard',
-			'microsoft-365_page_wp-ms365-settings',
-			'microsoft-365_page_wp-ms365-wording',
-			'microsoft-365_page_wp-ms365-diagnostics',
 		);
 		if ( ! in_array( $hook, $allowed_hooks, true ) ) {
 			return;
@@ -434,10 +479,83 @@ class WP_MS365_Admin {
 
 		wp_redirect(
 			add_query_arg(
-				array( 'page' => 'wp-ms365-settings', 'token_requested' => '1' ),
+				array(
+					'page'            => 'wp-ms365-graph',
+					'tab'             => 'settings',
+					'token_requested' => '1',
+				),
 				admin_url( 'admin.php' )
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * AJAX: Retrieve SharePoint document libraries for a site.
+	 *
+	 * @return void
+	 */
+	public function ajax_get_sharepoint_site_drives() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error(
+				array(
+					'message'       => __( 'Insufficient permissions.', 'wp-ms365-graph' ),
+					'access_denied' => true,
+				),
+				403
+			);
+		}
+
+		check_ajax_referer( 'wp_ms365_sp_explorer', 'nonce' );
+
+		$site_id = isset( $_POST['site_id'] ) ? sanitize_text_field( wp_unslash( $_POST['site_id'] ) ) : '';
+		if ( '' === trim( $site_id ) ) {
+			wp_send_json_error(
+				array(
+					'message'       => __( 'SharePoint site ID is required.', 'wp-ms365-graph' ),
+					'access_denied' => false,
+				),
+				400
+			);
+		}
+
+		$drives = WP_MS365_Graph::get_sharepoint_site_drives( $site_id );
+		if ( is_wp_error( $drives ) ) {
+			$error_data  = $drives->get_error_data();
+			$status_code = ( is_array( $error_data ) && isset( $error_data['status'] ) ) ? (int) $error_data['status'] : 400;
+			$message     = $drives->get_error_message();
+			$message_lc  = strtolower( (string) $message );
+
+			$is_access_denied = ( 403 === $status_code )
+				|| ( false !== strpos( $message_lc, 'access is denied' ) )
+				|| ( false !== strpos( $message_lc, 'insufficient privileges' ) )
+				|| ( false !== strpos( $message_lc, 'requestdenied' ) );
+
+			wp_send_json_error(
+				array(
+					'message'       => $message,
+					'access_denied' => $is_access_denied,
+				),
+				max( 400, $status_code )
+			);
+		}
+
+		$normalized = array();
+		if ( ! empty( $drives['value'] ) && is_array( $drives['value'] ) ) {
+			foreach ( $drives['value'] as $drive ) {
+				$normalized[] = array(
+					'id'        => isset( $drive['id'] ) ? (string) $drive['id'] : '',
+					'name'      => isset( $drive['name'] ) ? (string) $drive['name'] : '',
+					'driveType' => isset( $drive['driveType'] ) ? (string) $drive['driveType'] : '',
+					'webUrl'    => isset( $drive['webUrl'] ) ? (string) $drive['webUrl'] : '',
+				);
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'drives' => $normalized,
+			)
+		);
 	}
 }

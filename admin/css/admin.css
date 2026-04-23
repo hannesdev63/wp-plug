@@ -104,3 +104,37 @@
     font-size: 14px;
     line-height: 1.8;
 }
+
+/* ---------- SharePoint Explorer ---------- */
+.ms365-sp-explorer__drives-container {
+    min-height: 64px;
+}
+
+.ms365-sp-skeleton {
+    display: grid;
+    gap: 8px;
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.ms365-sp-skeleton__line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #eceef1 0%, #f7f8fa 50%, #eceef1 100%);
+    background-size: 200% 100%;
+    animation: ms365-sp-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.ms365-sp-skeleton__line--lg {
+    height: 16px;
+    width: 68%;
+}
+
+@keyframes ms365-sp-skeleton-pulse {
+    from {
+        background-position: 200% 0;
+    }
+    to {
+        background-position: -200% 0;
+    }
+}

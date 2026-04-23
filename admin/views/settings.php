@@ -66,7 +66,7 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 		<p>
 			<strong><?php esc_html_e( 'Note: App-only access requires Microsoft Graph application permissions.', 'wp-ms365-graph' ); ?></strong><br />
 			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
-			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>.<br />
+			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code>.<br />
 			<?php esc_html_e( 'After adding these application permissions, click "Grant admin consent" in Azure and save credentials again.', 'wp-ms365-graph' ); ?>
 		</p>
 	</div>
@@ -75,7 +75,7 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 	<div class="notice notice-info">
 		<p>
 			<?php esc_html_e( 'Having issues? Check the ', 'wp-ms365-graph' ); ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wp-ms365-diagnostics' ) ); ?>">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=diagnostics' ) ); ?>">
 				<?php esc_html_e( 'Diagnostics page', 'wp-ms365-graph' ); ?>
 			</a>
 			<?php esc_html_e( ' for troubleshooting and debug logs.', 'wp-ms365-graph' ); ?>
@@ -104,12 +104,17 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 			<tr>
 				<td><code>[ms365_calendar]</code></td>
 				<td><?php esc_html_e( 'Displays upcoming calendar events from the configured specific user.', 'wp-ms365-graph' ); ?></td>
-				<td><code>[ms365_calendar limit="5" timezone="Europe/London" title="My Calendar"]</code></td>
+				<td><code>[ms365_calendar limit="5" timezone="Europe/London" past_days="0" title="My Calendar"]</code></td>
 			</tr>
 			<tr>
 				<td><code>[ms365_files]</code></td>
 				<td><?php esc_html_e( 'Displays a file listing from the configured specific user OneDrive.', 'wp-ms365-graph' ); ?></td>
 				<td><code>[ms365_files limit="10" folder="Documents" title="My Files"]</code></td>
+			</tr>
+			<tr>
+				<td><code>[ms365_sharepoint_library]</code></td>
+				<td><?php esc_html_e( 'Displays a file listing from a SharePoint document library.', 'wp-ms365-graph' ); ?></td>
+				<td><code>[ms365_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]</code></td>
 			</tr>
 			<tr>
 				<td><code>[ms365_profile]</code></td>
