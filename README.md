@@ -25,6 +25,23 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - An **Azure Active Directory** app registration with the following:
    - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`
    - A **Client Secret** generated in *Certificates & Secrets*
+   - A **Teams Workflow Endpoint URL** (if using Teams message form)
+
+---
+
+## Required Microsoft Graph API Rights
+
+This plugin uses app-only authentication (OAuth client credentials), so configure **Application** permissions in Microsoft Graph and grant admin consent.
+
+| Feature | Required Graph Application Permission |
+|---|---|
+| Read configured user profile | `User.Read.All` |
+| Calendar shortcode `[msgraph_calendar]` | `Calendars.Read` |
+| OneDrive shortcode `[msgraph_files]` | `Files.Read.All` |
+| SharePoint library shortcode `[msgraph_sharepoint_library]` | `Sites.Read.All` |
+| Teams message form shortcode `[msgraph_teams_message_form]` | No Graph permission required (uses Teams Workflow endpoint URL) |
+
+After assigning these rights, click **Grant admin consent** in Azure and then request/save a fresh token in the plugin settings.
 
 ---
 
@@ -54,6 +71,23 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
    - `Files.Read.All` (Application)
    - `Sites.Read.All` (Application, required for SharePoint library shortcode)
 7. Click **Grant admin consent**.
+
+### Teams form workflow setup
+
+1. Open **Microsoft Teams** and go to the team/channel where form messages should arrive.
+2. Open **Workflows** for that team/channel.
+3. Create a flow using trigger **When a Teams webhook request is received**.
+4. Default delivery is plain text (webhook style).
+5. If you want adaptive cards, add action **Post card in a chat or channel** and map trigger body field `adaptive_card` as card payload.
+6. Save the flow and copy the generated HTTP POST URL.
+7. In WordPress, open **Microsoft 365 -> Settings** and paste the URL into **Teams Workflow Endpoint URL**.
+8. Save settings and submit a test message with `[msgraph_teams_message_form]`.
+
+Notes:
+- Keep the workflow URL private because anyone with the URL can trigger the flow.
+- The shortcode also accepts `webhook_url` as a legacy alias, but `endpoint_url` is now the preferred parameter.
+- Auto mode detects workflow-style URLs (for example `logic.azure.com`) and uses adaptive-card payload automatically.
+- You can force mode in shortcode with `use_adaptive_card="true"` or `use_adaptive_card="false"`.
 
 ### 2 – Enter Credentials in WordPress
 
@@ -85,7 +119,7 @@ The plugin includes a **Diagnostics** page to help troubleshoot authentication a
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | **Connection Failed** | Invalid credentials or misconfigured app | Check Tenant ID, Client ID, Client Secret. See Diagnostics page for details. |
-| **Access Denied (403)** | Missing Graph application permission | Add required application permissions (`User.Read.All`, `Calendars.Read`, `Files.Read.All`) and grant admin consent in Azure. |
+| **Access Denied (403)** | Missing Graph application permission | Add required application permissions (`User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`) and grant admin consent in Azure. |
 | **No files/calendar displayed** | Not connected, wrong user targeted, or resource not provisioned | Verify connection in Settings. Check if configured user has mailbox/OneDrive provisioned. |
 | **Specific User warning shown** | No target user configured | Set Specific User (UPN/object ID) in plugin settings. |
 | **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |

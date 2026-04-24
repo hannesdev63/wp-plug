@@ -108,6 +108,12 @@ class WP_MS365_Admin {
 			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
 			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
 			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
+			'teams_team_id' => __( 'Default Teams Team ID', 'wp-ms365-graph' ),
+			'teams_channel_id' => __( 'Default Teams Channel ID', 'wp-ms365-graph' ),
+			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'wp-ms365-graph' ),
+			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'wp-ms365-graph' ),
+			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'wp-ms365-graph' ),
+			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'wp-ms365-graph' ),
 			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'wp-ms365-graph' ),
 		);
 
@@ -177,6 +183,34 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['specific_user'] ) ) {
 			$clean['specific_user'] = sanitize_text_field( $input['specific_user'] );
+		}
+
+		if ( isset( $input['teams_team_id'] ) ) {
+			$clean['teams_team_id'] = sanitize_text_field( $input['teams_team_id'] );
+		}
+
+		if ( isset( $input['teams_channel_id'] ) ) {
+			$clean['teams_channel_id'] = sanitize_text_field( $input['teams_channel_id'] );
+		}
+
+		if ( isset( $input['teams_workflow_url'] ) ) {
+			$clean['teams_workflow_url'] = esc_url_raw( trim( (string) $input['teams_workflow_url'] ) );
+		}
+
+		if ( isset( $input['teams_webhook_url'] ) ) {
+			$clean['teams_webhook_url'] = esc_url_raw( trim( (string) $input['teams_webhook_url'] ) );
+		}
+
+		if ( isset( $input['teams_rate_limit_max'] ) ) {
+			$clean['teams_rate_limit_max'] = max( 1, min( 50, (int) $input['teams_rate_limit_max'] ) );
+		}
+
+		if ( isset( $input['teams_rate_limit_window'] ) ) {
+			$clean['teams_rate_limit_window'] = max( 30, min( 86400, (int) $input['teams_rate_limit_window'] ) );
+		}
+
+		if ( isset( $input['teams_min_submit_seconds'] ) ) {
+			$clean['teams_min_submit_seconds'] = max( 1, min( 120, (int) $input['teams_min_submit_seconds'] ) );
 		}
 
 		if ( isset( $input['custom_css'] ) ) {
@@ -462,6 +496,30 @@ class WP_MS365_Admin {
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
 				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_team_id' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default Team ID used by [msgraph_teams_message_form] when team_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_channel_id' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default Channel ID used by [msgraph_teams_message_form] when channel_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_workflow_url' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Workflow endpoint URL for Teams message delivery. This is the primary sender used by [msgraph_teams_message_form]. Existing Incoming Webhook URLs are still accepted for backward compatibility.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_rate_limit_max' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Maximum accepted message submissions per user/IP in each rate-limit window.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_rate_limit_window' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Rate-limit window in seconds for Teams message submissions.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_min_submit_seconds' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Rejects form submissions faster than this threshold to reduce bot traffic.', 'wp-ms365-graph' )
 				. '</p>';
 		} elseif ( false !== strpos( $key, 'header_' ) || false !== strpos( $key, 'empty_text' ) ) {
 			echo '<p class="description">'

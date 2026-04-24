@@ -217,6 +217,7 @@ $is_specific_user = '' !== $configured_user;
 				'msgraph_calendar'           => '[msgraph_calendar]',
 				'msgraph_files'              => '[msgraph_files]',
 				'msgraph_sharepoint_library' => '[msgraph_sharepoint_library]',
+				'msgraph_teams_message_form' => '[msgraph_teams_message_form]',
 			);
 			?>
 			<table class="widefat striped">
