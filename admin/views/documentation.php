@@ -122,7 +122,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<hr />
 	<h2><code>[msgraph_teams_message_form]</code></h2>
-	<p><?php esc_html_e( 'Displays a public message form and posts submissions to Microsoft Teams using a Workflow endpoint URL. The form includes optional sender name/email fields.', 'wp-ms365-graph' ); ?></p>
+	<p><?php esc_html_e( 'Displays a public message form and posts submissions to Microsoft Teams using a Workflow endpoint URL. Sender name and email are required.', 'wp-ms365-graph' ); ?></p>
 	<table class="widefat striped msgraph_shortcode-table">
 		<thead>
 			<tr>

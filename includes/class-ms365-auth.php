@@ -174,6 +174,21 @@ class WP_MS365_Auth {
 			'files_header_file'        => '',
 			'files_header_size'        => '',
 			'files_header_modified'    => '',
+			'teams_form_placeholder'   => '',
+			'teams_form_button_text'   => '',
+			'teams_form_label_name'    => '',
+			'teams_form_label_email'   => '',
+			'teams_form_label_message' => '',
+			'teams_form_success'       => '',
+			'teams_form_error_invalid_nonce' => '',
+			'teams_form_error_missing_fields' => '',
+			'teams_form_error_invalid_email' => '',
+			'teams_form_error_invalid_form' => '',
+			'teams_form_error_submitted_too_fast' => '',
+			'teams_form_error_rate_limited' => '',
+			'teams_form_error_invalid_endpoint' => '',
+			'teams_form_error_post_fail' => '',
+			'teams_form_error_unknown'  => '',
 		);
 		$settings = get_option( 'wp_ms365_settings', $defaults );
 		return wp_parse_args( $settings, $defaults );

@@ -145,6 +145,21 @@ class WP_MS365_Admin {
 			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
 			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
 			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+			'teams_form_placeholder'  => __( 'Teams Form: Placeholder', 'wp-ms365-graph' ),
+			'teams_form_button_text'  => __( 'Teams Form: Button Text', 'wp-ms365-graph' ),
+			'teams_form_label_name'   => __( 'Teams Form: Label Name', 'wp-ms365-graph' ),
+			'teams_form_label_email'  => __( 'Teams Form: Label Email', 'wp-ms365-graph' ),
+			'teams_form_label_message'=> __( 'Teams Form: Label Message', 'wp-ms365-graph' ),
+			'teams_form_success'      => __( 'Teams Form: Success Message', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_nonce' => __( 'Teams Form: Error Invalid Nonce', 'wp-ms365-graph' ),
+			'teams_form_error_missing_fields' => __( 'Teams Form: Error Missing Fields', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_email' => __( 'Teams Form: Error Invalid Email', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_form' => __( 'Teams Form: Error Invalid Form', 'wp-ms365-graph' ),
+			'teams_form_error_submitted_too_fast' => __( 'Teams Form: Error Submitted Too Fast', 'wp-ms365-graph' ),
+			'teams_form_error_rate_limited' => __( 'Teams Form: Error Rate Limited', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_endpoint' => __( 'Teams Form: Error Invalid Endpoint', 'wp-ms365-graph' ),
+			'teams_form_error_post_fail' => __( 'Teams Form: Error Delivery Failed', 'wp-ms365-graph' ),
+			'teams_form_error_unknown' => __( 'Teams Form: Error Unknown', 'wp-ms365-graph' ),
 		);
 
 		foreach ( $wording_fields as $key => $label ) {
@@ -251,6 +266,66 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['files_header_modified'] ) ) {
 			$clean['files_header_modified'] = sanitize_text_field( $input['files_header_modified'] );
+		}
+
+		if ( isset( $input['teams_form_placeholder'] ) ) {
+			$clean['teams_form_placeholder'] = sanitize_text_field( $input['teams_form_placeholder'] );
+		}
+
+		if ( isset( $input['teams_form_button_text'] ) ) {
+			$clean['teams_form_button_text'] = sanitize_text_field( $input['teams_form_button_text'] );
+		}
+
+		if ( isset( $input['teams_form_label_name'] ) ) {
+			$clean['teams_form_label_name'] = sanitize_text_field( $input['teams_form_label_name'] );
+		}
+
+		if ( isset( $input['teams_form_label_email'] ) ) {
+			$clean['teams_form_label_email'] = sanitize_text_field( $input['teams_form_label_email'] );
+		}
+
+		if ( isset( $input['teams_form_label_message'] ) ) {
+			$clean['teams_form_label_message'] = sanitize_text_field( $input['teams_form_label_message'] );
+		}
+
+		if ( isset( $input['teams_form_success'] ) ) {
+			$clean['teams_form_success'] = sanitize_text_field( $input['teams_form_success'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_nonce'] ) ) {
+			$clean['teams_form_error_invalid_nonce'] = sanitize_text_field( $input['teams_form_error_invalid_nonce'] );
+		}
+
+		if ( isset( $input['teams_form_error_missing_fields'] ) ) {
+			$clean['teams_form_error_missing_fields'] = sanitize_text_field( $input['teams_form_error_missing_fields'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_email'] ) ) {
+			$clean['teams_form_error_invalid_email'] = sanitize_text_field( $input['teams_form_error_invalid_email'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_form'] ) ) {
+			$clean['teams_form_error_invalid_form'] = sanitize_text_field( $input['teams_form_error_invalid_form'] );
+		}
+
+		if ( isset( $input['teams_form_error_submitted_too_fast'] ) ) {
+			$clean['teams_form_error_submitted_too_fast'] = sanitize_text_field( $input['teams_form_error_submitted_too_fast'] );
+		}
+
+		if ( isset( $input['teams_form_error_rate_limited'] ) ) {
+			$clean['teams_form_error_rate_limited'] = sanitize_text_field( $input['teams_form_error_rate_limited'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_endpoint'] ) ) {
+			$clean['teams_form_error_invalid_endpoint'] = sanitize_text_field( $input['teams_form_error_invalid_endpoint'] );
+		}
+
+		if ( isset( $input['teams_form_error_post_fail'] ) ) {
+			$clean['teams_form_error_post_fail'] = sanitize_text_field( $input['teams_form_error_post_fail'] );
+		}
+
+		if ( isset( $input['teams_form_error_unknown'] ) ) {
+			$clean['teams_form_error_unknown'] = sanitize_text_field( $input['teams_form_error_unknown'] );
 		}
 
 		// Basic UUID format validation for tenant/client IDs.

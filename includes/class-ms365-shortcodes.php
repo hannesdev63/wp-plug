@@ -1237,6 +1237,7 @@ class WP_MS365_Shortcodes {
 		$this->track_shortcode_render( 'msgraph_teams_message_form' );
 
 		$settings = WP_MS365_Auth::get_settings();
+		$wording  = $this->get_shortcode_wording();
 		$atts     = shortcode_atts(
 			array(
 				'team_id'     => '',
@@ -1245,8 +1246,8 @@ class WP_MS365_Shortcodes {
 				'webhook_url' => '',
 				'use_adaptive_card' => 'auto',
 				'title'       => '',
-				'placeholder' => __( 'Type your message', 'wp-ms365-graph' ),
-				'button_text' => __( 'Send Message', 'wp-ms365-graph' ),
+				'placeholder' => $wording['teams_form_placeholder'],
+				'button_text' => $wording['teams_form_button_text'],
 				'max_length'  => 1000,
 			),
 			$atts,
@@ -1280,6 +1281,11 @@ class WP_MS365_Shortcodes {
 
 		$max_length = max( 20, min( 4000, (int) $atts['max_length'] ) );
 		$use_adaptive_card = sanitize_key( (string) $atts['use_adaptive_card'] );
+		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
+		if ( $adaptive_mode ) {
+			$team_id    = '';
+			$channel_id = '';
+		}
 		$form_id    = 'msgraph_teams_form_' . wp_generate_password( 8, false, false );
 		$form_started_at = time();
 		$route_key       = $this->get_teams_form_route_key( $endpoint_url, $team_id, $channel_id );
@@ -1296,20 +1302,20 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 
 			<?php if ( 'success' === $status ) : ?>
-				<p class="msgraph_notice msgraph_notice--success"><?php esc_html_e( 'Your message has been sent.', 'wp-ms365-graph' ); ?></p>
+				<p class="msgraph_notice msgraph_notice--success"><?php echo esc_html( $wording['teams_form_success'] ); ?></p>
 			<?php elseif ( 'error' === $status ) : ?>
 				<?php
 				$error_map = array(
-					'invalid_nonce'   => __( 'Security validation failed. Please refresh the page and try again.', 'wp-ms365-graph' ),
-					'missing_fields'  => __( 'Please enter a message before submitting.', 'wp-ms365-graph' ),
-					'invalid_email'   => __( 'Please provide a valid email address or leave it empty.', 'wp-ms365-graph' ),
-					'invalid_form'    => __( 'Invalid form submission. Please refresh and try again.', 'wp-ms365-graph' ),
-					'submitted_too_fast' => __( 'Submitted too quickly. Please try again.', 'wp-ms365-graph' ),
-					'rate_limited'    => __( 'Too many requests. Please wait and try again later.', 'wp-ms365-graph' ),
-					'invalid_endpoint' => __( 'Message delivery is not configured. Please contact the site administrator.', 'wp-ms365-graph' ),
-					'invalid_webhook' => __( 'Message delivery is not configured. Please contact the site administrator.', 'wp-ms365-graph' ),
-					'teams_post_fail' => __( 'Message could not be delivered to Teams. Please try again later.', 'wp-ms365-graph' ),
-					'unknown'         => __( 'Message could not be sent.', 'wp-ms365-graph' ),
+					'invalid_nonce'   => $wording['teams_form_error_invalid_nonce'],
+					'missing_fields'  => $wording['teams_form_error_missing_fields'],
+					'invalid_email'   => $wording['teams_form_error_invalid_email'],
+					'invalid_form'    => $wording['teams_form_error_invalid_form'],
+					'submitted_too_fast' => $wording['teams_form_error_submitted_too_fast'],
+					'rate_limited'    => $wording['teams_form_error_rate_limited'],
+					'invalid_endpoint' => $wording['teams_form_error_invalid_endpoint'],
+					'invalid_webhook' => $wording['teams_form_error_invalid_endpoint'],
+					'teams_post_fail' => $wording['teams_form_error_post_fail'],
+					'unknown'         => $wording['teams_form_error_unknown'],
 				);
 				$error_text = isset( $error_map[ $reason ] ) ? $error_map[ $reason ] : $error_map['unknown'];
 				?>
@@ -1318,8 +1324,10 @@ class WP_MS365_Shortcodes {
 
 			<form id="<?php echo esc_attr( $form_id ); ?>" class="msgraph_teams_form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_submit_teams_message" />
-				<input type="hidden" name="team_id" value="<?php echo esc_attr( $team_id ); ?>" />
-				<input type="hidden" name="channel_id" value="<?php echo esc_attr( $channel_id ); ?>" />
+				<?php if ( ! $adaptive_mode ) : ?>
+					<input type="hidden" name="team_id" value="<?php echo esc_attr( $team_id ); ?>" />
+					<input type="hidden" name="channel_id" value="<?php echo esc_attr( $channel_id ); ?>" />
+				<?php endif; ?>
 				<input type="hidden" name="endpoint_url" value="<?php echo esc_url( $endpoint_url ); ?>" />
 				<input type="hidden" name="use_adaptive_card" value="<?php echo esc_attr( $use_adaptive_card ); ?>" />
 				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->get_current_request_url() ); ?>" />
@@ -1333,7 +1341,7 @@ class WP_MS365_Shortcodes {
 				</div>
 
 				<label class="msgraph_teams_form__label" for="<?php echo esc_attr( $form_id . '_sender_name' ); ?>">
-					<?php esc_html_e( 'Your Name (optional)', 'wp-ms365-graph' ); ?>
+					<?php echo esc_html( $wording['teams_form_label_name'] ); ?>
 				</label>
 				<input
 					id="<?php echo esc_attr( $form_id . '_sender_name' ); ?>"
@@ -1342,10 +1350,11 @@ class WP_MS365_Shortcodes {
 					class="msgraph_teams_form__input"
 					maxlength="120"
 					autocomplete="name"
+					required
 				/>
 
 				<label class="msgraph_teams_form__label" for="<?php echo esc_attr( $form_id . '_sender_email' ); ?>">
-					<?php esc_html_e( 'Your Email (optional)', 'wp-ms365-graph' ); ?>
+					<?php echo esc_html( $wording['teams_form_label_email'] ); ?>
 				</label>
 				<input
 					id="<?php echo esc_attr( $form_id . '_sender_email' ); ?>"
@@ -1354,10 +1363,11 @@ class WP_MS365_Shortcodes {
 					class="msgraph_teams_form__input"
 					maxlength="190"
 					autocomplete="email"
+					required
 				/>
 
 				<label class="msgraph_teams_form__label" for="<?php echo esc_attr( $form_id . '_message' ); ?>">
-					<?php esc_html_e( 'Message', 'wp-ms365-graph' ); ?>
+					<?php echo esc_html( $wording['teams_form_label_message'] ); ?>
 				</label>
 				<textarea
 					id="<?php echo esc_attr( $form_id . '_message' ); ?>"
@@ -1413,12 +1423,6 @@ class WP_MS365_Shortcodes {
 		$form_token   = isset( $_POST['ms365_form_token'] ) ? trim( (string) wp_unslash( $_POST['ms365_form_token'] ) ) : '';
 
 		$settings = WP_MS365_Auth::get_settings();
-		if ( '' === $team_id && ! empty( $settings['teams_team_id'] ) ) {
-			$team_id = trim( (string) $settings['teams_team_id'] );
-		}
-		if ( '' === $channel_id && ! empty( $settings['teams_channel_id'] ) ) {
-			$channel_id = trim( (string) $settings['teams_channel_id'] );
-		}
 		if ( '' === $endpoint_url && ! empty( $settings['teams_workflow_url'] ) ) {
 			$endpoint_url = trim( (string) $settings['teams_workflow_url'] );
 		}
@@ -1431,14 +1435,27 @@ class WP_MS365_Shortcodes {
 			exit;
 		}
 
+		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
+		if ( ! $adaptive_mode ) {
+			if ( '' === $team_id && ! empty( $settings['teams_team_id'] ) ) {
+				$team_id = trim( (string) $settings['teams_team_id'] );
+			}
+			if ( '' === $channel_id && ! empty( $settings['teams_channel_id'] ) ) {
+				$channel_id = trim( (string) $settings['teams_channel_id'] );
+			}
+		} else {
+			$team_id    = '';
+			$channel_id = '';
+		}
+
 		$route_key = $this->get_teams_form_route_key( $endpoint_url, $team_id, $channel_id );
 
-		if ( '' === $message ) {
+		if ( '' === $sender_name || '' === $sender_email || '' === $message ) {
 			wp_safe_redirect( $this->append_teams_form_status( $redirect_to, 'error', 'missing_fields' ) );
 			exit;
 		}
 
-		if ( '' !== $sender_email && ! is_email( $sender_email ) ) {
+		if ( ! is_email( $sender_email ) ) {
 			wp_safe_redirect( $this->append_teams_form_status( $redirect_to, 'error', 'invalid_email' ) );
 			exit;
 		}
@@ -1481,7 +1498,6 @@ class WP_MS365_Shortcodes {
 		}
 
 		$text_payload = implode( "\n", $header_lines ) . "\n\n" . $message;
-		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
 
 		if ( $adaptive_mode ) {
 			$payload = $this->build_teams_workflow_payload( $text_payload, $message, $sender_name, $sender_email );
@@ -2022,6 +2038,21 @@ class WP_MS365_Shortcodes {
 			'files_header_file'        => __( 'File', 'wp-ms365-graph' ),
 			'files_header_size'        => __( 'Size', 'wp-ms365-graph' ),
 			'files_header_modified'    => __( 'Modified', 'wp-ms365-graph' ),
+			'teams_form_placeholder'   => __( 'Type your message', 'wp-ms365-graph' ),
+			'teams_form_button_text'   => __( 'Send Message', 'wp-ms365-graph' ),
+			'teams_form_label_name'    => __( 'Your Name', 'wp-ms365-graph' ),
+			'teams_form_label_email'   => __( 'Your Email', 'wp-ms365-graph' ),
+			'teams_form_label_message' => __( 'Message', 'wp-ms365-graph' ),
+			'teams_form_success'       => __( 'Your message has been sent.', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_nonce' => __( 'Security validation failed. Please refresh the page and try again.', 'wp-ms365-graph' ),
+			'teams_form_error_missing_fields' => __( 'Please enter your name, email, and message before submitting.', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_email' => __( 'Please provide a valid email address.', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_form' => __( 'Invalid form submission. Please refresh and try again.', 'wp-ms365-graph' ),
+			'teams_form_error_submitted_too_fast' => __( 'Submitted too quickly. Please try again.', 'wp-ms365-graph' ),
+			'teams_form_error_rate_limited' => __( 'Too many requests. Please wait and try again later.', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_endpoint' => __( 'Message delivery is not configured. Please contact the site administrator.', 'wp-ms365-graph' ),
+			'teams_form_error_post_fail' => __( 'Message could not be delivered to Teams. Please try again later.', 'wp-ms365-graph' ),
+			'teams_form_error_unknown'  => __( 'Message could not be sent.', 'wp-ms365-graph' ),
 		);
 
 		foreach ( $defaults as $key => $default_value ) {
