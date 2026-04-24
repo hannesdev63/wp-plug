@@ -108,6 +108,12 @@ class WP_MS365_Admin {
 			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
 			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
 			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
+			'teams_team_id' => __( 'Default Teams Team ID', 'wp-ms365-graph' ),
+			'teams_channel_id' => __( 'Default Teams Channel ID', 'wp-ms365-graph' ),
+			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'wp-ms365-graph' ),
+			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'wp-ms365-graph' ),
+			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'wp-ms365-graph' ),
+			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'wp-ms365-graph' ),
 			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'wp-ms365-graph' ),
 		);
 
@@ -139,6 +145,21 @@ class WP_MS365_Admin {
 			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
 			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
 			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+			'teams_form_placeholder'  => __( 'Teams Form: Placeholder', 'wp-ms365-graph' ),
+			'teams_form_button_text'  => __( 'Teams Form: Button Text', 'wp-ms365-graph' ),
+			'teams_form_label_name'   => __( 'Teams Form: Label Name', 'wp-ms365-graph' ),
+			'teams_form_label_email'  => __( 'Teams Form: Label Email', 'wp-ms365-graph' ),
+			'teams_form_label_message'=> __( 'Teams Form: Label Message', 'wp-ms365-graph' ),
+			'teams_form_success'      => __( 'Teams Form: Success Message', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_nonce' => __( 'Teams Form: Error Invalid Nonce', 'wp-ms365-graph' ),
+			'teams_form_error_missing_fields' => __( 'Teams Form: Error Missing Fields', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_email' => __( 'Teams Form: Error Invalid Email', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_form' => __( 'Teams Form: Error Invalid Form', 'wp-ms365-graph' ),
+			'teams_form_error_submitted_too_fast' => __( 'Teams Form: Error Submitted Too Fast', 'wp-ms365-graph' ),
+			'teams_form_error_rate_limited' => __( 'Teams Form: Error Rate Limited', 'wp-ms365-graph' ),
+			'teams_form_error_invalid_endpoint' => __( 'Teams Form: Error Invalid Endpoint', 'wp-ms365-graph' ),
+			'teams_form_error_post_fail' => __( 'Teams Form: Error Delivery Failed', 'wp-ms365-graph' ),
+			'teams_form_error_unknown' => __( 'Teams Form: Error Unknown', 'wp-ms365-graph' ),
 		);
 
 		foreach ( $wording_fields as $key => $label ) {
@@ -179,6 +200,34 @@ class WP_MS365_Admin {
 			$clean['specific_user'] = sanitize_text_field( $input['specific_user'] );
 		}
 
+		if ( isset( $input['teams_team_id'] ) ) {
+			$clean['teams_team_id'] = sanitize_text_field( $input['teams_team_id'] );
+		}
+
+		if ( isset( $input['teams_channel_id'] ) ) {
+			$clean['teams_channel_id'] = sanitize_text_field( $input['teams_channel_id'] );
+		}
+
+		if ( isset( $input['teams_workflow_url'] ) ) {
+			$clean['teams_workflow_url'] = esc_url_raw( trim( (string) $input['teams_workflow_url'] ) );
+		}
+
+		if ( isset( $input['teams_webhook_url'] ) ) {
+			$clean['teams_webhook_url'] = esc_url_raw( trim( (string) $input['teams_webhook_url'] ) );
+		}
+
+		if ( isset( $input['teams_rate_limit_max'] ) ) {
+			$clean['teams_rate_limit_max'] = max( 1, min( 50, (int) $input['teams_rate_limit_max'] ) );
+		}
+
+		if ( isset( $input['teams_rate_limit_window'] ) ) {
+			$clean['teams_rate_limit_window'] = max( 30, min( 86400, (int) $input['teams_rate_limit_window'] ) );
+		}
+
+		if ( isset( $input['teams_min_submit_seconds'] ) ) {
+			$clean['teams_min_submit_seconds'] = max( 1, min( 120, (int) $input['teams_min_submit_seconds'] ) );
+		}
+
 		if ( isset( $input['custom_css'] ) ) {
 			$clean['custom_css'] = sanitize_textarea_field( $input['custom_css'] );
 		}
@@ -217,6 +266,66 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['files_header_modified'] ) ) {
 			$clean['files_header_modified'] = sanitize_text_field( $input['files_header_modified'] );
+		}
+
+		if ( isset( $input['teams_form_placeholder'] ) ) {
+			$clean['teams_form_placeholder'] = sanitize_text_field( $input['teams_form_placeholder'] );
+		}
+
+		if ( isset( $input['teams_form_button_text'] ) ) {
+			$clean['teams_form_button_text'] = sanitize_text_field( $input['teams_form_button_text'] );
+		}
+
+		if ( isset( $input['teams_form_label_name'] ) ) {
+			$clean['teams_form_label_name'] = sanitize_text_field( $input['teams_form_label_name'] );
+		}
+
+		if ( isset( $input['teams_form_label_email'] ) ) {
+			$clean['teams_form_label_email'] = sanitize_text_field( $input['teams_form_label_email'] );
+		}
+
+		if ( isset( $input['teams_form_label_message'] ) ) {
+			$clean['teams_form_label_message'] = sanitize_text_field( $input['teams_form_label_message'] );
+		}
+
+		if ( isset( $input['teams_form_success'] ) ) {
+			$clean['teams_form_success'] = sanitize_text_field( $input['teams_form_success'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_nonce'] ) ) {
+			$clean['teams_form_error_invalid_nonce'] = sanitize_text_field( $input['teams_form_error_invalid_nonce'] );
+		}
+
+		if ( isset( $input['teams_form_error_missing_fields'] ) ) {
+			$clean['teams_form_error_missing_fields'] = sanitize_text_field( $input['teams_form_error_missing_fields'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_email'] ) ) {
+			$clean['teams_form_error_invalid_email'] = sanitize_text_field( $input['teams_form_error_invalid_email'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_form'] ) ) {
+			$clean['teams_form_error_invalid_form'] = sanitize_text_field( $input['teams_form_error_invalid_form'] );
+		}
+
+		if ( isset( $input['teams_form_error_submitted_too_fast'] ) ) {
+			$clean['teams_form_error_submitted_too_fast'] = sanitize_text_field( $input['teams_form_error_submitted_too_fast'] );
+		}
+
+		if ( isset( $input['teams_form_error_rate_limited'] ) ) {
+			$clean['teams_form_error_rate_limited'] = sanitize_text_field( $input['teams_form_error_rate_limited'] );
+		}
+
+		if ( isset( $input['teams_form_error_invalid_endpoint'] ) ) {
+			$clean['teams_form_error_invalid_endpoint'] = sanitize_text_field( $input['teams_form_error_invalid_endpoint'] );
+		}
+
+		if ( isset( $input['teams_form_error_post_fail'] ) ) {
+			$clean['teams_form_error_post_fail'] = sanitize_text_field( $input['teams_form_error_post_fail'] );
+		}
+
+		if ( isset( $input['teams_form_error_unknown'] ) ) {
+			$clean['teams_form_error_unknown'] = sanitize_text_field( $input['teams_form_error_unknown'] );
 		}
 
 		// Basic UUID format validation for tenant/client IDs.
@@ -462,6 +571,30 @@ class WP_MS365_Admin {
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
 				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_team_id' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default Team ID used by [msgraph_teams_message_form] when team_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_channel_id' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default Channel ID used by [msgraph_teams_message_form] when channel_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_workflow_url' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Workflow endpoint URL for Teams message delivery. This is the primary sender used by [msgraph_teams_message_form]. Existing Incoming Webhook URLs are still accepted for backward compatibility.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_rate_limit_max' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Maximum accepted message submissions per user/IP in each rate-limit window.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_rate_limit_window' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Rate-limit window in seconds for Teams message submissions.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'teams_min_submit_seconds' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Rejects form submissions faster than this threshold to reduce bot traffic.', 'wp-ms365-graph' )
 				. '</p>';
 		} elseif ( false !== strpos( $key, 'header_' ) || false !== strpos( $key, 'empty_text' ) ) {
 			echo '<p class="description">'

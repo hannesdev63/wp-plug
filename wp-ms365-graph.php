@@ -3,7 +3,7 @@
  * Plugin Name:       MS Graph Connect
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
  * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
- * Version:           1.0.4
+ * Version:           1.0.5
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            hannesdev63
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'WP_MS365_VERSION',     '1.0.4' );
+define( 'WP_MS365_VERSION',     '1.0.5' );
 define( 'WP_MS365_PLUGIN_FILE', __FILE__ );
 define( 'WP_MS365_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'WP_MS365_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -72,6 +72,13 @@ function wp_ms365_graph_activate() {
 		'client_id'     => '',
 		'client_secret' => '',
 		'specific_user' => '',
+		'teams_team_id' => '',
+		'teams_channel_id' => '',
+		'teams_workflow_url' => '',
+		'teams_webhook_url' => '',
+		'teams_rate_limit_max' => 3,
+		'teams_rate_limit_window' => 300,
+		'teams_min_submit_seconds' => 3,
 		'custom_css'    => '',
 		'calendar_empty_text'      => '',
 		'calendar_header_date'     => '',
@@ -81,6 +88,21 @@ function wp_ms365_graph_activate() {
 		'files_header_file'        => '',
 		'files_header_size'        => '',
 		'files_header_modified'    => '',
+		'teams_form_placeholder'   => '',
+		'teams_form_button_text'   => '',
+		'teams_form_label_name'    => '',
+		'teams_form_label_email'   => '',
+		'teams_form_label_message' => '',
+		'teams_form_success'       => '',
+		'teams_form_error_invalid_nonce' => '',
+		'teams_form_error_missing_fields' => '',
+		'teams_form_error_invalid_email' => '',
+		'teams_form_error_invalid_form' => '',
+		'teams_form_error_submitted_too_fast' => '',
+		'teams_form_error_rate_limited' => '',
+		'teams_form_error_invalid_endpoint' => '',
+		'teams_form_error_post_fail' => '',
+		'teams_form_error_unknown'  => '',
 		'redirect_uri'  => admin_url( 'admin.php?page=wp-ms365-graph' ),
 	);
 	add_option( 'wp_ms365_settings', $defaults );

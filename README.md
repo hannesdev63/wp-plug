@@ -25,6 +25,23 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - An **Azure Active Directory** app registration with the following:
    - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`
    - A **Client Secret** generated in *Certificates & Secrets*
+   - A **Teams Workflow Endpoint URL** (if using Teams message form)
+
+---
+
+## Required Microsoft Graph API Rights
+
+This plugin uses app-only authentication (OAuth client credentials), so configure **Application** permissions in Microsoft Graph and grant admin consent.
+
+| Feature | Required Graph Application Permission |
+|---|---|
+| Read configured user profile | `User.Read.All` |
+| Calendar shortcode `[msgraph_calendar]` | `Calendars.Read` |
+| OneDrive shortcode `[msgraph_files]` | `Files.Read.All` |
+| SharePoint library shortcode `[msgraph_sharepoint_library]` | `Sites.Read.All` |
+| Teams message form shortcode `[msgraph_teams_message_form]` | No Graph permission required (uses Teams Workflow endpoint URL) |
+
+After assigning these rights, click **Grant admin consent** in Azure and then request/save a fresh token in the plugin settings.
 
 ---
 
@@ -54,6 +71,24 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
    - `Files.Read.All` (Application)
    - `Sites.Read.All` (Application, required for SharePoint library shortcode)
 7. Click **Grant admin consent**.
+
+### Teams form workflow setup
+
+1. Open **Microsoft Teams** and go to the team/channel where form messages should arrive.
+2. Open **Workflows** for that team/channel.
+3. Create a flow using trigger **When a Teams webhook request is received**.
+4. Default delivery is plain text (webhook style).
+5. If you want adaptive cards, add action **Post card in a chat or channel** and map trigger body field `adaptive_card` as card payload.
+6. Save the flow and copy the generated HTTP POST URL.
+7. In WordPress, open **Microsoft 365 -> Settings** and paste the URL into **Teams Workflow Endpoint URL**.
+8. Save settings and submit a test message with `[msgraph_teams_message_form]`.
+
+Notes:
+- Keep the workflow URL private because anyone with the URL can trigger the flow.
+- The shortcode also accepts `webhook_url` as a legacy alias, but `endpoint_url` is now the preferred parameter.
+- Auto mode detects workflow-style URLs (for example `logic.azure.com`) and uses adaptive-card payload automatically.
+- You can force mode in shortcode with `use_adaptive_card="true"` or `use_adaptive_card="false"`.
+- In adaptive-card mode, `team_id` and `channel_id` are hidden in the admin UI and omitted from the payload.
 
 ### 2 – Enter Credentials in WordPress
 
@@ -85,7 +120,7 @@ The plugin includes a **Diagnostics** page to help troubleshoot authentication a
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | **Connection Failed** | Invalid credentials or misconfigured app | Check Tenant ID, Client ID, Client Secret. See Diagnostics page for details. |
-| **Access Denied (403)** | Missing Graph application permission | Add required application permissions (`User.Read.All`, `Calendars.Read`, `Files.Read.All`) and grant admin consent in Azure. |
+| **Access Denied (403)** | Missing Graph application permission | Add required application permissions (`User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`) and grant admin consent in Azure. |
 | **No files/calendar displayed** | Not connected, wrong user targeted, or resource not provisioned | Verify connection in Settings. Check if configured user has mailbox/OneDrive provisioned. |
 | **Specific User warning shown** | No target user configured | Set Specific User (UPN/object ID) in plugin settings. |
 | **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |
@@ -103,9 +138,13 @@ Displays upcoming calendar events from the configured specific user.
 | `limit` | `5` | Maximum number of events to display |
 | `timezone` | `UTC` | IANA timezone string (e.g. `Europe/London`) |
 | `title` | `Upcoming Events` | Heading text (empty string = no heading) |
+| `class` | `msgraph_calendar` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_calendar__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_calendar__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_calendar limit="5" timezone="America/New_York" title="My Schedule"]
+[msgraph_calendar class="my-calendar" table_class="my-calendar-table" item_class="my-calendar-row"]
 ```
 
 ---
@@ -119,9 +158,13 @@ Displays a OneDrive file/folder listing from the configured specific user.
 | `limit` | `10` | Maximum number of items |
 | `folder` | *(root)* | OneDrive path (e.g. `Documents/Projects`) |
 | `title` | `My Files` | Heading text |
+| `class` | `msgraph_files` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_files__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_files__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_files limit="20" folder="Documents" title="Project Docs"]
+[msgraph_files class="my-files" table_class="my-files-table" item_class="my-files-row"]
 ```
 
 ---
@@ -137,9 +180,40 @@ Displays a SharePoint document library file/folder listing.
 | `limit` | `10` | Maximum number of items |
 | `folder` | *(root)* | Library folder path (e.g. `Shared Documents/Team`) |
 | `title` | *(empty)* | Heading text |
+| `class` | `msgraph_files msgraph_files--sharepoint` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_files__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_files__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]
+[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" class="my-sp-files" table_class="my-sp-table" item_class="my-sp-row"]
+```
+
+---
+
+### `[msgraph_teams_message_form]`
+
+Displays a public Teams message form (name and email required).
+
+| Attribute | Default | Description |
+|---|---|---|
+| `endpoint_url` | settings value | Teams Workflow endpoint URL |
+| `webhook_url` | *(empty)* | Legacy alias for `endpoint_url` |
+| `use_adaptive_card` | `auto` | `auto`, `true`, or `false` |
+| `title` | *(empty)* | Optional heading text |
+| `placeholder` | `Type your message` | Message textarea placeholder |
+| `button_text` | `Send Message` | Submit button label |
+| `max_length` | `1000` | Message max length |
+| `class` | `msgraph_teams_form-wrap` | Additional wrapper classes (merged with defaults) |
+| `form_class` | `msgraph_teams_form` | Additional form classes (merged with defaults) |
+| `input_class` | `msgraph_teams_form__input` | Additional name/email input classes (merged with defaults) |
+| `textarea_class` | `msgraph_teams_form__textarea` | Additional textarea classes (merged with defaults) |
+| `submit_class` | `msgraph_teams_form__submit` | Additional submit button classes (merged with defaults) |
+
+```
+[msgraph_teams_message_form]
+[msgraph_teams_message_form endpoint_url="https://..." use_adaptive_card="true"]
+[msgraph_teams_message_form class="my-teams-wrap" form_class="my-teams-form" input_class="my-teams-input" textarea_class="my-teams-textarea" submit_class="my-teams-submit"]
 ```
 
 ---

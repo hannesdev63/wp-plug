@@ -46,6 +46,139 @@ class WP_MS365_Graph {
 		return self::request( 'POST', $url, $body );
 	}
 
+	/**
+	 * Post a message into a Microsoft Teams channel.
+	 *
+	 * @param  string $team_id    Microsoft Teams team ID.
+	 * @param  string $channel_id Microsoft Teams channel ID.
+	 * @param  string $message    Message body text.
+	 * @return array|WP_Error
+	 */
+	public static function post_teams_channel_message( $team_id, $channel_id, $message ) {
+		$team_id    = trim( (string) $team_id );
+		$channel_id = trim( (string) $channel_id );
+		$message    = trim( (string) $message );
+
+		if ( '' === $team_id || '' === $channel_id ) {
+			return new WP_Error( 'ms365_invalid_teams_target', __( 'Teams team ID and channel ID are required.', 'wp-ms365-graph' ) );
+		}
+
+		if ( '' === $message ) {
+			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'wp-ms365-graph' ) );
+		}
+
+		return self::post(
+			'/teams/' . rawurlencode( $team_id ) . '/channels/' . rawurlencode( $channel_id ) . '/messages',
+			array(
+				'body' => array(
+					'contentType' => 'text',
+					'content'     => $message,
+				),
+			)
+		);
+	}
+
+	/**
+	 * Post a JSON payload to a Microsoft Teams Workflow endpoint URL.
+	 *
+	 * @param  string $endpoint_url Teams workflow endpoint URL.
+	 * @param  array  $payload      Request payload.
+	 * @return array|WP_Error
+	 */
+	public static function post_teams_workflow_message( $endpoint_url, array $payload ) {
+		$endpoint_url = trim( (string) $endpoint_url );
+
+		if ( '' === $endpoint_url || ! wp_http_validate_url( $endpoint_url ) ) {
+			return new WP_Error( 'ms365_invalid_teams_endpoint', __( 'Teams workflow endpoint URL is invalid.', 'wp-ms365-graph' ) );
+		}
+
+		$response = wp_remote_post(
+			$endpoint_url,
+			array(
+				'timeout' => 20,
+				'headers' => array(
+					'Content-Type' => 'application/json; charset=utf-8',
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status = wp_remote_retrieve_response_code( $response );
+		$body   = trim( (string) wp_remote_retrieve_body( $response ) );
+
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error(
+				'ms365_teams_workflow_failed',
+				sprintf( __( 'Teams workflow endpoint request failed (%d).', 'wp-ms365-graph' ), (int) $status ),
+				array( 'status' => $status, 'body' => $body )
+			);
+		}
+
+		return array(
+			'status' => $status,
+			'body'   => $body,
+		);
+	}
+
+	/**
+	 * Legacy wrapper for webhook delivery.
+	 *
+	 * @param  string $webhook_url Teams webhook URL.
+	 * @param  string $message     Message body text.
+	 * @return array|WP_Error
+	 */
+	public static function post_teams_webhook_message( $webhook_url, $message ) {
+		$webhook_url = trim( (string) $webhook_url );
+		$message     = trim( (string) $message );
+
+		if ( '' === $webhook_url || ! wp_http_validate_url( $webhook_url ) ) {
+			return new WP_Error( 'ms365_invalid_teams_webhook', __( 'Teams webhook URL is invalid.', 'wp-ms365-graph' ) );
+		}
+
+		if ( '' === $message ) {
+			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'wp-ms365-graph' ) );
+		}
+
+		$response = wp_remote_post(
+			$webhook_url,
+			array(
+				'timeout' => 20,
+				'headers' => array(
+					'Content-Type' => 'application/json; charset=utf-8',
+				),
+				'body'    => wp_json_encode(
+					array(
+						'text' => $message,
+					)
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status = wp_remote_retrieve_response_code( $response );
+		$body   = trim( (string) wp_remote_retrieve_body( $response ) );
+
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error(
+				'ms365_teams_webhook_failed',
+				sprintf( __( 'Teams webhook request failed (%d).', 'wp-ms365-graph' ), (int) $status ),
+				array( 'status' => $status, 'body' => $body )
+			);
+		}
+
+		return array(
+			'status' => $status,
+			'body'   => $body,
+		);
+	}
+
 	// ------------------------------------------------------------------
 	// High-level Graph resource methods
 	// ------------------------------------------------------------------

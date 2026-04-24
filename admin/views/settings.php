@@ -117,6 +117,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 			<strong><?php esc_html_e( 'Note: App-only access requires Microsoft Graph application permissions.', 'wp-ms365-graph' ); ?></strong><br />
 			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
 			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code>.<br />
+			<?php esc_html_e( 'Teams form submissions are delivered via Teams Workflow endpoint URL (no additional Microsoft Graph permission is required for that form sender).', 'wp-ms365-graph' ); ?><br />
 			<?php esc_html_e( 'After adding these application permissions, click "Grant admin consent" in Azure and save credentials again.', 'wp-ms365-graph' ); ?>
 		</p>
 	</div>
@@ -197,6 +198,35 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 			if (!root) {
 				return;
 			}
+
+			var isAdaptiveEndpointUrl = function (url) {
+				if (!url) {
+					return false;
+				}
+
+				var normalized = String(url).toLowerCase();
+				return normalized.indexOf('logic.azure.com') !== -1 || normalized.indexOf('/workflows/') !== -1;
+			};
+
+			var updateTeamsRoutingVisibility = function () {
+				var endpointInput = root.querySelector('#wp_ms365_teams_workflow_url');
+				var teamRow = root.querySelector('tr#wp_ms365_teams_team_id');
+				var channelRow = root.querySelector('tr#wp_ms365_teams_channel_id');
+				if (!endpointInput || !teamRow || !channelRow) {
+					return;
+				}
+
+				var hide = isAdaptiveEndpointUrl(endpointInput.value);
+				teamRow.style.display = hide ? 'none' : '';
+				channelRow.style.display = hide ? 'none' : '';
+			};
+
+			var endpointInput = root.querySelector('#wp_ms365_teams_workflow_url');
+			if (endpointInput) {
+				endpointInput.addEventListener('input', updateTeamsRoutingVisibility);
+				endpointInput.addEventListener('change', updateTeamsRoutingVisibility);
+			}
+			updateTeamsRoutingVisibility();
 
 			root.querySelectorAll('input[type="password"]').forEach(function (input) {
 				if (input.dataset.toggleReady === '1') {
