@@ -33,6 +33,14 @@ class WP_MS365_Shortcodes {
 	 * @return void
 	 */
 	public function maybe_handle_download() {
+		if ( 'POST' === strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) ) {
+			$posted_action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : '';
+			if ( 'wp_ms365_submit_teams_message' === $posted_action ) {
+				$this->handle_teams_message_submission();
+				return;
+			}
+		}
+
 		if ( isset( $_GET['ms365_download'] ) ) {
 			$this->handle_drive_download();
 			return;
@@ -1350,7 +1358,7 @@ class WP_MS365_Shortcodes {
 				<p class="msgraph_notice msgraph_notice--error"><?php echo esc_html( $error_text ); ?></p>
 			<?php endif; ?>
 
-			<form id="<?php echo esc_attr( $form_id ); ?>" class="<?php echo esc_attr( $teams_form_class ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<form id="<?php echo esc_attr( $form_id ); ?>" class="<?php echo esc_attr( $teams_form_class ); ?>" method="post" action="<?php echo esc_url( $this->get_current_request_url() ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_submit_teams_message" />
 				<?php if ( ! $adaptive_mode ) : ?>
 					<input type="hidden" name="team_id" value="<?php echo esc_attr( $team_id ); ?>" />
