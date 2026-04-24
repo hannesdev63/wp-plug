@@ -161,6 +161,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php esc_html_e( 'Auto mode enables adaptive cards for workflow-style URLs (for example logic.azure.com). You can force mode with shortcode param use_adaptive_card="true" or "false".', 'wp-ms365-graph' ); ?>
 	</p>
 	<p>
+		<?php esc_html_e( 'Note: in adaptive-card mode, team_id and channel_id are hidden in Settings and omitted from the payload.', 'wp-ms365-graph' ); ?>
+	</p>
+	<p>
 		<?php esc_html_e( 'Rate limiting for this form is enforced server-side using the plugin settings fields "Teams Form Rate Limit: Max Requests" and "Teams Form Rate Limit: Window (seconds)". Additional anti-bot checks include a hidden honeypot field and a configurable minimum submit time ("Teams Form: Minimum Submit Time (seconds)").', 'wp-ms365-graph' ); ?>
 	</p>
 

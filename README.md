@@ -88,6 +88,7 @@ Notes:
 - The shortcode also accepts `webhook_url` as a legacy alias, but `endpoint_url` is now the preferred parameter.
 - Auto mode detects workflow-style URLs (for example `logic.azure.com`) and uses adaptive-card payload automatically.
 - You can force mode in shortcode with `use_adaptive_card="true"` or `use_adaptive_card="false"`.
+- In adaptive-card mode, `team_id` and `channel_id` are hidden in the admin UI and omitted from the payload.
 
 ### 2 – Enter Credentials in WordPress
 

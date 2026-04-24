@@ -199,6 +199,35 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 				return;
 			}
 
+			var isAdaptiveEndpointUrl = function (url) {
+				if (!url) {
+					return false;
+				}
+
+				var normalized = String(url).toLowerCase();
+				return normalized.indexOf('logic.azure.com') !== -1 || normalized.indexOf('/workflows/') !== -1;
+			};
+
+			var updateTeamsRoutingVisibility = function () {
+				var endpointInput = root.querySelector('#wp_ms365_teams_workflow_url');
+				var teamRow = root.querySelector('tr#wp_ms365_teams_team_id');
+				var channelRow = root.querySelector('tr#wp_ms365_teams_channel_id');
+				if (!endpointInput || !teamRow || !channelRow) {
+					return;
+				}
+
+				var hide = isAdaptiveEndpointUrl(endpointInput.value);
+				teamRow.style.display = hide ? 'none' : '';
+				channelRow.style.display = hide ? 'none' : '';
+			};
+
+			var endpointInput = root.querySelector('#wp_ms365_teams_workflow_url');
+			if (endpointInput) {
+				endpointInput.addEventListener('input', updateTeamsRoutingVisibility);
+				endpointInput.addEventListener('change', updateTeamsRoutingVisibility);
+			}
+			updateTeamsRoutingVisibility();
+
 			root.querySelectorAll('input[type="password"]').forEach(function (input) {
 				if (input.dataset.toggleReady === '1') {
 					return;

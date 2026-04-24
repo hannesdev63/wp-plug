@@ -1484,7 +1484,7 @@ class WP_MS365_Shortcodes {
 		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
 
 		if ( $adaptive_mode ) {
-			$payload = $this->build_teams_workflow_payload( $text_payload, $message, $sender_name, $sender_email, $team_id, $channel_id );
+			$payload = $this->build_teams_workflow_payload( $text_payload, $message, $sender_name, $sender_email );
 			$result  = WP_MS365_Graph::post_teams_workflow_message( $endpoint_url, $payload );
 		} else {
 			$result = WP_MS365_Graph::post_teams_webhook_message( $endpoint_url, $text_payload );
@@ -1578,11 +1578,9 @@ class WP_MS365_Shortcodes {
 	 * @param  string $message      Original message body.
 	 * @param  string $sender_name  Optional sender name.
 	 * @param  string $sender_email Optional sender email.
-	 * @param  string $team_id      Optional team metadata.
-	 * @param  string $channel_id   Optional channel metadata.
 	 * @return array
 	 */
-	private function build_teams_workflow_payload( $text_payload, $message, $sender_name, $sender_email, $team_id, $channel_id ) {
+	private function build_teams_workflow_payload( $text_payload, $message, $sender_name, $sender_email ) {
 		$site_name    = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		$site_url     = home_url( '/' );
 		$submitted_at = gmdate( 'c' );
@@ -1610,14 +1608,6 @@ class WP_MS365_Shortcodes {
 							'value' => ( '' !== $sender_email ) ? (string) $sender_email : '-',
 						),
 						array(
-							'title' => 'Team ID',
-							'value' => ( '' !== $team_id ) ? (string) $team_id : '-',
-						),
-						array(
-							'title' => 'Channel ID',
-							'value' => ( '' !== $channel_id ) ? (string) $channel_id : '-',
-						),
-						array(
 							'title' => 'Submitted',
 							'value' => $submitted_at,
 						),
@@ -1641,8 +1631,6 @@ class WP_MS365_Shortcodes {
 			'message'      => (string) $message,
 			'sender_name'  => (string) $sender_name,
 			'sender_email' => (string) $sender_email,
-			'team_id'      => (string) $team_id,
-			'channel_id'   => (string) $channel_id,
 			'site_name'    => $site_name,
 			'site_url'     => $site_url,
 			'submitted_at' => $submitted_at,
