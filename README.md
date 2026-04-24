@@ -138,9 +138,13 @@ Displays upcoming calendar events from the configured specific user.
 | `limit` | `5` | Maximum number of events to display |
 | `timezone` | `UTC` | IANA timezone string (e.g. `Europe/London`) |
 | `title` | `Upcoming Events` | Heading text (empty string = no heading) |
+| `class` | `msgraph_calendar` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_calendar__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_calendar__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_calendar limit="5" timezone="America/New_York" title="My Schedule"]
+[msgraph_calendar class="my-calendar" table_class="my-calendar-table" item_class="my-calendar-row"]
 ```
 
 ---
@@ -154,9 +158,13 @@ Displays a OneDrive file/folder listing from the configured specific user.
 | `limit` | `10` | Maximum number of items |
 | `folder` | *(root)* | OneDrive path (e.g. `Documents/Projects`) |
 | `title` | `My Files` | Heading text |
+| `class` | `msgraph_files` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_files__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_files__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_files limit="20" folder="Documents" title="Project Docs"]
+[msgraph_files class="my-files" table_class="my-files-table" item_class="my-files-row"]
 ```
 
 ---
@@ -172,9 +180,40 @@ Displays a SharePoint document library file/folder listing.
 | `limit` | `10` | Maximum number of items |
 | `folder` | *(root)* | Library folder path (e.g. `Shared Documents/Team`) |
 | `title` | *(empty)* | Heading text |
+| `class` | `msgraph_files msgraph_files--sharepoint` | Additional wrapper classes (merged with defaults) |
+| `table_class` | `msgraph_table msgraph_files__table` | Additional table classes (merged with defaults) |
+| `item_class` | `msgraph_files__item` | Additional row/item classes (merged with defaults) |
 
 ```
 [msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents" title="Team Library"]
+[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" class="my-sp-files" table_class="my-sp-table" item_class="my-sp-row"]
+```
+
+---
+
+### `[msgraph_teams_message_form]`
+
+Displays a public Teams message form (name and email required).
+
+| Attribute | Default | Description |
+|---|---|---|
+| `endpoint_url` | settings value | Teams Workflow endpoint URL |
+| `webhook_url` | *(empty)* | Legacy alias for `endpoint_url` |
+| `use_adaptive_card` | `auto` | `auto`, `true`, or `false` |
+| `title` | *(empty)* | Optional heading text |
+| `placeholder` | `Type your message` | Message textarea placeholder |
+| `button_text` | `Send Message` | Submit button label |
+| `max_length` | `1000` | Message max length |
+| `class` | `msgraph_teams_form-wrap` | Additional wrapper classes (merged with defaults) |
+| `form_class` | `msgraph_teams_form` | Additional form classes (merged with defaults) |
+| `input_class` | `msgraph_teams_form__input` | Additional name/email input classes (merged with defaults) |
+| `textarea_class` | `msgraph_teams_form__textarea` | Additional textarea classes (merged with defaults) |
+| `submit_class` | `msgraph_teams_form__submit` | Additional submit button classes (merged with defaults) |
+
+```
+[msgraph_teams_message_form]
+[msgraph_teams_message_form endpoint_url="https://..." use_adaptive_card="true"]
+[msgraph_teams_message_form class="my-teams-wrap" form_class="my-teams-form" input_class="my-teams-input" textarea_class="my-teams-textarea" submit_class="my-teams-submit"]
 ```
 
 ---

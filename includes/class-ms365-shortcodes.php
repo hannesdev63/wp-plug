@@ -398,6 +398,9 @@ class WP_MS365_Shortcodes {
 				'limit'              => 5,
 				'timezone'           => $default_timezone,
 				'title'              => '',
+				'class'              => '',
+				'table_class'        => '',
+				'item_class'         => '',
 				'past_days'          => 0,
 				'columns'            => '',
 				'duration_display'   => 'hours_minutes',
@@ -410,6 +413,9 @@ class WP_MS365_Shortcodes {
 		);
 
 		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+		$calendar_wrap_class  = $this->merge_css_classes( 'msgraph_calendar', $atts['class'] );
+		$calendar_table_class = $this->merge_css_classes( 'msgraph_table msgraph_calendar__table', $atts['table_class'] );
+		$calendar_item_class  = $this->merge_css_classes( 'msgraph_calendar__item', $atts['item_class'] );
 
 		$available_columns = array(
 			'date'     => $wording['calendar_header_date'],
@@ -535,7 +541,7 @@ class WP_MS365_Shortcodes {
 
 		ob_start();
 		?>
-		<div class="msgraph_calendar">
+		<div class="<?php echo esc_attr( $calendar_wrap_class ); ?>">
 			<?php if ( $atts['title'] ) : ?>
 				<h3 class="msgraph_calendar__title"><?php echo esc_html( $atts['title'] ); ?></h3>
 			<?php endif; ?>
@@ -573,7 +579,7 @@ class WP_MS365_Shortcodes {
 				}
 				$col_count = count( $active_columns );
 				?>
-				<table class="msgraph_table msgraph_calendar__table">
+				<table class="<?php echo esc_attr( $calendar_table_class ); ?>">
 					<?php if ( $show_headers && ! $group_by_date ) : ?>
 						<thead>
 							<tr>
@@ -615,7 +621,7 @@ class WP_MS365_Shortcodes {
 										? $this->format_event_time_range_for_display( $start, $end, $event_timezone, $all_day, $all_day_label )
 										: $this->format_event_duration_for_display( $start, $end, $all_day, $event_timezone );
 									?>
-									<tr class="msgraph_calendar__item">
+									<tr class="<?php echo esc_attr( $calendar_item_class ); ?>">
 										<?php foreach ( $active_columns as $column_key ) : ?>
 											<?php if ( 'date' === $column_key ) : ?>
 												<td class="msgraph_calendar__date" data-label="<?php echo esc_attr( $available_columns['date'] ); ?>"><?php echo esc_html( $start_display ); ?></td>
@@ -658,7 +664,7 @@ class WP_MS365_Shortcodes {
 									? $this->format_event_time_range_for_display( $start, $end, $event_timezone, $all_day, $all_day_label )
 									: $this->format_event_duration_for_display( $start, $end, $all_day, $event_timezone );
 								?>
-								<tr class="msgraph_calendar__item">
+								<tr class="<?php echo esc_attr( $calendar_item_class ); ?>">
 									<?php foreach ( $active_columns as $column_key ) : ?>
 										<?php if ( 'date' === $column_key ) : ?>
 											<td class="msgraph_calendar__date" data-label="<?php echo esc_attr( $available_columns['date'] ); ?>"><?php echo esc_html( $start_display ); ?></td>
@@ -957,6 +963,9 @@ class WP_MS365_Shortcodes {
 				'limit'  => 50,
 				'folder' => '',
 				'title'  => '',
+				'class'  => '',
+				'table_class' => '',
+				'item_class'  => '',
 				'show_headers' => 'true',
 			),
 			$atts,
@@ -964,6 +973,9 @@ class WP_MS365_Shortcodes {
 		);
 
 		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+		$files_wrap_class  = $this->merge_css_classes( 'msgraph_files', $atts['class'] );
+		$files_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
+		$files_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
@@ -1008,7 +1020,7 @@ class WP_MS365_Shortcodes {
 
 		ob_start();
 		?>
-		<div class="msgraph_files">
+		<div class="<?php echo esc_attr( $files_wrap_class ); ?>">
 			<?php if ( $atts['title'] ) : ?>
 				<h3 class="msgraph_files__title"><?php echo esc_html( $atts['title'] ); ?></h3>
 			<?php endif; ?>
@@ -1016,7 +1028,7 @@ class WP_MS365_Shortcodes {
 			<?php if ( empty( $items ) ) : ?>
 				<p class="msgraph_files__empty"><?php echo esc_html( $wording['files_empty_text'] ); ?></p>
 			<?php else : ?>
-				<table class="msgraph_table msgraph_files__table">
+				<table class="<?php echo esc_attr( $files_table_class ); ?>">
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
@@ -1038,7 +1050,7 @@ class WP_MS365_Shortcodes {
 								? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
 								: '';
 							?>
-							<tr class="msgraph_files__item">
+							<tr class="<?php echo esc_attr( $files_item_class ); ?>">
 								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
 									<?php if ( $download_link ) : ?>
 										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
@@ -1090,6 +1102,9 @@ class WP_MS365_Shortcodes {
 				'limit'        => 50,
 				'folder'       => '',
 				'title'        => '',
+				'class'        => '',
+				'table_class'  => '',
+				'item_class'   => '',
 				'show_headers' => 'true',
 			),
 			$atts,
@@ -1097,6 +1112,9 @@ class WP_MS365_Shortcodes {
 		);
 
 		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+		$sp_wrap_class  = $this->merge_css_classes( 'msgraph_files msgraph_files--sharepoint', $atts['class'] );
+		$sp_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
+		$sp_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
 		$site_id      = trim( (string) $atts['site_id'] );
 		$drive_id     = trim( (string) $atts['drive_id'] );
 		$folder       = trim( (string) $atts['folder'] );
@@ -1147,7 +1165,7 @@ class WP_MS365_Shortcodes {
 
 		ob_start();
 		?>
-		<div class="msgraph_files msgraph_files--sharepoint">
+		<div class="<?php echo esc_attr( $sp_wrap_class ); ?>">
 			<?php if ( $atts['title'] ) : ?>
 				<h3 class="msgraph_files__title"><?php echo esc_html( $atts['title'] ); ?></h3>
 			<?php endif; ?>
@@ -1155,7 +1173,7 @@ class WP_MS365_Shortcodes {
 			<?php if ( empty( $items ) ) : ?>
 				<p class="msgraph_files__empty"><?php echo esc_html( $wording['files_empty_text'] ); ?></p>
 			<?php else : ?>
-				<table class="msgraph_table msgraph_files__table">
+				<table class="<?php echo esc_attr( $sp_table_class ); ?>">
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
@@ -1190,7 +1208,7 @@ class WP_MS365_Shortcodes {
 								);
 							}
 							?>
-							<tr class="msgraph_files__item">
+							<tr class="<?php echo esc_attr( $sp_item_class ); ?>">
 								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
 									<?php if ( $download_link ) : ?>
 										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
@@ -1246,6 +1264,11 @@ class WP_MS365_Shortcodes {
 				'webhook_url' => '',
 				'use_adaptive_card' => 'auto',
 				'title'       => '',
+				'class'       => '',
+				'form_class'  => '',
+				'input_class' => '',
+				'textarea_class' => '',
+				'submit_class' => '',
 				'placeholder' => $wording['teams_form_placeholder'],
 				'button_text' => $wording['teams_form_button_text'],
 				'max_length'  => 1000,
@@ -1282,6 +1305,11 @@ class WP_MS365_Shortcodes {
 		$max_length = max( 20, min( 4000, (int) $atts['max_length'] ) );
 		$use_adaptive_card = sanitize_key( (string) $atts['use_adaptive_card'] );
 		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
+		$teams_wrap_class     = $this->merge_css_classes( 'msgraph_teams_form-wrap', $atts['class'] );
+		$teams_form_class     = $this->merge_css_classes( 'msgraph_teams_form', $atts['form_class'] );
+		$teams_input_class    = $this->merge_css_classes( 'msgraph_teams_form__input', $atts['input_class'] );
+		$teams_textarea_class = $this->merge_css_classes( 'msgraph_teams_form__textarea', $atts['textarea_class'] );
+		$teams_submit_class   = $this->merge_css_classes( 'msgraph_teams_form__submit', $atts['submit_class'] );
 		if ( $adaptive_mode ) {
 			$team_id    = '';
 			$channel_id = '';
@@ -1296,7 +1324,7 @@ class WP_MS365_Shortcodes {
 
 		ob_start();
 		?>
-		<div class="msgraph_teams_form-wrap">
+		<div class="<?php echo esc_attr( $teams_wrap_class ); ?>">
 			<?php if ( '' !== trim( (string) $atts['title'] ) ) : ?>
 				<h3 class="msgraph_teams_form__title"><?php echo esc_html( $atts['title'] ); ?></h3>
 			<?php endif; ?>
@@ -1322,7 +1350,7 @@ class WP_MS365_Shortcodes {
 				<p class="msgraph_notice msgraph_notice--error"><?php echo esc_html( $error_text ); ?></p>
 			<?php endif; ?>
 
-			<form id="<?php echo esc_attr( $form_id ); ?>" class="msgraph_teams_form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<form id="<?php echo esc_attr( $form_id ); ?>" class="<?php echo esc_attr( $teams_form_class ); ?>" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_submit_teams_message" />
 				<?php if ( ! $adaptive_mode ) : ?>
 					<input type="hidden" name="team_id" value="<?php echo esc_attr( $team_id ); ?>" />
@@ -1347,7 +1375,7 @@ class WP_MS365_Shortcodes {
 					id="<?php echo esc_attr( $form_id . '_sender_name' ); ?>"
 					type="text"
 					name="sender_name"
-					class="msgraph_teams_form__input"
+					class="<?php echo esc_attr( $teams_input_class ); ?>"
 					maxlength="120"
 					autocomplete="name"
 					required
@@ -1360,7 +1388,7 @@ class WP_MS365_Shortcodes {
 					id="<?php echo esc_attr( $form_id . '_sender_email' ); ?>"
 					type="email"
 					name="sender_email"
-					class="msgraph_teams_form__input"
+					class="<?php echo esc_attr( $teams_input_class ); ?>"
 					maxlength="190"
 					autocomplete="email"
 					required
@@ -1373,13 +1401,13 @@ class WP_MS365_Shortcodes {
 					id="<?php echo esc_attr( $form_id . '_message' ); ?>"
 					name="message"
 					rows="5"
-					class="msgraph_teams_form__textarea"
+					class="<?php echo esc_attr( $teams_textarea_class ); ?>"
 					maxlength="<?php echo esc_attr( $max_length ); ?>"
 					placeholder="<?php echo esc_attr( (string) $atts['placeholder'] ); ?>"
 					required
 				></textarea>
 
-				<button type="submit" class="msgraph_teams_form__submit"><?php echo esc_html( (string) $atts['button_text'] ); ?></button>
+				<button type="submit" class="<?php echo esc_attr( $teams_submit_class ); ?>"><?php echo esc_html( (string) $atts['button_text'] ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -2062,6 +2090,36 @@ class WP_MS365_Shortcodes {
 		}
 
 		return $defaults;
+	}
+
+	/**
+	 * Merge default and override CSS classes.
+	 *
+	 * @param  string $defaults  Space-separated default classes.
+	 * @param  string $overrides Space-separated override classes.
+	 * @return string
+	 */
+	private function merge_css_classes( $defaults, $overrides = '' ) {
+		$classes = array();
+		$tokens  = preg_split( '/\s+/', trim( (string) $defaults . ' ' . (string) $overrides ) );
+
+		if ( ! is_array( $tokens ) ) {
+			return '';
+		}
+
+		foreach ( $tokens as $token ) {
+			$token = trim( (string) $token );
+			if ( '' === $token ) {
+				continue;
+			}
+
+			$clean = sanitize_html_class( $token );
+			if ( '' !== $clean && ! in_array( $clean, $classes, true ) ) {
+				$classes[] = $clean;
+			}
+		}
+
+		return implode( ' ', $classes );
 	}
 
 	/**
