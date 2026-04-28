@@ -29,6 +29,12 @@ class WP_MS365_Auth {
 	/** OpenID Connect scopes requested for delegated sign-in. */
 	const SSO_SCOPES = 'openid email profile';
 
+	/** User meta flag indicating the account is linked to Entra SSO. */
+	const USER_META_SSO_LINKED = 'wp_ms365_sso_linked';
+
+	/** User meta value for linked identity provider. */
+	const USER_META_SSO_PROVIDER = 'wp_ms365_sso_provider';
+
 	// ------------------------------------------------------------------
 	// Public API
 	// ------------------------------------------------------------------
@@ -397,6 +403,10 @@ class WP_MS365_Auth {
 		do_action( 'wp_login', $user->user_login, $user );
 
 		WP_MS365_Logger::log_auth_event( sprintf( 'SSO login: user %s (%d)', $user->user_email, $user->ID ) );
+
+		// Mark account as Entra-linked so local password login can be restricted.
+		update_user_meta( $user->ID, self::USER_META_SSO_LINKED, 1 );
+		update_user_meta( $user->ID, self::USER_META_SSO_PROVIDER, 'entra' );
 
 		// Redirect to post-login destination.
 		$redirect = ! empty( $state_data['redirect_after'] ) ? $state_data['redirect_after'] : home_url( '/' );

@@ -21,6 +21,37 @@ class WP_MS365_Login {
 		// Login page additions.
 		add_action( 'login_form',             array( $this, 'render_login_button' ) );
 		add_action( 'login_enqueue_scripts',  array( $this, 'enqueue_assets' ) );
+		add_filter( 'wp_authenticate_user',   array( $this, 'block_local_password_for_entra_users' ), 20, 2 );
+	}
+
+	/**
+	 * Block local password login for users already linked to Entra SSO.
+	 *
+	 * @param WP_User|WP_Error $user     Authenticated user object or error.
+	 * @param string            $password Submitted password.
+	 * @return WP_User|WP_Error
+	 */
+	public function block_local_password_for_entra_users( $user, $password ) {
+		if ( is_wp_error( $user ) || ! ( $user instanceof WP_User ) ) {
+			return $user;
+		}
+
+		$settings = WP_MS365_Auth::get_settings();
+		if ( empty( $settings['sso_enabled'] ) ) {
+			return $user;
+		}
+
+		$linked_flag = get_user_meta( $user->ID, WP_MS365_Auth::USER_META_SSO_LINKED, true );
+		$provider    = get_user_meta( $user->ID, WP_MS365_Auth::USER_META_SSO_PROVIDER, true );
+
+		if ( empty( $linked_flag ) && 'entra' !== $provider ) {
+			return $user;
+		}
+
+		return new WP_Error(
+			'ms365_entra_local_login_blocked',
+			__( 'This account is managed via Microsoft Entra sign-in. Please use the Microsoft sign-in button.', 'wp-ms365-graph' )
+		);
 	}
 
 	/**
