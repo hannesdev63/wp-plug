@@ -230,6 +230,12 @@ class WP_MS365_Graph {
 	 * @return array|WP_Error   Array with 'value' key containing events.
 	 */
 	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '', $past_days = 0 ) {
+		// Validate timezone against PHP's known IANA list before injecting into
+		// the Prefer header. An unrecognised or malformed value falls back to UTC.
+		if ( '' === $timezone || ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
+			$timezone = 'UTC';
+		}
+
 		$past_days   = max( 0, (int) $past_days );
 		$start       = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '-' . $past_days . ' days' ) );
 		$end   = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days' ) );

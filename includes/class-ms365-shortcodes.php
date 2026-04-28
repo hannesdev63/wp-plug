@@ -21,6 +21,7 @@ class WP_MS365_Shortcodes {
 		add_shortcode( 'msgraph_files',    array( $this, 'render_files' ) );
 		add_shortcode( 'msgraph_sharepoint_library', array( $this, 'render_sharepoint_library' ) );
 		add_shortcode( 'msgraph_teams_message_form', array( $this, 'render_teams_message_form' ) );
+		add_shortcode( 'msgraph_login_button',       array( $this, 'render_login_button' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'init', array( $this, 'maybe_handle_download' ) );
 		add_action( 'admin_post_wp_ms365_submit_teams_message', array( $this, 'handle_teams_message_submission' ) );
@@ -372,6 +373,82 @@ class WP_MS365_Shortcodes {
 	 */
 	private function base64url_decode( $data ) {
 		return base64_decode( strtr( $data, '-_', '+/' ), true );
+	}
+
+	// ------------------------------------------------------------------
+	// Shortcode: [msgraph_login_button]
+	// ------------------------------------------------------------------
+
+	/**
+	 * Render a "Sign in with Microsoft" button for use on custom login pages.
+	 *
+	 * Attributes:
+	 *   redirect_to  – Internal URL to redirect to after sign-in. Defaults to home.
+	 *   label        – Button label. Defaults to translated "Sign in with Microsoft".
+	 *   class        – Extra CSS class(es) added to the anchor.
+	 *
+	 * @param  array $atts Shortcode attributes.
+	 * @return string      HTML output.
+	 */
+	public function render_login_button( $atts ) {
+		$this->track_shortcode_render( 'msgraph_login_button' );
+		$settings = WP_MS365_Auth::get_settings();
+		if ( empty( $settings['sso_enabled'] ) ) {
+			return '';
+		}
+
+		$atts = shortcode_atts(
+			array(
+				'redirect_to' => '',
+				'label'       => '',
+				'class'       => '',
+			),
+			$atts,
+			'msgraph_login_button'
+		);
+
+		if ( '' !== $atts['label'] ) {
+			$label = esc_html( $atts['label'] );
+		} elseif ( ! empty( $settings['sso_signin_button_text'] ) ) {
+			$label = esc_html( (string) $settings['sso_signin_button_text'] );
+		} else {
+			$label = esc_html__( 'Sign in with Microsoft', 'wp-ms365-graph' );
+		}
+		$redirect_to = esc_url_raw( (string) $atts['redirect_to'] );
+		$extra_class = '' !== $atts['class'] ? ' ' . esc_attr( $atts['class'] ) : '';
+
+		$login_url = WP_MS365_Auth::get_sso_login_url( $redirect_to );
+		if ( ! $login_url ) {
+			return '';
+		}
+
+		wp_enqueue_style(
+			'wp-ms365-login',
+			WP_MS365_PLUGIN_URL . 'assets/css/login.css',
+			array(),
+			WP_MS365_VERSION
+		);
+
+		ob_start();
+		$button_image_url = ! empty( $settings['sso_signin_button_image'] ) ? esc_url( $settings['sso_signin_button_image'] ) : '';
+		?>
+		<div class="ms365-signin-wrap">
+			<a href="<?php echo esc_url( $login_url ); ?>" class="ms365-signin-button<?php echo esc_attr( $extra_class ); ?>">
+				<?php if ( $button_image_url ) : ?>
+				<img src="<?php echo $button_image_url; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — escaped above. ?>" alt="" width="20" height="20" aria-hidden="true" class="ms365-signin-button__icon" />
+				<?php else : ?>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="20" height="20" aria-hidden="true" focusable="false">
+					<rect x="1"  y="1"  width="10" height="10" fill="#F25022"/>
+					<rect x="12" y="1"  width="10" height="10" fill="#7FBA00"/>
+					<rect x="1"  y="12" width="10" height="10" fill="#00A4EF"/>
+					<rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+				</svg>
+				<?php endif; ?>
+				<span><?php echo $label; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — escaped above. ?></span>
+			</a>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	// ------------------------------------------------------------------
@@ -1586,6 +1663,10 @@ class WP_MS365_Shortcodes {
 	/**
 	 * Build a stable identity key for the current submitter.
 	 *
+	 * Uses REMOTE_ADDR exclusively. HTTP_X_FORWARDED_FOR is client-controlled
+	 * and must not be trusted for rate-limiting: an attacker can cycle arbitrary
+	 * IP values to bypass the per-IP submission throttle.
+	 *
 	 * @return string
 	 */
 	private function get_teams_form_submitter_identity() {
@@ -1594,14 +1675,7 @@ class WP_MS365_Shortcodes {
 			return 'u:' . $user_id;
 		}
 
-		$ip = '';
-		if ( isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-			$forwarded = explode( ',', (string) wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
-			$ip        = trim( (string) reset( $forwarded ) );
-		}
-		if ( '' === $ip && isset( $_SERVER['REMOTE_ADDR'] ) ) {
-			$ip = trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
-		}
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 		return 'ip:' . sanitize_text_field( $ip );
 	}
@@ -1777,19 +1851,22 @@ class WP_MS365_Shortcodes {
 	/**
 	 * Build the current frontend URL for form redirects.
 	 *
+	 * Uses home_url() as the authority — HTTP_HOST is client-controlled and
+	 * must not be trusted for constructing redirect destinations. Only the
+	 * path and query string are taken from REQUEST_URI.
+	 *
 	 * @return string
 	 */
 	private function get_current_request_url() {
-		$scheme = is_ssl() ? 'https' : 'http';
-		$host   = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
-		$uri    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
 
-		if ( '' === $host ) {
-			return home_url( '/' );
+		// Strip any scheme + host prefix that some server configs include in REQUEST_URI.
+		$path = preg_replace( '#^https?://[^/]+#i', '', $request_uri );
+		if ( '' === $path || '/' !== $path[0] ) {
+			$path = '/' . ltrim( (string) $path, '/' );
 		}
 
-		$url = $scheme . '://' . $host . $uri;
-		return esc_url_raw( $url );
+		return esc_url_raw( home_url( $path ) );
 	}
 
 	// ------------------------------------------------------------------
@@ -1972,6 +2049,7 @@ class WP_MS365_Shortcodes {
 			'msgraph_files'              => 0,
 			'msgraph_sharepoint_library' => 0,
 			'msgraph_teams_message_form' => 0,
+			'msgraph_login_button'       => 0,
 		);
 	}
 

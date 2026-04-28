@@ -133,6 +133,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" class="my-sp-files" table_class="my-sp-table" item_class="my-sp-row"]</code></p>
 
 	<hr />
+	<h2><code>[msgraph_login_button]</code></h2>
+	<p><?php esc_html_e( 'Displays a Microsoft Entra sign-in button for custom login pages.', 'wp-ms365-graph' ); ?></p>
+	<table class="widefat striped msgraph_shortcode-table">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Parameter', 'wp-ms365-graph' ); ?></th>
+				<th><?php esc_html_e( 'Default', 'wp-ms365-graph' ); ?></th>
+				<th><?php esc_html_e( 'Description', 'wp-ms365-graph' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td><code>label</code></td><td><?php esc_html_e( 'Sign-In wording setting value (fallback: "Sign in with Microsoft")', 'wp-ms365-graph' ); ?></td><td><?php esc_html_e( 'Button label text. If omitted, uses the Entra Sign-In Button Text from Wording settings.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>redirect_to</code></td><td><code>current page</code></td><td><?php esc_html_e( 'Internal URL to redirect to after successful sign-in.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>class</code></td><td><code>""</code></td><td><?php esc_html_e( 'Extra CSS class(es) added to the button wrapper.', 'wp-ms365-graph' ); ?></td></tr>
+		</tbody>
+	</table>
+	<p><strong><?php esc_html_e( 'Samples', 'wp-ms365-graph' ); ?>:</strong></p>
+	<p><code>[msgraph_login_button]</code></p>
+	<p><code>[msgraph_login_button label="Log in with Company Account" redirect_to="/dashboard"]</code></p>
+	<p><code>[msgraph_login_button class="my-login-button"]</code></p>
+	<p>
+		<?php esc_html_e( 'Wording source: Microsoft 365 -> Wording -> Sign-In Wording -> Entra Sign-In Button Text.', 'wp-ms365-graph' ); ?>
+	</p>
+	<p><strong><?php esc_html_e( 'Settings persistence check', 'wp-ms365-graph' ); ?>:</strong></p>
+	<ol>
+		<li><?php esc_html_e( 'Open Microsoft 365 -> Settings -> WordPress Sign-In (Microsoft Tenant), enable both "Enable Tenant Sign-In" and "Auto-Create Users", then save.', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'Open Microsoft 365 -> Wording, change any wording value, and save.', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'Return to Microsoft 365 -> Settings and verify both sign-in options are still enabled.', 'wp-ms365-graph' ); ?></li>
+	</ol>
+
+	<hr />
 	<h2><code>[msgraph_teams_message_form]</code></h2>
 	<p><?php esc_html_e( 'Displays a public message form and posts submissions to Microsoft Teams using a Workflow endpoint URL. Sender name and email are required.', 'wp-ms365-graph' ); ?></p>
 	<table class="widefat striped msgraph_shortcode-table">
