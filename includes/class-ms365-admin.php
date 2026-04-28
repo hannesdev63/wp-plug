@@ -26,6 +26,7 @@ class WP_MS365_Admin {
 		add_action( 'admin_post_wp_ms365_disconnect', array( $this, 'handle_request_new_token' ) );
 		add_action( 'admin_post_wp_ms365_reset_shortcode_counts', array( $this, 'handle_reset_shortcode_counts' ) );
 		add_action( 'wp_ajax_wp_ms365_sp_site_drives', array( $this, 'ajax_get_sharepoint_site_drives' ) );
+		add_action( 'wp_ajax_wp_ms365_sso_test_config', array( $this, 'ajax_sso_test_config' ) );
 	}
 
 	// ------------------------------------------------------------------
@@ -108,12 +109,6 @@ class WP_MS365_Admin {
 			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
 			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
 			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
-			'teams_team_id' => __( 'Default Teams Team ID', 'wp-ms365-graph' ),
-			'teams_channel_id' => __( 'Default Teams Channel ID', 'wp-ms365-graph' ),
-			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'wp-ms365-graph' ),
-			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'wp-ms365-graph' ),
-			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'wp-ms365-graph' ),
-			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'wp-ms365-graph' ),
 			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'wp-ms365-graph' ),
 		);
 
@@ -129,13 +124,105 @@ class WP_MS365_Admin {
 		}
 
 		add_settings_section(
-			'wp_ms365_wording',
-			__( 'Shortcode Wording', 'wp-ms365-graph' ),
-			array( $this, 'section_wording_intro' ),
+			'wp_ms365_teams',
+			__( 'Teams Settings', 'wp-ms365-graph' ),
+			array( $this, 'section_teams_intro' ),
+			'wp-ms365-graph'
+		);
+
+		$teams_fields = array(
+			'teams_team_id' => __( 'Default Teams Team ID', 'wp-ms365-graph' ),
+			'teams_channel_id' => __( 'Default Teams Channel ID', 'wp-ms365-graph' ),
+			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'wp-ms365-graph' ),
+			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'wp-ms365-graph' ),
+			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'wp-ms365-graph' ),
+			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'wp-ms365-graph' ),
+		);
+
+		foreach ( $teams_fields as $key => $label ) {
+			add_settings_field(
+				'wp_ms365_' . $key,
+				$label,
+				array( $this, 'render_text_field' ),
+				'wp-ms365-graph',
+				'wp_ms365_teams',
+				array( 'key' => $key, 'label' => $label )
+			);
+		}
+
+		// ---- WordPress sign-in (SSO) section ----
+		add_settings_section(
+			'wp_ms365_sso',
+			__( 'WordPress Sign-In (Microsoft Tenant)', 'wp-ms365-graph' ),
+			array( $this, 'section_sso_intro' ),
+			'wp-ms365-graph'
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_enabled',
+			__( 'Enable Tenant Sign-In', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_enabled', 'label' => __( 'Show a "Sign in with Microsoft" button on wp-login.php and enable the shortcode.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_auto_create',
+			__( 'Auto-Create Users', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_auto_create', 'label' => __( 'Automatically create a WordPress account for new Microsoft users.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_use_ms_avatar',
+			__( 'Use Microsoft Profile Picture', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_use_ms_avatar', 'label' => __( 'Use the Microsoft Entra profile picture as the WordPress avatar for linked users.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_default_role',
+			__( 'Default Role for New Users', 'wp-ms365-graph' ),
+			array( $this, 'render_select_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array(
+				'key'     => 'sso_default_role',
+				'options' => $this->get_wp_roles_for_select(),
+			)
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_allowed_domains',
+			__( 'Allowed Email Domains', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_allowed_domains', 'label' => __( 'Allowed Email Domains', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_redirect_url',
+			__( 'Post-Login Redirect URL', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_redirect_url', 'label' => __( 'Post-Login Redirect URL', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_section(
+			'wp_ms365_wording_calendar_files',
+			__( 'Calendar & Files Wording', 'wp-ms365-graph' ),
+			array( $this, 'section_wording_calendar_files_intro' ),
 			'wp-ms365-wording'
 		);
 
-		$wording_fields = array(
+		$wording_calendar_files_fields = array(
 			'calendar_empty_text'     => __( 'Calendar: No items found', 'wp-ms365-graph' ),
 			'calendar_header_date'    => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
 			'calendar_header_event'   => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
@@ -145,6 +232,27 @@ class WP_MS365_Admin {
 			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
 			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
 			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+		);
+
+		foreach ( $wording_calendar_files_fields as $key => $label ) {
+			add_settings_field(
+				'wp_ms365_' . $key,
+				$label,
+				array( $this, 'render_text_field' ),
+				'wp-ms365-wording',
+				'wp_ms365_wording_calendar_files',
+				array( 'key' => $key, 'label' => $label )
+			);
+		}
+
+		add_settings_section(
+			'wp_ms365_wording_teams',
+			__( 'Teams Form Wording', 'wp-ms365-graph' ),
+			array( $this, 'section_wording_teams_intro' ),
+			'wp-ms365-wording'
+		);
+
+		$wording_teams_fields = array(
 			'teams_form_placeholder'  => __( 'Teams Form: Placeholder', 'wp-ms365-graph' ),
 			'teams_form_button_text'  => __( 'Teams Form: Button Text', 'wp-ms365-graph' ),
 			'teams_form_label_name'   => __( 'Teams Form: Label Name', 'wp-ms365-graph' ),
@@ -162,16 +270,41 @@ class WP_MS365_Admin {
 			'teams_form_error_unknown' => __( 'Teams Form: Error Unknown', 'wp-ms365-graph' ),
 		);
 
-		foreach ( $wording_fields as $key => $label ) {
+		foreach ( $wording_teams_fields as $key => $label ) {
 			add_settings_field(
 				'wp_ms365_' . $key,
 				$label,
 				array( $this, 'render_text_field' ),
 				'wp-ms365-wording',
-				'wp_ms365_wording',
+				'wp_ms365_wording_teams',
 				array( 'key' => $key, 'label' => $label )
 			);
 		}
+
+		add_settings_section(
+			'wp_ms365_wording_signin',
+			__( 'Sign-In Wording', 'wp-ms365-graph' ),
+			array( $this, 'section_wording_signin_intro' ),
+			'wp-ms365-wording'
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_signin_button_text',
+			__( 'Entra Sign-In Button Text', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-wording',
+			'wp_ms365_wording_signin',
+			array( 'key' => 'sso_signin_button_text', 'label' => __( 'Entra Sign-In Button Text', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_signin_button_image',
+			__( 'Entra Sign-In Button Image', 'wp-ms365-graph' ),
+			array( $this, 'render_image_field' ),
+			'wp-ms365-wording',
+			'wp_ms365_wording_signin',
+			array( 'key' => 'sso_signin_button_image', 'label' => __( 'Entra Sign-In Button Image', 'wp-ms365-graph' ) )
+		);
 	}
 
 	/**
@@ -328,6 +461,14 @@ class WP_MS365_Admin {
 			$clean['teams_form_error_unknown'] = sanitize_text_field( $input['teams_form_error_unknown'] );
 		}
 
+		if ( isset( $input['sso_signin_button_text'] ) ) {
+			$clean['sso_signin_button_text'] = sanitize_text_field( $input['sso_signin_button_text'] );
+		}
+
+		if ( isset( $input['sso_signin_button_image'] ) ) {
+			$clean['sso_signin_button_image'] = esc_url_raw( trim( (string) $input['sso_signin_button_image'] ) );
+		}
+
 		// Basic UUID format validation for tenant/client IDs.
 		$uuid_pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
 		if ( ! empty( $clean['tenant_id'] ) && ! preg_match( $uuid_pattern, $clean['tenant_id'] ) ) {
@@ -344,6 +485,44 @@ class WP_MS365_Admin {
 				'invalid_client_id',
 				__( 'Client ID does not look like a valid GUID.', 'wp-ms365-graph' )
 			);
+		}
+
+		// ---- SSO / delegated sign-in settings ----
+		$has_sso_payload =
+			isset( $input['sso_enabled'] ) ||
+			isset( $input['sso_auto_create'] ) ||
+			isset( $input['sso_use_ms_avatar'] ) ||
+			isset( $input['sso_default_role'] ) ||
+			isset( $input['sso_allowed_domains'] ) ||
+			isset( $input['sso_redirect_url'] );
+
+		if ( $has_sso_payload ) {
+			$clean['sso_enabled']       = ! empty( $input['sso_enabled'] ) ? 1 : 0;
+			$clean['sso_auto_create']   = ! empty( $input['sso_auto_create'] ) ? 1 : 0;
+			$clean['sso_use_ms_avatar'] = ! empty( $input['sso_use_ms_avatar'] ) ? 1 : 0;
+
+			if ( isset( $input['sso_default_role'] ) ) {
+				$allowed_roles             = array_keys( (array) wp_roles()->role_names );
+				$submitted_role            = sanitize_key( (string) $input['sso_default_role'] );
+				$clean['sso_default_role'] = in_array( $submitted_role, $allowed_roles, true ) ? $submitted_role : 'subscriber';
+			}
+
+			if ( isset( $input['sso_allowed_domains'] ) ) {
+				// Sanitize comma-separated domain list: lower-case, strip spaces, strip protocol/path.
+				$raw_domains = sanitize_text_field( (string) $input['sso_allowed_domains'] );
+				$domains     = array_filter( array_map( function ( $d ) {
+					$d = strtolower( trim( $d ) );
+					// Strip any accidentally included scheme or path.
+					$d = preg_replace( '#^https?://#i', '', $d );
+					$d = rtrim( $d, '/' );
+					return $d;
+				}, explode( ',', $raw_domains ) ) );
+				$clean['sso_allowed_domains'] = implode( ', ', $domains );
+			}
+
+			if ( isset( $input['sso_redirect_url'] ) ) {
+				$clean['sso_redirect_url'] = esc_url_raw( trim( (string) $input['sso_redirect_url'] ) );
+			}
 		}
 
 		return $clean;
@@ -515,11 +694,38 @@ class WP_MS365_Admin {
 	}
 
 	/**
-	 * Section description for wording customization.
+	 * Section description for Teams settings.
 	 */
-	public function section_wording_intro() {
+	public function section_teams_intro() {
 		echo '<p>'
-			. esc_html__( 'Override shortcode table headings and empty-state text. Leave any field blank to use the built-in translated default.', 'wp-ms365-graph' )
+			. esc_html__( 'Configure defaults and anti-spam controls for the Teams message form shortcode.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
+	 * Section description for calendar/files wording customization.
+	 */
+	public function section_wording_calendar_files_intro() {
+		echo '<p>'
+			. esc_html__( 'Override table headings and empty-state text for calendar and file shortcodes. Leave any field blank to use translated defaults.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
+	 * Section description for Teams form wording customization.
+	 */
+	public function section_wording_teams_intro() {
+		echo '<p>'
+			. esc_html__( 'Customize labels, button text, success, and error messages shown in the Teams message form shortcode.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
+	 * Section description for sign-in wording customization.
+	 */
+	public function section_wording_signin_intro() {
+		echo '<p>'
+			. esc_html__( 'Customize the Microsoft Entra sign-in button wording. Leave blank to use the translated default label.', 'wp-ms365-graph' )
 			. '</p>';
 	}
 
@@ -600,7 +806,185 @@ class WP_MS365_Admin {
 			echo '<p class="description">'
 				. esc_html__( 'Optional override. Leave blank to use the translated default text.', 'wp-ms365-graph' )
 				. '</p>';
+		} elseif ( 'sso_allowed_domains' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Comma-separated list of email domains allowed to sign in (e.g. contoso.com, fabrikam.org). Leave blank to allow any tenant domain.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'sso_redirect_url' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional. Internal URL to redirect to after successful sign-in. Overrides the per-request destination. Leave blank to redirect to the WP admin or the page that triggered login.', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'sso_signin_button_text' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional override for the Entra sign-in button label used on wp-login.php and by [msgraph_login_button] when no label attribute is provided.', 'wp-ms365-graph' )
+				. '</p>';
 		}
+	}
+
+	/**
+	 * Render an image URL field with a WP media library picker button and live preview.
+	 *
+	 * @param array $args Field arguments (key, label).
+	 */
+	public function render_image_field( $args ) {
+		$settings = WP_MS365_Auth::get_settings();
+		$key      = $args['key'];
+		$value    = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+		$field_id = 'wp_ms365_' . $key;
+		?>
+		<div class="ms365-image-field" id="<?php echo esc_attr( $field_id . '_wrap' ); ?>">
+			<input
+				type="url"
+				id="<?php echo esc_attr( $field_id ); ?>"
+				name="wp_ms365_settings[<?php echo esc_attr( $key ); ?>]"
+				value="<?php echo esc_attr( $value ); ?>"
+				class="regular-text"
+				autocomplete="off"
+			/>
+			<button
+				type="button"
+				class="button ms365-image-select"
+				data-target="<?php echo esc_attr( $field_id ); ?>"
+				data-preview="<?php echo esc_attr( $field_id . '_preview' ); ?>"
+			><?php esc_html_e( 'Select Image', 'wp-ms365-graph' ); ?></button>
+			<?php if ( ! empty( $value ) ) : ?>
+			<button
+				type="button"
+				class="button ms365-image-remove"
+				data-target="<?php echo esc_attr( $field_id ); ?>"
+				data-preview="<?php echo esc_attr( $field_id . '_preview' ); ?>"
+			><?php esc_html_e( 'Remove', 'wp-ms365-graph' ); ?></button>
+			<?php endif; ?>
+			<div class="ms365-image-preview" id="<?php echo esc_attr( $field_id . '_preview' ); ?>" style="margin-top:8px;">
+				<?php if ( ! empty( $value ) ) : ?>
+				<img src="<?php echo esc_url( $value ); ?>" alt="" style="max-width:200px;max-height:80px;display:block;" />
+				<?php endif; ?>
+			</div>
+		</div>
+		<p class="description"><?php esc_html_e( 'Optional. Upload or select an image to replace the Microsoft logo in the sign-in button. The image is rendered as a small icon (20×20 px), so keep it square and no larger than 200×200 px. Leave blank to use the default Microsoft logo.', 'wp-ms365-graph' ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render a checkbox setting field.
+	 *
+	 * @param array $args Field arguments (key, label).
+	 */
+	public function render_checkbox_field( $args ) {
+		$settings = WP_MS365_Auth::get_settings();
+		$key      = $args['key'];
+		$label    = isset( $args['label'] ) ? $args['label'] : '';
+		$checked  = ! empty( $settings[ $key ] );
+		printf(
+			'<label><input type="checkbox" id="wp_ms365_%1$s" name="wp_ms365_settings[%1$s]" value="1"%2$s /> %3$s</label>',
+			esc_attr( $key ),
+			checked( $checked, true, false ),
+			esc_html( $label )
+		);
+	}
+
+	/**
+	 * Render a select/dropdown setting field.
+	 *
+	 * @param array $args Field arguments (key, options).
+	 */
+	public function render_select_field( $args ) {
+		$settings = WP_MS365_Auth::get_settings();
+		$key      = $args['key'];
+		$options  = isset( $args['options'] ) ? $args['options'] : array();
+		$current  = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+
+		printf( '<select id="wp_ms365_%s" name="wp_ms365_settings[%s]">', esc_attr( $key ), esc_attr( $key ) );
+		foreach ( $options as $value => $label ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $value ),
+				selected( $current, $value, false ),
+				esc_html( $label )
+			);
+		}
+		echo '</select>';
+
+		if ( 'sso_default_role' === $key ) {
+			echo '<p class="description">' . esc_html__( 'WordPress role assigned to auto-created users. Only applies when Auto-Create Users is enabled.', 'wp-ms365-graph' ) . '</p>';
+		}
+	}
+
+	/**
+	 * Section description for WordPress sign-in / SSO.
+	 */
+	public function section_sso_intro() {
+		$callback_uri        = WP_MS365_Auth::get_sso_redirect_uri();
+		$legacy_callback_uri = WP_MS365_Auth::get_sso_legacy_redirect_uri();
+		echo '<p>'
+			. esc_html__( 'Allow users to sign in to WordPress using their Microsoft tenant account via OAuth 2.0 Authorization Code + PKCE. The credentials configured in the Azure App Registration section above are reused.', 'wp-ms365-graph' )
+			. '</p><p>'
+			. '<strong>' . esc_html__( 'Required Azure app registration steps:', 'wp-ms365-graph' ) . '</strong>'
+			. '</p><ol>'
+			. '<li>' . esc_html__( 'Set application type to "Web".', 'wp-ms365-graph' ) . '</li>'
+			. '<li>' . sprintf(
+				/* translators: %s: callback redirect URI */
+				esc_html__( 'Add the following Redirect URI (preferred): %s', 'wp-ms365-graph' ),
+				'<code>' . esc_html( $callback_uri ) . '</code>'
+			) . '</li>'
+			. '<li>' . sprintf(
+				/* translators: %s: legacy callback redirect URI */
+				esc_html__( 'Legacy callback URL also supported: %s', 'wp-ms365-graph' ),
+				'<code>' . esc_html( $legacy_callback_uri ) . '</code>'
+			) . '</li>'
+			. '<li>' . esc_html__( 'Under "API permissions" add the delegated permissions: openid, email, profile.', 'wp-ms365-graph' ) . '</li>'
+			. '</ol>';
+	}
+
+	/**
+	 * Return an array of WordPress role names keyed by role slug.
+	 *
+	 * @return array
+	 */
+	private function get_wp_roles_for_select() {
+		$roles  = array();
+		$global = wp_roles();
+		foreach ( $global->role_names as $slug => $name ) {
+			$roles[ $slug ] = translate_user_role( $name );
+		}
+		return $roles;
+	}
+
+	/**
+	 * AJAX: Validate SSO configuration and return the computed redirect URI.
+	 *
+	 * @return void
+	 */
+	public function ajax_sso_test_config() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-ms365-graph' ) ), 403 );
+		}
+
+		check_ajax_referer( 'wp_ms365_sso_test', 'nonce' );
+
+		$settings = WP_MS365_Auth::get_settings();
+		$issues   = array();
+
+		if ( empty( $settings['sso_enabled'] ) ) {
+			$issues[] = __( 'Tenant sign-in is not enabled.', 'wp-ms365-graph' );
+		}
+		if ( empty( $settings['tenant_id'] ) ) {
+			$issues[] = __( 'Tenant ID is missing.', 'wp-ms365-graph' );
+		}
+		if ( empty( $settings['client_id'] ) ) {
+			$issues[] = __( 'Client ID is missing.', 'wp-ms365-graph' );
+		}
+		if ( empty( $settings['client_secret'] ) ) {
+			$issues[] = __( 'Client Secret is missing.', 'wp-ms365-graph' );
+		}
+
+		wp_send_json_success(
+			array(
+				'redirect_uri' => WP_MS365_Auth::get_sso_redirect_uri(),
+				'issues'       => $issues,
+				'ready'        => empty( $issues ),
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -626,6 +1010,17 @@ class WP_MS365_Admin {
 			array(),
 			WP_MS365_VERSION
 		);
+
+		// Load WP media library for image picker fields.
+		wp_enqueue_media();
+
+		wp_enqueue_script(
+			'wp-ms365-admin',
+			WP_MS365_PLUGIN_URL . 'admin/js/admin.js',
+			array( 'jquery' ),
+			WP_MS365_VERSION,
+			true
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -643,7 +1038,7 @@ class WP_MS365_Admin {
 		check_admin_referer( 'wp_ms365_request_new_token' );
 		WP_MS365_Auth::disconnect();
 
-		wp_redirect(
+		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'            => 'wp-ms365-graph',
@@ -767,7 +1162,7 @@ class WP_MS365_Admin {
 			$args['reason'] = sanitize_key( (string) $reason );
 		}
 
-		wp_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 
@@ -898,7 +1293,7 @@ class WP_MS365_Admin {
 		check_admin_referer( 'wp_ms365_reset_shortcode_counts' );
 		WP_MS365_Shortcodes::reset_render_counts();
 
-		wp_redirect(
+		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'         => 'wp-ms365-graph',

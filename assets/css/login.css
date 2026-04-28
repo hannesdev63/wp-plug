@@ -1,0 +1,90 @@
+/* Sign in with Microsoft – wp-login.php button */
+
+.ms365-login-separator {
+	position: relative;
+	text-align: center;
+	margin: 16px 0 12px;
+	color: #767676;
+	font-size: 13px;
+}
+
+.ms365-login-separator::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 0;
+	right: 0;
+	border-top: 1px solid #dcdcde;
+}
+
+.ms365-login-separator span {
+	position: relative;
+	background: #f0f0f1;
+	padding: 0 8px;
+}
+
+.ms365-login-button-wrap {
+	text-align: center;
+	margin-bottom: 12px;
+}
+
+.ms365-login-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 16px;
+	background: #fff;
+	border: 1px solid #8c8f94;
+	border-radius: 3px;
+	font-size: 14px;
+	font-family: inherit;
+	color: #1d2327;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s ease, border-color 0.15s ease;
+	white-space: nowrap;
+}
+
+.ms365-login-button:hover,
+.ms365-login-button:focus {
+	background: #f6f7f7;
+	border-color: #50575e;
+	color: #1d2327;
+	text-decoration: none;
+}
+
+.ms365-login-button svg {
+	flex-shrink: 0;
+}
+
+/* Shortcode sign-in button on custom login pages */
+
+.ms365-signin-wrap {
+	display: inline-block;
+}
+
+.ms365-signin-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 20px;
+	background: #0078d4;
+	border: none;
+	border-radius: 3px;
+	font-size: 14px;
+	color: #fff;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.ms365-signin-button:hover,
+.ms365-signin-button:focus {
+	background: #106ebe;
+	color: #fff;
+	text-decoration: none;
+}
+
+.ms365-signin-button svg {
+	flex-shrink: 0;
+}

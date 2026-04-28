@@ -67,7 +67,21 @@
 
 /* ---------- Settings form ---------- */
 .msgraph_settings__form {
-    max-width: 700px;
+    max-width: 980px;
+}
+
+.msgraph_settings__cards {
+    display: grid;
+    gap: 16px;
+}
+
+.msgraph_card--settings {
+    margin-bottom: 0;
+}
+
+.msgraph_card--settings .form-table {
+    margin-top: 8px;
+    margin-bottom: 0;
 }
 
 .msgraph_password-field {

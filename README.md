@@ -62,7 +62,8 @@ After assigning these rights, click **Grant admin consent** in Azure and then re
 
 1. Go to [portal.azure.com](https://portal.azure.com/) → **Azure Active Directory → App registrations → New registration**.
 2. Choose a name (e.g. *My WordPress Site*).
-3. Redirect URI is not required for this plugin flow (app-only client credentials).
+3. Redirect URI is **not** required for the app-only (client credentials) plugin flow.  
+   > If you want to enable **Tenant Sign-In** (see below), set the Redirect URI type to **Web** and register the WordPress callback URL shown in **Microsoft 365 → Settings** (e.g. `https://example.com/ms365-sso-callback/`).
 4. After creation, copy the **Directory (tenant) ID** and **Application (client) ID**.
 5. Go to **Certificates & secrets → New client secret** – copy the generated value immediately.
 6. Go to **API permissions → Add a permission → Microsoft Graph** and add:
@@ -70,7 +71,83 @@ After assigning these rights, click **Grant admin consent** in Azure and then re
    - `Calendars.Read` (Application)
    - `Files.Read.All` (Application)
    - `Sites.Read.All` (Application, required for SharePoint library shortcode)
+   - `openid`, `email`, `profile` (Delegated – required for Tenant Sign-In)
 7. Click **Grant admin consent**.
+
+---
+
+### Tenant Sign-In (WordPress Login via Microsoft)
+
+Allows WordPress users to authenticate with their Microsoft tenant account using OAuth 2.0 Authorization Code + PKCE. The same Tenant ID, Client ID, and Client Secret configured above are reused — no second app registration is needed.
+
+#### Azure App Registration requirements
+
+| Step | Detail |
+|------|--------|
+| Application type | Set at least one **Web** redirect URI |
+| Redirect URI | The value shown in **Microsoft 365 → Settings → WordPress Sign-In** (e.g. `https://yoursite.com/ms365-sso-callback/`) |
+| Delegated permissions | `openid`, `email`, `profile` — no admin consent required |
+
+#### WordPress settings
+
+Go to **Microsoft 365 → Settings → WordPress Sign-In (Microsoft Tenant)**:
+
+| Setting | Description |
+|---------|-------------|
+| **Enable Tenant Sign-In** | Adds a "Sign in with Microsoft" button to wp-login.php and activates the shortcode. |
+| **Auto-Create Users** | Automatically creates a new WordPress account for first-time Microsoft users. |
+| **Default Role for New Users** | Role assigned to auto-created accounts (default: Subscriber). |
+| **Allowed Email Domains** | Comma-separated list (e.g. `contoso.com, fabrikam.org`). Leave blank to allow any domain from your tenant. |
+| **Post-Login Redirect URL** | Optional. Overrides the normal WordPress redirect after a successful sign-in. |
+
+### Wording customization
+
+Go to **Microsoft 365 -> Wording** to override user-facing text in separate cards:
+
+- **Calendar & Files Wording**
+- **Teams Form Wording**
+- **Sign-In Wording**
+
+In **Sign-In Wording**, set **Entra Sign-In Button Text** to override the default label used on `wp-login.php` and by `[msgraph_login_button]` when no `label` attribute is provided.
+
+#### Settings persistence check
+
+Use this quick regression test after updates:
+
+1. In **Microsoft 365 -> Settings -> WordPress Sign-In (Microsoft Tenant)**, enable **Enable Tenant Sign-In** and **Auto-Create Users**, then click **Save Changes**.
+2. Open **Microsoft 365 -> Wording** and change any wording field (for example **Entra Sign-In Button Text**), then click **Save Changes**.
+3. Return to **Microsoft 365 -> Settings** and confirm **Enable Tenant Sign-In** and **Auto-Create Users** are still enabled.
+
+#### Shortcode
+
+Place the sign-in button anywhere on a page or widget:
+
+```
+[msgraph_login_button]
+```
+
+Optional attributes:
+
+| Attribute | Default | Description |
+|-----------|---------|-------------|
+| `label` | value from **Wording -> Sign-In Wording -> Entra Sign-In Button Text** (fallback: *Sign in with Microsoft*) | Button label text |
+| `redirect_to` | current page | URL to redirect to after sign-in |
+| `class` | *(empty)* | Extra CSS class(es) added to the button wrapper |
+
+Example:
+
+```
+[msgraph_login_button label="Log in with Company Account" redirect_to="/dashboard"]
+```
+
+#### Security notes
+
+- PKCE (SHA-256 code challenge) is always used — no implicit flow.
+- State and nonce are one-time transients (10-minute TTL) to prevent CSRF and replay attacks.
+- ID token is validated: `aud` = Client ID, `iss` = `https://login.microsoftonline.com/{tenant_id}/v2.0`, `exp` ± 60 s, nonce match.
+- Redirects after login are sanitized via `wp_validate_redirect()`.
+
+---
 
 ### Teams form workflow setup
 

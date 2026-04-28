@@ -105,7 +105,54 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<!-- Settings form -->
 	<form method="post" action="options.php" class="msgraph_settings__form">
 		<?php settings_fields( 'wp_ms365_settings_group' ); ?>
-		<?php do_settings_sections( 'wp-ms365-graph' ); ?>
+		<?php
+		global $wp_settings_sections;
+		$settings_page_sections = isset( $wp_settings_sections['wp-ms365-graph'] ) ? $wp_settings_sections['wp-ms365-graph'] : array();
+		?>
+
+		<div class="msgraph_settings__cards">
+			<?php if ( isset( $settings_page_sections['wp_ms365_azure_app'] ) ) : ?>
+				<div class="msgraph_card msgraph_card--settings">
+					<h2 class="msgraph_card__title"><?php echo esc_html( $settings_page_sections['wp_ms365_azure_app']['title'] ); ?></h2>
+					<?php
+					if ( ! empty( $settings_page_sections['wp_ms365_azure_app']['callback'] ) ) {
+						call_user_func( $settings_page_sections['wp_ms365_azure_app']['callback'] );
+					}
+					?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_azure_app' ); ?>
+					</table>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( isset( $settings_page_sections['wp_ms365_teams'] ) ) : ?>
+				<div class="msgraph_card msgraph_card--settings">
+					<h2 class="msgraph_card__title"><?php echo esc_html( $settings_page_sections['wp_ms365_teams']['title'] ); ?></h2>
+					<?php
+					if ( ! empty( $settings_page_sections['wp_ms365_teams']['callback'] ) ) {
+						call_user_func( $settings_page_sections['wp_ms365_teams']['callback'] );
+					}
+					?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_teams' ); ?>
+					</table>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( isset( $settings_page_sections['wp_ms365_sso'] ) ) : ?>
+				<div class="msgraph_card msgraph_card--settings">
+					<h2 class="msgraph_card__title"><?php echo esc_html( $settings_page_sections['wp_ms365_sso']['title'] ); ?></h2>
+					<?php
+					if ( ! empty( $settings_page_sections['wp_ms365_sso']['callback'] ) ) {
+						call_user_func( $settings_page_sections['wp_ms365_sso']['callback'] );
+					}
+					?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_sso' ); ?>
+					</table>
+				</div>
+			<?php endif; ?>
+		</div>
 
 		<?php submit_button(); ?>
 	</form>
@@ -136,8 +183,21 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<hr />
 	<h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
 	<p>
-		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials). No interactive Microsoft sign-in is required.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials) for Graph data features. No interactive Microsoft sign-in is required for shortcodes.', 'wp-ms365-graph' ); ?>
 	</p>
+
+	<?php if ( ! empty( $settings['sso_enabled'] ) ) : ?>
+	<div class="notice notice-info">
+		<p>
+			<strong><?php esc_html_e( 'Tenant Sign-In is active.', 'wp-ms365-graph' ); ?></strong>
+			<?php esc_html_e( 'Register the following Redirect URI in your Azure app registration:', 'wp-ms365-graph' ); ?><br />
+			<code><?php echo esc_html( WP_MS365_Auth::get_sso_redirect_uri() ); ?></code>
+		</p>
+		<p>
+			<?php esc_html_e( 'Required delegated permissions: openid, email, profile.', 'wp-ms365-graph' ); ?>
+		</p>
+	</div>
+	<?php endif; ?>
 
 	<hr />
 	<h2><?php esc_html_e( 'Import / Export', 'wp-ms365-graph' ); ?></h2>

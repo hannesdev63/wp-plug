@@ -19,7 +19,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	<form method="post" action="options.php" class="msgraph_settings__form">
 		<?php settings_fields( 'wp_ms365_settings_group' ); ?>
-		<?php do_settings_sections( 'wp-ms365-wording' ); ?>
+		<?php
+		global $wp_settings_sections;
+		$wording_sections = isset( $wp_settings_sections['wp-ms365-wording'] ) ? $wp_settings_sections['wp-ms365-wording'] : array();
+		?>
+
+		<div class="msgraph_settings__cards">
+			<?php foreach ( $wording_sections as $section_id => $section ) : ?>
+				<div class="msgraph_card msgraph_card--settings">
+					<h2 class="msgraph_card__title"><?php echo esc_html( $section['title'] ); ?></h2>
+					<?php
+					if ( ! empty( $section['callback'] ) ) {
+						call_user_func( $section['callback'] );
+					}
+					?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( 'wp-ms365-wording', $section_id ); ?>
+					</table>
+				</div>
+			<?php endforeach; ?>
+		</div>
 
 		<?php submit_button(); ?>
 	</form>
