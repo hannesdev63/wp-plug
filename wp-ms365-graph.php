@@ -112,6 +112,7 @@ function wp_ms365_graph_activate() {
 		// WordPress tenant sign-in (delegated Auth Code + PKCE).
 		'sso_enabled'         => 0,
 		'sso_auto_create'     => 0,
+		'sso_use_ms_avatar'   => 0,
 		'sso_default_role'    => 'subscriber',
 		'sso_allowed_domains' => '',
 		'sso_redirect_url'    => '',

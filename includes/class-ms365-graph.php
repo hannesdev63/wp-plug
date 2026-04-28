@@ -715,6 +715,70 @@ class WP_MS365_Graph {
 	}
 
 	/**
+	 * Fetch the raw JPEG binary of a Microsoft user's profile photo.
+	 *
+	 * Returns a binary string on success or WP_Error on failure (including when
+	 * the user simply has no photo set on their Entra account).
+	 *
+	 * @param  string $user_id_or_email  UPN (email) or Azure AD object ID.
+	 * @return string|WP_Error  Binary image data, or WP_Error.
+	 */
+	public static function get_user_photo_data( $user_id_or_email ) {
+		$user_id_or_email = trim( (string) $user_id_or_email );
+		if ( '' === $user_id_or_email ) {
+			return new WP_Error( 'ms365_invalid_user', __( 'User identifier is required.', 'wp-ms365-graph' ) );
+		}
+
+		$token = WP_MS365_Auth::get_access_token();
+		if ( ! $token ) {
+			return new WP_Error(
+				'ms365_not_authenticated',
+				__( 'Not connected to Microsoft 365.', 'wp-ms365-graph' )
+			);
+		}
+
+		$url = self::API_BASE . '/users/' . rawurlencode( $user_id_or_email ) . '/photo/$value';
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 15,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status = wp_remote_retrieve_response_code( $response );
+
+		if ( 404 === $status ) {
+			return new WP_Error( 'ms365_no_photo', __( 'User has no profile photo.', 'wp-ms365-graph' ) );
+		}
+
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error(
+				'ms365_photo_fetch_failed',
+				sprintf(
+					/* translators: %d = HTTP status code */
+					__( 'Could not fetch profile photo (HTTP %d).', 'wp-ms365-graph' ),
+					(int) $status
+				)
+			);
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		if ( '' === $body ) {
+			return new WP_Error( 'ms365_no_photo', __( 'Profile photo response was empty.', 'wp-ms365-graph' ) );
+		}
+
+		return $body;
+	}
+
+	/**
 	 * Execute an authenticated HTTP request, with one retry on 401.
 	 *
 	 * @param  string $method HTTP method.

@@ -177,6 +177,15 @@ class WP_MS365_Admin {
 		);
 
 		add_settings_field(
+			'wp_ms365_sso_use_ms_avatar',
+			__( 'Use Microsoft Profile Picture', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_use_ms_avatar', 'label' => __( 'Use the Microsoft Entra profile picture as the WordPress avatar for linked users.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
 			'wp_ms365_sso_default_role',
 			__( 'Default Role for New Users', 'wp-ms365-graph' ),
 			array( $this, 'render_select_field' ),
@@ -482,13 +491,15 @@ class WP_MS365_Admin {
 		$has_sso_payload =
 			isset( $input['sso_enabled'] ) ||
 			isset( $input['sso_auto_create'] ) ||
+			isset( $input['sso_use_ms_avatar'] ) ||
 			isset( $input['sso_default_role'] ) ||
 			isset( $input['sso_allowed_domains'] ) ||
 			isset( $input['sso_redirect_url'] );
 
 		if ( $has_sso_payload ) {
-			$clean['sso_enabled']     = ! empty( $input['sso_enabled'] ) ? 1 : 0;
-			$clean['sso_auto_create'] = ! empty( $input['sso_auto_create'] ) ? 1 : 0;
+			$clean['sso_enabled']       = ! empty( $input['sso_enabled'] ) ? 1 : 0;
+			$clean['sso_auto_create']   = ! empty( $input['sso_auto_create'] ) ? 1 : 0;
+			$clean['sso_use_ms_avatar'] = ! empty( $input['sso_use_ms_avatar'] ) ? 1 : 0;
 
 			if ( isset( $input['sso_default_role'] ) ) {
 				$allowed_roles             = array_keys( (array) wp_roles()->role_names );
@@ -850,7 +861,7 @@ class WP_MS365_Admin {
 				<?php endif; ?>
 			</div>
 		</div>
-		<p class="description"><?php esc_html_e( 'Optional. Upload or select an image to replace the Microsoft logo in the sign-in button. Leave blank to use the default Microsoft logo.', 'wp-ms365-graph' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Optional. Upload or select an image to replace the Microsoft logo in the sign-in button. The image is rendered as a small icon (20×20 px), so keep it square and no larger than 200×200 px. Leave blank to use the default Microsoft logo.', 'wp-ms365-graph' ); ?></p>
 		<?php
 	}
 

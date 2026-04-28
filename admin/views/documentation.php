@@ -33,6 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</thead>
 		<tbody>
 			<tr><td><?php esc_html_e( 'Read configured user profile', 'wp-ms365-graph' ); ?></td><td><code>User.Read.All</code></td></tr>
+			<tr><td><?php esc_html_e( 'Microsoft Entra profile picture (avatar)', 'wp-ms365-graph' ); ?></td><td><code>User.Read.All</code></td></tr>
 			<tr><td><code>[msgraph_calendar]</code></td><td><code>Calendars.Read</code></td></tr>
 			<tr><td><code>[msgraph_files]</code> (OneDrive)</td><td><code>Files.Read.All</code></td></tr>
 			<tr><td><code>[msgraph_sharepoint_library]</code> (SharePoint)</td><td><code>Sites.Read.All</code></td></tr>
@@ -162,6 +163,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<li><?php esc_html_e( 'Open Microsoft 365 -> Wording, change any wording value, and save.', 'wp-ms365-graph' ); ?></li>
 		<li><?php esc_html_e( 'Return to Microsoft 365 -> Settings and verify both sign-in options are still enabled.', 'wp-ms365-graph' ); ?></li>
 	</ol>
+	<p><strong><?php esc_html_e( 'Custom sign-in button image', 'wp-ms365-graph' ); ?>:</strong></p>
+	<p>
+		<?php esc_html_e( 'Set under Microsoft 365 -> Wording -> Sign-In Wording -> Entra Sign-In Button Image.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'The image replaces the Microsoft SVG logo and is rendered as a 20×20 px icon inside the sign-in button.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'Use a square image no larger than 200×200 px (PNG or SVG with transparency works best).', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'The media library picker warns you if the selected image exceeds 200×200 px.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'Leave blank to revert to the default Microsoft logo.', 'wp-ms365-graph' ); ?>
+	</p>
+
+	<hr />
+	<h2><?php esc_html_e( 'Microsoft Entra Profile Picture (Avatar)', 'wp-ms365-graph' ); ?></h2>
+	<p>
+		<?php esc_html_e( 'When enabled, the plugin fetches each Entra-linked user\'s Microsoft profile photo via the Graph API and uses it as their WordPress avatar, replacing the default Gravatar.', 'wp-ms365-graph' ); ?>
+	</p>
+	<p><strong><?php esc_html_e( 'How to enable', 'wp-ms365-graph' ); ?>:</strong></p>
+	<ol>
+		<li><?php esc_html_e( 'Open Microsoft 365 -> Settings -> WordPress Sign-In (Microsoft Tenant).', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'Enable "Use Microsoft Profile Picture" and save.', 'wp-ms365-graph' ); ?></li>
+	</ol>
+	<p><strong><?php esc_html_e( 'Behaviour', 'wp-ms365-graph' ); ?>:</strong></p>
+	<ul>
+		<li><?php esc_html_e( 'Only applies to users who have previously signed in via Microsoft Entra SSO (linked accounts).', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'The photo is fetched on first avatar render, saved to the wp-content/uploads/ms365-avatars/ directory, and cached for 12 hours via a WP transient.', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'If the user has no Entra profile photo the avatar falls back to the default WordPress/Gravatar avatar silently.', 'wp-ms365-graph' ); ?></li>
+		<li><?php esc_html_e( 'To force a refresh, delete the transient wp_ms365_avatar_{user_id} from the database (e.g. via WP-CLI or a caching plugin flush).', 'wp-ms365-graph' ); ?></li>
+	</ul>
+	<p><strong><?php esc_html_e( 'Required Graph permission', 'wp-ms365-graph' ); ?>:</strong> <code>User.Read.All</code> <?php esc_html_e( '(application permission, already required for profile reads).', 'wp-ms365-graph' ); ?></p>
 
 	<hr />
 	<h2><code>[msgraph_teams_message_form]</code></h2>

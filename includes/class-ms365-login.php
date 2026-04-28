@@ -22,6 +22,7 @@ class WP_MS365_Login {
 		add_action( 'login_form',             array( $this, 'render_login_button' ) );
 		add_action( 'login_enqueue_scripts',  array( $this, 'enqueue_assets' ) );
 		add_filter( 'wp_authenticate_user',   array( $this, 'block_local_password_for_entra_users' ), 20, 2 );
+		add_filter( 'pre_get_avatar_data',    array( $this, 'maybe_override_avatar' ), 20, 2 );
 	}
 
 	/**
@@ -96,6 +97,106 @@ class WP_MS365_Login {
 			</a>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Override the WordPress avatar with the user's Microsoft profile picture.
+	 *
+	 * Fetches the photo on first request, saves it to the uploads directory, and
+	 * caches the URL in a transient for 12 hours. Stores 'none' when the user
+	 * has no Entra profile photo so we don't fetch repeatedly.
+	 *
+	 * @param  array             $args        Avatar data arguments.
+	 * @param  int|string|WP_User $id_or_email User identifier.
+	 * @return array
+	 */
+	public function maybe_override_avatar( $args, $id_or_email ) {
+		$settings = WP_MS365_Auth::get_settings();
+		if ( empty( $settings['sso_use_ms_avatar'] ) ) {
+			return $args;
+		}
+
+		// Resolve the identifier to a WP_User object.
+		$user = false;
+		if ( $id_or_email instanceof WP_User ) {
+			$user = $id_or_email;
+		} elseif ( is_numeric( $id_or_email ) && (int) $id_or_email > 0 ) {
+			$user = get_user_by( 'id', (int) $id_or_email );
+		} elseif ( is_string( $id_or_email ) && false !== strpos( $id_or_email, '@' ) ) {
+			$user = get_user_by( 'email', $id_or_email );
+		} elseif ( $id_or_email instanceof WP_Comment ) {
+			if ( ! empty( $id_or_email->user_id ) ) {
+				$user = get_user_by( 'id', (int) $id_or_email->user_id );
+			} elseif ( ! empty( $id_or_email->comment_author_email ) ) {
+				$user = get_user_by( 'email', $id_or_email->comment_author_email );
+			}
+		}
+
+		if ( ! ( $user instanceof WP_User ) ) {
+			return $args;
+		}
+
+		// Only override for Entra-linked accounts.
+		if ( ! get_user_meta( $user->ID, WP_MS365_Auth::USER_META_SSO_LINKED, true ) ) {
+			return $args;
+		}
+
+		$transient_key = 'wp_ms365_avatar_' . $user->ID;
+		$cached        = get_transient( $transient_key );
+
+		if ( false === $cached ) {
+			$cached = $this->fetch_and_cache_ms_avatar( $user );
+		}
+
+		if ( 'none' !== $cached && '' !== $cached ) {
+			$args['url']          = $cached;
+			$args['found_avatar'] = true;
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Fetch the Microsoft profile photo via Graph, save it to uploads, and
+	 * store the resulting URL (or the sentinel 'none') in a transient.
+	 *
+	 * @param  WP_User $user
+	 * @return string  Local file URL, or 'none' when no photo is available.
+	 */
+	private function fetch_and_cache_ms_avatar( WP_User $user ) {
+		$transient_key = 'wp_ms365_avatar_' . $user->ID;
+		$data          = WP_MS365_Graph::get_user_photo_data( $user->user_email );
+
+		if ( is_wp_error( $data ) ) {
+			WP_MS365_Logger::log(
+				'debug',
+				'MS avatar fetch failed for user ' . $user->ID . ': ' . $data->get_error_message()
+			);
+			set_transient( $transient_key, 'none', 12 * HOUR_IN_SECONDS );
+			return 'none';
+		}
+
+		$upload    = wp_upload_dir();
+		$dir_path  = trailingslashit( $upload['basedir'] ) . 'ms365-avatars';
+		$dir_url   = trailingslashit( $upload['baseurl'] ) . 'ms365-avatars';
+
+		if ( ! file_exists( $dir_path ) ) {
+			wp_mkdir_p( $dir_path );
+		}
+
+		$file_path = $dir_path . '/' . $user->ID . '.jpg';
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === file_put_contents( $file_path, $data ) ) {
+			WP_MS365_Logger::log( 'error', 'MS avatar: could not write photo to disk for user ' . $user->ID );
+			set_transient( $transient_key, 'none', 12 * HOUR_IN_SECONDS );
+			return 'none';
+		}
+
+		$photo_url = $dir_url . '/' . $user->ID . '.jpg';
+		set_transient( $transient_key, $photo_url, 12 * HOUR_IN_SECONDS );
+
+		return $photo_url;
 	}
 
 	/**
