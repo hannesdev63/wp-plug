@@ -195,10 +195,10 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	</div>
 
 	<hr />
-	<h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
+	<!-- <h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
 	<p>
 		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials) for Graph data features. No interactive Microsoft sign-in is required for shortcodes.', 'wp-ms365-graph' ); ?>
-	</p>
+	</p> -->
 
 	<?php if ( ! empty( $settings['sso_enabled'] ) ) : ?>
 	<div class="notice notice-info">
