@@ -20,6 +20,7 @@ class WP_MS365_Admin {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_init',            array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'wp_dashboard_setup',    array( $this, 'register_wp_dashboard_widgets' ) );
 		add_action( 'admin_post_wp_ms365_request_new_token', array( $this, 'handle_request_new_token' ) );
 		add_action( 'admin_post_wp_ms365_export_settings', array( $this, 'handle_export_settings' ) );
 		add_action( 'admin_post_wp_ms365_import_settings', array( $this, 'handle_import_settings' ) );
@@ -825,6 +826,318 @@ class WP_MS365_Admin {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
 		}
 		WP_MS365_Login_Logs::render_page( array( 'as_tab' => true ) );
+	}
+
+	/**
+	 * Register WordPress dashboard widgets for access statistics.
+	 *
+	 * @return void
+	 */
+	public function register_wp_dashboard_widgets() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		wp_add_dashboard_widget(
+			'wp_ms365_access_daily_trend_widget',
+			__( 'MS Graph Connect: Daily Trend', 'wp-ms365-graph' ),
+			array( $this, 'render_wp_dashboard_daily_trend_widget' )
+		);
+
+		wp_add_dashboard_widget(
+			'wp_ms365_access_top_items_widget',
+			__( 'MS Graph Connect: Top Accessed Items', 'wp-ms365-graph' ),
+			array( $this, 'render_wp_dashboard_top_items_widget' )
+		);
+
+		wp_add_dashboard_widget(
+			'wp_ms365_signin_activity_widget',
+			__( 'MS Graph Connect: Sign-In Activity', 'wp-ms365-graph' ),
+			array( $this, 'render_wp_dashboard_signin_activity_widget' )
+		);
+	}
+
+	/**
+	 * Get sign-in activity data for dashboard widget.
+	 *
+	 * @param int $window_days Number of days in the reporting window.
+	 * @param int $limit       Maximum number of recent entries.
+	 * @return array{success_count: int, failed_count: int, recent_logs: array<int, array<string, mixed>>}
+	 */
+	private function get_dashboard_signin_activity_data( $window_days = 7, $limit = 10 ) {
+		global $wpdb;
+
+		$window_days = max( 1, (int) $window_days );
+		$limit       = max( 1, (int) $limit );
+		$table       = WP_MS365_Login_Logs::table_name();
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$summary_sql = "SELECT status, COUNT(*) AS total FROM {$table} WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL %d DAY) GROUP BY status";
+		$summary_rows = $wpdb->get_results( $wpdb->prepare( $summary_sql, $window_days ), ARRAY_A );
+
+		$success_count = 0;
+		$failed_count  = 0;
+		foreach ( $summary_rows as $row ) {
+			$status = isset( $row['status'] ) ? sanitize_key( (string) $row['status'] ) : '';
+			$total  = isset( $row['total'] ) ? (int) $row['total'] : 0;
+			if ( 'success' === $status ) {
+				$success_count = $total;
+			} elseif ( 'failed' === $status ) {
+				$failed_count = $total;
+			}
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$recent_sql = "SELECT attempted_at, status, username, ip_address, reason FROM {$table} WHERE attempted_at >= DATE_SUB(NOW(), INTERVAL %d DAY) ORDER BY attempted_at DESC, id DESC LIMIT %d";
+		$recent_logs = $wpdb->get_results( $wpdb->prepare( $recent_sql, $window_days, $limit ), ARRAY_A );
+
+		return array(
+			'success_count' => $success_count,
+			'failed_count'  => $failed_count,
+			'recent_logs'   => is_array( $recent_logs ) ? $recent_logs : array(),
+		);
+	}
+
+	/**
+	 * Get combined access statistics data for dashboard widgets.
+	 *
+	 * @param int $window_days Number of days in the reporting window.
+	 * @return array{top_rows: array<int, array<string, mixed>>, trend_map: array<string, int>}
+	 */
+	private function get_dashboard_access_stats_data( $window_days = 30 ) {
+		$window_days   = max( 1, (int) $window_days );
+		$wp_top        = WP_MS365_WP_Access_Stats::get_top_items( $window_days, 10, 'all' );
+		$external_top  = WP_MS365_WP_Access_Stats::get_top_items( $window_days, 250, 'external' );
+		$wp_trend      = WP_MS365_WP_Access_Stats::get_daily_trend( $window_days, 'all' );
+		$external_trend = WP_MS365_WP_Access_Stats::get_external_daily_trend( $window_days, 'all' );
+
+		$shortcode_item_keys = array();
+		foreach ( $external_top as $row ) {
+			$external_url = isset( $row['url'] ) ? trim( (string) $row['url'] ) : '';
+			if ( '' !== $external_url ) {
+				$shortcode_item_keys[ 'url:' . strtolower( untrailingslashit( $external_url ) ) ] = true;
+			}
+
+			$external_label = isset( $row['post_title'] ) ? trim( (string) $row['post_title'] ) : '';
+			if ( '' !== $external_label ) {
+				$shortcode_item_keys[ 'label:' . strtolower( $external_label ) ] = true;
+			}
+		}
+
+		$top_rows = array();
+
+		foreach ( $wp_top as $row ) {
+			$wp_label = isset( $row['post_title'] ) ? trim( (string) $row['post_title'] ) : '';
+			$wp_url   = isset( $row['url'] ) ? trim( (string) $row['url'] ) : '';
+
+			$matched_by_url   = '' !== $wp_url && isset( $shortcode_item_keys[ 'url:' . strtolower( untrailingslashit( $wp_url ) ) ] );
+			$matched_by_label = '' !== $wp_label && isset( $shortcode_item_keys[ 'label:' . strtolower( $wp_label ) ] );
+			if ( $matched_by_url || $matched_by_label ) {
+				continue;
+			}
+
+			$top_rows[] = array(
+				'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'wp-ms365-graph' ),
+				'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
+				'source' => __( 'WordPress Content', 'wp-ms365-graph' ),
+				'url'    => $wp_url,
+			);
+		}
+
+		foreach ( $external_top as $row ) {
+			$type         = isset( $row['post_type'] ) ? sanitize_key( (string) $row['post_type'] ) : '';
+			$source_label = __( 'WP Shortcode -> Microsoft 365', 'wp-ms365-graph' );
+			if ( 'sharepoint' === $type ) {
+				$source_label = __( 'WP Shortcode -> SharePoint', 'wp-ms365-graph' );
+			} elseif ( 'onedrive' === $type ) {
+				$source_label = __( 'WP Shortcode -> OneDrive', 'wp-ms365-graph' );
+			} elseif ( 'outlook' === $type ) {
+				$source_label = __( 'WP Shortcode -> Outlook', 'wp-ms365-graph' );
+			}
+
+			$top_rows[] = array(
+				'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'wp-ms365-graph' ),
+				'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
+				'source' => $source_label,
+				'url'    => isset( $row['url'] ) ? (string) $row['url'] : '',
+			);
+		}
+
+		usort(
+			$top_rows,
+			function ( $a, $b ) {
+				return (int) $b['value'] <=> (int) $a['value'];
+			}
+		);
+		$top_rows = array_slice( $top_rows, 0, 10 );
+
+		$trend_map = array();
+		foreach ( $wp_trend as $row ) {
+			$date = isset( $row['stat_date'] ) ? (string) $row['stat_date'] : '';
+			if ( '' === $date ) {
+				continue;
+			}
+			if ( ! isset( $trend_map[ $date ] ) ) {
+				$trend_map[ $date ] = 0;
+			}
+			$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
+		}
+
+		foreach ( $external_trend as $row ) {
+			$date = isset( $row['stat_date'] ) ? (string) $row['stat_date'] : '';
+			if ( '' === $date ) {
+				continue;
+			}
+			if ( ! isset( $trend_map[ $date ] ) ) {
+				$trend_map[ $date ] = 0;
+			}
+			$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
+		}
+
+		ksort( $trend_map );
+
+		return array(
+			'top_rows'  => $top_rows,
+			'trend_map' => $trend_map,
+		);
+	}
+
+	/**
+	 * Render the WordPress dashboard widget for daily trend.
+	 *
+	 * @return void
+	 */
+	public function render_wp_dashboard_daily_trend_widget() {
+		$data      = $this->get_dashboard_access_stats_data( 30 );
+		$trend_map = $data['trend_map'];
+		$max_value = 0;
+
+		if ( empty( $trend_map ) ) {
+			echo '<p>' . esc_html__( 'No trend data available for the selected period yet.', 'wp-ms365-graph' ) . '</p>';
+			return;
+		}
+
+		echo '<table class="widefat striped">';
+		echo '<thead><tr>';
+		echo '<th>' . esc_html__( 'Date', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Total accesses', 'wp-ms365-graph' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $trend_map as $value ) {
+			$max_value = max( $max_value, (int) $value );
+		}
+
+		foreach ( $trend_map as $date => $value ) {
+			$int_value = (int) $value;
+			$bar_width = ( $max_value > 0 ) ? (int) round( ( $int_value / $max_value ) * 100 ) : 0;
+			echo '<tr>';
+			echo '<td>' . esc_html( $date ) . '</td>';
+			echo '<td>';
+			echo '<div style="display:flex;align-items:center;gap:8px;">';
+			echo '<span>' . esc_html( number_format_i18n( $int_value ) ) . '</span>';
+			echo '<span aria-hidden="true" style="display:inline-block;flex:1;max-width:140px;height:8px;background:#e5e5e5;border-radius:4px;overflow:hidden;">';
+			echo '<span style="display:block;height:100%;width:' . esc_attr( (string) $bar_width ) . '%;background:#0078d4;"></span>';
+			echo '</span>';
+			echo '</div>';
+			echo '</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'wp-ms365-graph' ) . '</a></p>';
+	}
+
+	/**
+	 * Render the WordPress dashboard widget for top accessed items.
+	 *
+	 * @return void
+	 */
+	public function render_wp_dashboard_top_items_widget() {
+		$data     = $this->get_dashboard_access_stats_data( 30 );
+		$top_rows = $data['top_rows'];
+
+		if ( empty( $top_rows ) ) {
+			echo '<p>' . esc_html__( 'No access data available for the current filters yet.', 'wp-ms365-graph' ) . '</p>';
+			return;
+		}
+
+		echo '<table class="widefat striped">';
+		echo '<thead><tr>';
+		echo '<th>' . esc_html__( 'Item', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Source', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Access count', 'wp-ms365-graph' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $top_rows as $row ) {
+			echo '<tr>';
+			echo '<td>';
+			if ( ! empty( $row['url'] ) ) {
+				echo '<a href="' . esc_url( $row['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $row['label'] ) . '</a>';
+			} else {
+				echo esc_html( $row['label'] );
+			}
+			echo '</td>';
+			echo '<td>' . esc_html( (string) $row['source'] ) . '</td>';
+			echo '<td>' . esc_html( number_format_i18n( (int) $row['value'] ) ) . '</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'wp-ms365-graph' ) . '</a></p>';
+	}
+
+	/**
+	 * Render the WordPress dashboard widget for sign-in activity.
+	 *
+	 * @return void
+	 */
+	public function render_wp_dashboard_signin_activity_widget() {
+		$data          = $this->get_dashboard_signin_activity_data( 7, 10 );
+		$success_count = (int) $data['success_count'];
+		$failed_count  = (int) $data['failed_count'];
+		$recent_logs   = $data['recent_logs'];
+
+		echo '<p>';
+		echo esc_html__( 'Last 7 days', 'wp-ms365-graph' ) . ': ';
+		echo '<strong>' . esc_html__( 'Success', 'wp-ms365-graph' ) . '</strong> ' . esc_html( number_format_i18n( $success_count ) );
+		echo ' | ';
+		echo '<strong>' . esc_html__( 'Failed', 'wp-ms365-graph' ) . '</strong> ' . esc_html( number_format_i18n( $failed_count ) );
+		echo '</p>';
+
+		if ( empty( $recent_logs ) ) {
+			echo '<p>' . esc_html__( 'No login attempts found.', 'wp-ms365-graph' ) . '</p>';
+			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'wp-ms365-graph' ) . '</a></p>';
+			return;
+		}
+
+		echo '<table class="widefat striped">';
+		echo '<thead><tr>';
+		echo '<th>' . esc_html__( 'Date', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Status', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Username', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'IP', 'wp-ms365-graph' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $recent_logs as $row ) {
+			$status = isset( $row['status'] ) ? sanitize_key( (string) $row['status'] ) : '';
+			if ( 'success' === $status ) {
+				$status_label = __( 'Success', 'wp-ms365-graph' );
+			} elseif ( 'failed' === $status ) {
+				$status_label = __( 'Failed', 'wp-ms365-graph' );
+			} else {
+				$status_label = $status;
+			}
+
+			echo '<tr>';
+			echo '<td>' . esc_html( isset( $row['attempted_at'] ) ? (string) $row['attempted_at'] : '' ) . '</td>';
+			echo '<td>' . esc_html( $status_label ) . '</td>';
+			echo '<td>' . esc_html( isset( $row['username'] ) ? (string) $row['username'] : '' ) . '</td>';
+			echo '<td>' . esc_html( isset( $row['ip_address'] ) ? (string) $row['ip_address'] : '' ) . '</td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'wp-ms365-graph' ) . '</a></p>';
 	}
 
 	/**

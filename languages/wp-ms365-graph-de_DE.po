@@ -844,3 +844,18 @@ msgstr "Grund"
 
 msgid "No login attempts found."
 msgstr "Keine Anmeldeversuche gefunden."
+
+msgid "MS Graph Connect: Daily Trend"
+msgstr "MS Graph Connect: Taeglicher Trend"
+
+msgid "MS Graph Connect: Top Accessed Items"
+msgstr "MS Graph Connect: Meist aufgerufene Elemente"
+
+msgid "Open Access Statistics"
+msgstr "Zugriffsstatistik oeffnen"
+
+msgid "MS Graph Connect: Sign-In Activity"
+msgstr "MS Graph Connect: Anmeldeaktivitaet"
+
+msgid "Open Login Access"
+msgstr "Anmeldezugriffe oeffnen"
