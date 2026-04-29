@@ -29,10 +29,14 @@ class WP_MS365_Logger {
 			return;
 		}
 
+		$level   = strtoupper( (string) $level );
+		$message = self::redact_string( (string) $message );
+		$context = self::redact_context( $context );
+
 		$timestamp = gmdate( 'Y-m-d H:i:s' );
 		$entry     = array(
 			'timestamp' => $timestamp,
-			'level'     => strtoupper( $level ),
+			'level'     => $level,
 			'message'   => $message,
 			'context'   => $context,
 		);
@@ -54,7 +58,7 @@ class WP_MS365_Logger {
 		update_option( self::LOG_OPTION, $logs );
 
 		// Also log to PHP error log if available.
-		error_log( "[WP-MS365-{$entry['level']}] {$message}" );
+		error_log( "[WP-MS365-{$entry['level']}] {$entry['message']}" );
 	}
 
 	/**
@@ -64,7 +68,25 @@ class WP_MS365_Logger {
 	 */
 	public static function get_logs() {
 		$logs = get_option( self::LOG_OPTION, array() );
-		return is_array( $logs ) ? $logs : array();
+		if ( ! is_array( $logs ) ) {
+			return array();
+		}
+
+		$sanitized = array();
+		foreach ( $logs as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+
+			$sanitized[] = array(
+				'timestamp' => isset( $entry['timestamp'] ) ? (string) $entry['timestamp'] : '',
+				'level'     => isset( $entry['level'] ) ? (string) $entry['level'] : 'INFO',
+				'message'   => self::redact_string( isset( $entry['message'] ) ? (string) $entry['message'] : '' ),
+				'context'   => self::redact_context( isset( $entry['context'] ) ? $entry['context'] : array() ),
+			);
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -140,5 +162,73 @@ class WP_MS365_Logger {
 		$html .= '</table>';
 
 		return $html;
+	}
+
+	/**
+	 * Recursively redact sensitive values in log context.
+	 *
+	 * @param mixed  $value Context value.
+	 * @param string $key   Optional context key.
+	 * @return mixed
+	 */
+	private static function redact_context( $value, $key = '' ) {
+		$key_lc = strtolower( (string) $key );
+
+		if ( is_array( $value ) ) {
+			$sanitized = array();
+			foreach ( $value as $child_key => $child_value ) {
+				$sanitized[ $child_key ] = self::redact_context( $child_value, (string) $child_key );
+			}
+			return $sanitized;
+		}
+
+		if ( is_object( $value ) ) {
+			return self::redact_context( (array) $value, $key );
+		}
+
+		if ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
+			return $value;
+		}
+
+		$scalar = (string) $value;
+
+		if ( preg_match( '/(email|upn|userprincipalname|token|secret|password|authorization|ip|code)/i', $key_lc ) ) {
+			return '[redacted]';
+		}
+
+		return self::redact_string( $scalar );
+	}
+
+	/**
+	 * Redact common PII/secrets from a free-text string.
+	 *
+	 * @param string $text Input text.
+	 * @return string
+	 */
+	private static function redact_string( $text ) {
+		if ( '' === $text ) {
+			return $text;
+		}
+
+		$patterns = array(
+			// Email/UPN addresses.
+			'/\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b/i'                         => '[redacted-email]',
+			// IPv4 addresses.
+			'/\b(?:\d{1,3}\.){3}\d{1,3}\b/'                                            => '[redacted-ip]',
+			// GUID/Object IDs.
+			'/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i' => '[redacted-guid]',
+			// OAuth/query secrets.
+			'/\b(access_token|refresh_token|id_token|client_secret|password|code)=([^&\s]+)/i' => '$1=[redacted-secret]',
+			// Authorization bearer token values.
+			'/(authorization\s*:\s*bearer\s+)[A-Za-z0-9\-._~+\/=]+/i'                  => '$1[redacted-token]',
+			// JWT-like strings.
+			'/\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\b/'               => '[redacted-jwt]',
+		);
+
+		foreach ( $patterns as $pattern => $replacement ) {
+			$text = preg_replace( $pattern, $replacement, $text );
+		}
+
+		return (string) $text;
 	}
 }

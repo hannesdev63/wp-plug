@@ -695,9 +695,396 @@ class WP_MS365_Graph {
 		);
 	}
 
+	/**
+	 * Convert a day-count to the Graph reports period token.
+	 *
+	 * @param int $days Number of days.
+	 * @return string
+	 */
+	public static function get_report_period( $days = 7 ) {
+		$days = (int) $days;
+		if ( $days >= 180 ) {
+			return 'D180';
+		}
+		if ( $days >= 90 ) {
+			return 'D90';
+		}
+		if ( $days >= 30 ) {
+			return 'D30';
+		}
+		if ( $days >= 7 ) {
+			return 'D7';
+		}
+
+		return 'D7';
+	}
+
+	/**
+	 * Fetch SharePoint site usage detail report rows.
+	 *
+	 * @param string $period Graph report period token (D7|D30|D90|D180).
+	 * @return array|WP_Error
+	 */
+	public static function get_sharepoint_site_usage_detail( $period = 'D7' ) {
+		$period = self::sanitize_report_period( $period );
+		return self::get_report_csv_rows( "/reports/getSharePointSiteUsageDetail(period='{$period}')" );
+	}
+
+	/**
+	 * Fetch SharePoint file usage detail report rows.
+	 *
+	 * @param string $period Graph report period token (D7|D30|D90|D180).
+	 * @return array|WP_Error
+	 */
+	public static function get_sharepoint_file_usage_detail( $period = 'D7' ) {
+		$period = self::sanitize_report_period( $period );
+		return self::get_report_csv_rows( "/reports/getSharePointActivityFileCounts(period='{$period}')" );
+	}
+
+	/**
+	 * Fetch OneDrive account usage detail report rows.
+	 *
+	 * @param string $period Graph report period token (D7|D30|D90|D180).
+	 * @return array|WP_Error
+	 */
+	public static function get_onedrive_usage_account_detail( $period = 'D7' ) {
+		$period = self::sanitize_report_period( $period );
+		return self::get_report_csv_rows( "/reports/getOneDriveUsageAccountDetail(period='{$period}')" );
+	}
+
+	/**
+	 * Normalize SharePoint site usage rows to a common schema.
+	 *
+	 * @param array $rows Raw CSV rows.
+	 * @return array
+	 */
+	public static function normalize_sharepoint_site_usage_rows( array $rows ) {
+		$normalized = array();
+		foreach ( $rows as $row ) {
+			$site_url = isset( $row['site url'] ) ? (string) $row['site url'] : '';
+			$normalized[] = array(
+				'date'              => isset( $row['report refresh date'] ) ? (string) $row['report refresh date'] : '',
+				'label'             => $site_url,
+				'sub_label'         => isset( $row['site id'] ) ? (string) $row['site id'] : '',
+				'url'               => $site_url,
+				'page_views'        => isset( $row['page view count'] ) ? (int) $row['page view count'] : 0,
+				'visited_pages'     => isset( $row['visited page count'] ) ? (int) $row['visited page count'] : 0,
+				'files'             => isset( $row['file count'] ) ? (int) $row['file count'] : 0,
+				'active_files'      => isset( $row['active file count'] ) ? (int) $row['active file count'] : 0,
+				'source'            => 'sharepoint',
+				'content_category'  => 'page',
+			);
+		}
+		return $normalized;
+	}
+
+	/**
+	 * Normalize SharePoint file activity rows to a common schema.
+	 *
+	 * @param array $rows Raw CSV rows.
+	 * @return array
+	 */
+	public static function normalize_sharepoint_file_usage_rows( array $rows ) {
+		$normalized = array();
+		foreach ( $rows as $row ) {
+			$normalized[] = array(
+				'date'              => isset( $row['report refresh date'] ) ? (string) $row['report refresh date'] : '',
+				'label'             => __( 'SharePoint Documents', 'wp-ms365-graph' ),
+				'sub_label'         => __( 'Tenant aggregate', 'wp-ms365-graph' ),
+				'files_viewed'      => isset( $row['viewed or edited file count'] ) ? (int) $row['viewed or edited file count'] : 0,
+				'files_synced'      => isset( $row['synced file count'] ) ? (int) $row['synced file count'] : 0,
+				'files_shared'      => isset( $row['shared internally file count'] ) ? (int) $row['shared internally file count'] : 0,
+				'source'            => 'sharepoint',
+				'content_category'  => 'document',
+			);
+		}
+		return $normalized;
+	}
+
+	/**
+	 * Normalize OneDrive account usage rows to a common schema.
+	 *
+	 * @param array $rows Raw CSV rows.
+	 * @return array
+	 */
+	public static function normalize_onedrive_usage_rows( array $rows ) {
+		$normalized = array();
+		foreach ( $rows as $row ) {
+			$display_name   = isset( $row['owner display name'] ) ? trim( (string) $row['owner display name'] ) : '';
+			$principal_name = isset( $row['owner principal name'] ) ? trim( (string) $row['owner principal name'] ) : '';
+			$label          = '' !== $display_name ? $display_name : ( '' !== $principal_name ? $principal_name : __( 'Unknown account', 'wp-ms365-graph' ) );
+			$url            = isset( $row['site url'] ) ? trim( (string) $row['site url'] ) : '';
+
+			// Fallback: construct OneDrive URL from UPN when the report omits or obfuscates the site URL.
+			// Pattern: https://{tenant}-my.sharepoint.com/personal/{user_domain_com}
+			if ( '' === $url && '' !== $principal_name && false !== strpos( $principal_name, '@' ) ) {
+				$upn_parts = explode( '@', $principal_name, 2 );
+				$domain    = $upn_parts[1]; // e.g. contoso.com
+				$tenant    = strstr( $domain, '.', true ); // e.g. contoso
+				if ( '' !== $tenant ) {
+					$normalized_upn = strtolower( str_replace( array( '@', '.' ), '_', $principal_name ) );
+					$url = 'https://' . $tenant . '-my.sharepoint.com/personal/' . $normalized_upn . '/';
+				}
+			}
+
+			$normalized[] = array(
+				'date'              => isset( $row['report refresh date'] ) ? (string) $row['report refresh date'] : '',
+				'label'             => $label,
+				'sub_label'         => $principal_name,
+				'url'               => $url,
+				'files'             => isset( $row['file count'] ) ? (int) $row['file count'] : 0,
+				'active_files'      => isset( $row['active file count'] ) ? (int) $row['active file count'] : 0,
+				'files_viewed'      => isset( $row['viewed or edited file count'] ) ? (int) $row['viewed or edited file count'] : 0,
+				'source'            => 'onedrive',
+				'content_category'  => 'document',
+			);
+		}
+		return $normalized;
+	}
+
+	/**
+	 * Build top-item rows from normalized data.
+	 *
+	 * @param array  $rows       Normalized rows.
+	 * @param string $label_key  Row key used as item label.
+	 * @param string $metric_key Row key used as metric.
+	 * @param int    $limit      Maximum items.
+	 * @return array
+	 */
+	public static function aggregate_report_top_items( array $rows, $label_key, $metric_key, $limit = 10 ) {
+		$totals     = array();
+		$sub_labels = array();
+		$urls       = array();
+		foreach ( $rows as $row ) {
+			$label = isset( $row[ $label_key ] ) ? trim( (string) $row[ $label_key ] ) : '';
+			if ( '' === $label ) {
+				continue;
+			}
+			$value = isset( $row[ $metric_key ] ) ? (int) $row[ $metric_key ] : 0;
+			if ( ! isset( $totals[ $label ] ) ) {
+				$totals[ $label ] = 0;
+			}
+			$totals[ $label ] += max( 0, $value );
+			// Capture sub_label and url on first encounter.
+			if ( ! isset( $sub_labels[ $label ] ) && isset( $row['sub_label'] ) && '' !== trim( (string) $row['sub_label'] ) ) {
+				$sub_labels[ $label ] = trim( (string) $row['sub_label'] );
+			}
+			if ( ! isset( $urls[ $label ] ) && isset( $row['url'] ) && '' !== trim( (string) $row['url'] ) ) {
+				$urls[ $label ] = trim( (string) $row['url'] );
+			}
+		}
+
+		arsort( $totals );
+		$top = array();
+		$count = 0;
+		$limit = max( 1, (int) $limit );
+		foreach ( $totals as $label => $value ) {
+			$top[] = array(
+				'label'     => $label,
+				'value'     => (int) $value,
+				'sub_label' => isset( $sub_labels[ $label ] ) ? $sub_labels[ $label ] : '',
+				'url'       => isset( $urls[ $label ] ) ? $urls[ $label ] : '',
+			);
+			$count++;
+			if ( $count >= $limit ) {
+				break;
+			}
+		}
+
+		return $top;
+	}
+
+	/**
+	 * Build daily metric totals from normalized report rows.
+	 *
+	 * @param array  $rows       Normalized rows.
+	 * @param string $date_key   Row key containing date value.
+	 * @param string $metric_key Row key containing metric value.
+	 * @return array
+	 */
+	public static function aggregate_report_daily_metric( array $rows, $date_key, $metric_key ) {
+		$daily = array();
+		foreach ( $rows as $row ) {
+			$date = isset( $row[ $date_key ] ) ? trim( (string) $row[ $date_key ] ) : '';
+			if ( '' === $date ) {
+				continue;
+			}
+			$value = isset( $row[ $metric_key ] ) ? (int) $row[ $metric_key ] : 0;
+			if ( ! isset( $daily[ $date ] ) ) {
+				$daily[ $date ] = 0;
+			}
+			$daily[ $date ] += max( 0, $value );
+		}
+
+		ksort( $daily );
+		$rows_out = array();
+		foreach ( $daily as $date => $value ) {
+			$rows_out[] = array(
+				'date'  => $date,
+				'value' => (int) $value,
+			);
+		}
+		return $rows_out;
+	}
+
 	// ------------------------------------------------------------------
 	// Internal helpers
 	// ------------------------------------------------------------------
+
+	/**
+	 * Fetch and parse a CSV-based Graph report endpoint.
+	 *
+	 * @param string $report_endpoint Report endpoint under /reports.
+	 * @return array|WP_Error
+	 */
+	private static function get_report_csv_rows( $report_endpoint ) {
+		$token = WP_MS365_Auth::get_access_token();
+		if ( ! $token ) {
+			return new WP_Error(
+				'ms365_not_authenticated',
+				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' )
+			);
+		}
+
+		$url = self::build_url( $report_endpoint );
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout'     => 45,
+				'redirection' => 0,
+				'headers'     => array(
+					'Authorization' => 'Bearer ' . $token,
+					'Accept'        => 'text/csv, application/json',
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status   = wp_remote_retrieve_response_code( $response );
+		$location = wp_remote_retrieve_header( $response, 'location' );
+		$csv_body = '';
+
+		if ( in_array( $status, array( 301, 302, 307, 308 ), true ) && ! empty( $location ) ) {
+			$csv_response = wp_remote_get(
+				esc_url_raw( $location ),
+				array(
+					'timeout' => 45,
+				)
+			);
+			if ( is_wp_error( $csv_response ) ) {
+				return $csv_response;
+			}
+
+			$csv_status = wp_remote_retrieve_response_code( $csv_response );
+			if ( $csv_status < 200 || $csv_status >= 300 ) {
+				return self::build_report_error( $csv_response, __( 'Could not download report payload.', 'wp-ms365-graph' ) );
+			}
+
+			$csv_body = (string) wp_remote_retrieve_body( $csv_response );
+		} elseif ( $status >= 200 && $status < 300 ) {
+			$csv_body = (string) wp_remote_retrieve_body( $response );
+		} else {
+			return self::build_report_error( $response, __( 'Could not fetch report endpoint.', 'wp-ms365-graph' ) );
+		}
+
+		if ( '' === trim( $csv_body ) ) {
+			return array();
+		}
+
+		return self::parse_csv_rows( $csv_body );
+	}
+
+	/**
+	 * Parse a CSV payload into an array with normalized lowercase keys.
+	 *
+	 * @param string $csv CSV payload.
+	 * @return array
+	 */
+	private static function parse_csv_rows( $csv ) {
+		$lines = preg_split( '/\r\n|\r|\n/', trim( (string) $csv ) );
+		if ( ! is_array( $lines ) || empty( $lines ) ) {
+			return array();
+		}
+
+		$header_line = array_shift( $lines );
+		$headers     = str_getcsv( (string) $header_line );
+		$headers     = is_array( $headers ) ? $headers : array();
+
+		$normalized_headers = array();
+		foreach ( $headers as $header ) {
+			$normalized_headers[] = strtolower( trim( (string) $header ) );
+		}
+
+		$rows = array();
+		foreach ( $lines as $line ) {
+			if ( '' === trim( (string) $line ) ) {
+				continue;
+			}
+
+			$values = str_getcsv( (string) $line );
+			if ( ! is_array( $values ) ) {
+				continue;
+			}
+
+			$row = array();
+			foreach ( $normalized_headers as $index => $header_key ) {
+				$row[ $header_key ] = isset( $values[ $index ] ) ? trim( (string) $values[ $index ] ) : '';
+			}
+			$rows[] = $row;
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Build a WP_Error object for report responses.
+	 *
+	 * @param array  $response HTTP response array.
+	 * @param string $fallback Fallback error message.
+	 * @return WP_Error
+	 */
+	private static function build_report_error( $response, $fallback ) {
+		$body   = (string) wp_remote_retrieve_body( $response );
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$data   = json_decode( $body, true );
+
+		$message = $fallback;
+		if ( is_array( $data ) && isset( $data['error']['message'] ) ) {
+			$message = (string) $data['error']['message'];
+		}
+
+		if ( 403 === $status && false !== stripos( strtolower( $message ), 'insufficient' ) ) {
+			$message = __( 'Insufficient privileges for Microsoft 365 Reports API. Add Reports.Read.All application permission and grant admin consent.', 'wp-ms365-graph' );
+		}
+
+		return new WP_Error(
+			'ms365_graph_report_error',
+			$message,
+			array(
+				'status' => $status,
+				'body'   => $body,
+			)
+		);
+	}
+
+	/**
+	 * Sanitize report period value.
+	 *
+	 * @param string $period Report period token.
+	 * @return string
+	 */
+	private static function sanitize_report_period( $period ) {
+		$period = strtoupper( trim( (string) $period ) );
+		if ( in_array( $period, array( 'D7', 'D30', 'D90', 'D180' ), true ) ) {
+			return $period;
+		}
+
+		return 'D7';
+	}
 
 	/**
 	 * Build a full API URL with optional query parameters.

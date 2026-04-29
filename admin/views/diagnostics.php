@@ -14,6 +14,25 @@ $settings           = WP_MS365_Auth::get_settings();
 $logs               = WP_MS365_Logger::get_logs();
 $debug_enabled      = defined( 'WP_DEBUG' ) && WP_DEBUG;
 $configured_user    = WP_MS365_Graph::get_configured_user();
+$mail_test_status   = isset( $_GET['mail_test'] ) ? sanitize_key( wp_unslash( $_GET['mail_test'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$mail_test_reason   = isset( $_GET['reason'] ) ? sanitize_text_field( wp_unslash( $_GET['reason'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$admin_email        = sanitize_email( (string) get_option( 'admin_email', '' ) );
+$allowed_logs_per_page = array( 25, 50, 100 );
+$logs_per_page         = isset( $_GET['logs_per_page'] ) ? absint( wp_unslash( $_GET['logs_per_page'] ) ) : 25; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+if ( ! in_array( $logs_per_page, $allowed_logs_per_page, true ) ) {
+	$logs_per_page = 25;
+}
+$logs_total         = count( $logs );
+$log_page           = isset( $_GET['log_page'] ) ? max( 1, absint( wp_unslash( $_GET['log_page'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$logs_total_pages   = max( 1, (int) ceil( $logs_total / $logs_per_page ) );
+
+if ( $log_page > $logs_total_pages ) {
+	$log_page = $logs_total_pages;
+}
+
+$logs_sorted = array_reverse( $logs );
+$log_offset  = ( $log_page - 1 ) * $logs_per_page;
+$logs_page_items = array_slice( $logs_sorted, $log_offset, $logs_per_page );
 
 // Live Graph checks – only run when connected and a specific user is configured.
 $diag_user_result     = null;
@@ -39,6 +58,40 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
 		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
 	</h1>
+
+	<?php if ( 'success' === $mail_test_status ) : ?>
+		<div class="notice notice-success is-dismissible">
+			<p><?php printf( esc_html__( 'Test email sent successfully to %s.', 'wp-ms365-graph' ), esc_html( $admin_email ) ); ?></p>
+		</div>
+	<?php elseif ( 'error' === $mail_test_status ) : ?>
+		<div class="notice notice-error is-dismissible">
+			<p>
+				<?php
+				echo esc_html__( 'Test email failed.', 'wp-ms365-graph' );
+				if ( 'invalid_recipient' === $mail_test_reason ) {
+					echo ' ' . esc_html__( 'Admin email address is not configured or invalid.', 'wp-ms365-graph' );
+				} elseif ( '' !== $mail_test_reason ) {
+					echo ' ' . esc_html( $mail_test_reason );
+				}
+				?>
+			</p>
+		</div>
+	<?php endif; ?>
+
+	<div class="msgraph_card">
+		<h2><?php esc_html_e( 'Email Transport Test', 'wp-ms365-graph' ); ?></h2>
+		<p>
+			<?php esc_html_e( 'Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph.', 'wp-ms365-graph' ); ?>
+		</p>
+		<p>
+			<?php echo esc_html__( 'Recipient:', 'wp-ms365-graph' ); ?> <code><?php echo esc_html( $admin_email ); ?></code>
+		</p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="wp_ms365_send_test_email" />
+			<?php wp_nonce_field( 'wp_ms365_send_test_email' ); ?>
+			<?php submit_button( __( 'Send Test Email', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+		</form>
+	</div>
 
 	<!-- System Information -->
 	<div class="msgraph_card">
@@ -269,11 +322,104 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 		<?php if ( ! empty( $logs ) ) : ?>
 			<p>
-				<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'clear_logs', '1' ), 'wp_ms365_clear_logs' ) ); ?>" class="button button-secondary">
+				<?php
+				$clear_logs_url = wp_nonce_url(
+					add_query_arg(
+						array(
+							'clear_logs'     => '1',
+							'log_page'       => $log_page,
+							'logs_per_page'  => $logs_per_page,
+						)
+					),
+					'wp_ms365_clear_logs'
+				);
+				?>
+				<a href="<?php echo esc_url( $clear_logs_url ); ?>" class="button button-secondary">
 					<?php esc_html_e( 'Clear Logs', 'wp-ms365-graph' ); ?>
 				</a>
 			</p>
-			<?php WP_MS365_Logger::render_logs_table( $logs ); ?>
+
+			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" style="margin:0 0 12px 0; display:flex; gap:8px; align-items:center;">
+				<input type="hidden" name="page" value="wp-ms365-graph" />
+				<input type="hidden" name="tab" value="diagnostics" />
+				<input type="hidden" name="log_page" value="1" />
+				<label for="wp_ms365_logs_per_page"><strong><?php esc_html_e( 'Rows per page', 'wp-ms365-graph' ); ?></strong></label>
+				<select name="logs_per_page" id="wp_ms365_logs_per_page">
+					<?php foreach ( $allowed_logs_per_page as $page_size ) : ?>
+						<option value="<?php echo esc_attr( (string) $page_size ); ?>"<?php selected( $logs_per_page, $page_size ); ?>><?php echo esc_html( (string) $page_size ); ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Apply', 'wp-ms365-graph' ); ?></button>
+			</form>
+
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Time', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Level', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Message', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Context', 'wp-ms365-graph' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $logs_page_items as $entry ) : ?>
+						<?php
+						$level_class = isset( $entry['level'] ) ? strtolower( (string) $entry['level'] ) : 'info';
+						$context_str = ! empty( $entry['context'] ) ? wp_json_encode( $entry['context'] ) : '—';
+						?>
+						<tr class="log-level-<?php echo esc_attr( $level_class ); ?>">
+							<td><?php echo esc_html( isset( $entry['timestamp'] ) ? (string) $entry['timestamp'] : '' ); ?></td>
+							<td><code><?php echo esc_html( isset( $entry['level'] ) ? (string) $entry['level'] : '' ); ?></code></td>
+							<td><?php echo esc_html( isset( $entry['message'] ) ? (string) $entry['message'] : '' ); ?></td>
+							<td><code><?php echo esc_html( $context_str ); ?></code></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+
+			<?php if ( $logs_total_pages > 1 ) : ?>
+				<?php
+				$prev_page_url = add_query_arg(
+					array(
+						'log_page'      => max( 1, $log_page - 1 ),
+						'logs_per_page' => $logs_per_page,
+					)
+				);
+				$next_page_url = add_query_arg(
+					array(
+						'log_page'      => min( $logs_total_pages, $log_page + 1 ),
+						'logs_per_page' => $logs_per_page,
+					)
+				);
+				?>
+				<p style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+					<?php if ( $log_page > 1 ) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $prev_page_url ); ?>">
+							<?php esc_html_e( 'Previous', 'wp-ms365-graph' ); ?>
+						</a>
+					<?php else : ?>
+						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Previous', 'wp-ms365-graph' ); ?></button>
+					<?php endif; ?>
+
+					<span>
+						<?php
+						printf(
+							esc_html__( 'Page %1$d of %2$d', 'wp-ms365-graph' ),
+							(int) $log_page,
+							(int) $logs_total_pages
+						);
+						?>
+					</span>
+
+					<?php if ( $log_page < $logs_total_pages ) : ?>
+						<a class="button button-secondary" href="<?php echo esc_url( $next_page_url ); ?>">
+							<?php esc_html_e( 'Next', 'wp-ms365-graph' ); ?>
+						</a>
+					<?php else : ?>
+						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Next', 'wp-ms365-graph' ); ?></button>
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
 		<?php endif; ?>
 	</div>
 

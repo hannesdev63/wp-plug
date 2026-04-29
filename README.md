@@ -15,6 +15,8 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 | **Specific User Targeting** | Configure a Microsoft user (UPN or object ID); profile, calendar, and OneDrive are queried for that user |
 | **Admin Dashboard** | Live data preview of events and files inside WP Admin |
 | **Automatic Token Retrieval** | Fetches app-only Graph access tokens from tenant/client credentials |
+| **WordPress Mail via Microsoft Graph** | Routes `wp_mail()` through Microsoft Graph `sendMail` (optional, requires `Mail.Send` permission) |
+| **Diagnostics** | Diagnostics page with live Graph checks, paged debug log viewer (PII-redacted), and test email button |
 
 ---
 
@@ -24,6 +26,7 @@ A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enablin
 - PHP 7.4+
 - An **Azure Active Directory** app registration with the following:
    - **Microsoft Graph application permissions**: `User.Read.All`, `Calendars.Read`, `Files.Read.All`, `Sites.Read.All`
+   - `Mail.Send` (Application permission, optional — only required if Graph Mail Transport is enabled)
    - A **Client Secret** generated in *Certificates & Secrets*
    - A **Teams Workflow Endpoint URL** (if using Teams message form)
 
@@ -40,6 +43,7 @@ This plugin uses app-only authentication (OAuth client credentials), so configur
 | OneDrive shortcode `[msgraph_files]` | `Files.Read.All` |
 | SharePoint library shortcode `[msgraph_sharepoint_library]` | `Sites.Read.All` |
 | Teams message form shortcode `[msgraph_teams_message_form]` | No Graph permission required (uses Teams Workflow endpoint URL) |
+| WordPress Mail via Microsoft Graph (optional) | `Mail.Send` |
 
 After assigning these rights, click **Grant admin consent** in Azure and then request/save a fresh token in the plugin settings.
 
@@ -71,6 +75,7 @@ After assigning these rights, click **Grant admin consent** in Azure and then re
    - `Calendars.Read` (Application)
    - `Files.Read.All` (Application)
    - `Sites.Read.All` (Application, required for SharePoint library shortcode)
+   - `Mail.Send` (Application — **optional**, only needed for Graph Mail Transport)
    - `openid`, `email`, `profile` (Delegated – required for Tenant Sign-In)
 7. Click **Grant admin consent**.
 
@@ -100,9 +105,40 @@ Go to **Microsoft 365 → Settings → WordPress Sign-In (Microsoft Tenant)**:
 | **Allowed Email Domains** | Comma-separated list (e.g. `contoso.com, fabrikam.org`). Leave blank to allow any domain from your tenant. |
 | **Post-Login Redirect URL** | Optional. Overrides the normal WordPress redirect after a successful sign-in. |
 
-### Wording customization
+---
 
-Go to **Microsoft 365 -> Wording** to override user-facing text in separate cards:
+### WordPress Mail via Microsoft Graph
+
+Routes WordPress emails sent via `wp_mail()` through Microsoft Graph `sendMail` instead of the default SMTP transport.
+
+#### Requirements
+
+- The Azure app registration must have the **`Mail.Send`** application permission with admin consent granted.
+- The configured sender mailbox must exist in Exchange Online and allow app-only `sendMail` calls.
+
+#### Configuration
+
+1. Go to **Microsoft 365 → Settings → WordPress Mail via Microsoft Graph**.
+2. Enable **Graph Mail Transport**.
+3. Set **Mail Sender Mailbox (UPN or ID)** to the mailbox used as sender (e.g. `no-reply@contoso.com`).
+4. Optionally enable **Save Messages in Sent Items** to store sent emails in the sender's *Sent Items* folder.
+5. Click **Save Changes**.
+6. **Deactivate and reactivate the plugin once** to register the transport hook.
+
+#### Testing
+
+1. Go to **Microsoft 365 → Diagnostics → Email Transport Test**.
+2. Click **Send Test Email**. The test message is sent to the configured WordPress admin email.
+3. Check the result notice and the debug log for details.
+
+#### Notes
+
+- When Graph Mail Transport is disabled, `wp_mail()` falls back to the default WordPress SMTP transport.
+- The sender address in the email headers is always the mailbox configured above, regardless of the `from` header passed to `wp_mail()`.
+
+---
+
+### Wording customization
 
 - **Calendar & Files Wording**
 - **Teams Form Wording**
@@ -183,14 +219,24 @@ Notes:
 
 ## Diagnostics & Troubleshooting
 
-The plugin includes a **Diagnostics** page to help troubleshoot authentication and API issues:
+The plugin includes a **Diagnostics** page (**Microsoft 365 → Diagnostics**) to help troubleshoot authentication, API, and mail issues.
 
-1. Go to **WordPress Admin → Microsoft 365 → Diagnostics**
-2. View system information, authentication configuration status, and debug logs
-3. Enable **WP_DEBUG** in `wp-config.php` to record detailed debug logs:
-   ```php
-   define( 'WP_DEBUG', true );
-   ```
+### What the Diagnostics page shows
+
+| Section | Description |
+|---------|-------------|
+| **System Information** | WordPress version, PHP version, plugin version, WP_DEBUG status |
+| **Authentication Configuration** | Whether Tenant ID, Client ID, Client Secret, and Specific User are configured |
+| **Live Graph Checks** | Real-time checks: user profile, calendar, OneDrive, token scope |
+| **Email Transport Test** | Send a test email to the configured admin email address via `wp_mail()` (routes through Graph if Graph Mail Transport is enabled) |
+| **Debug Logs** | Paged table of logged events (25 / 50 / 100 rows per page). All log entries are automatically redacted: email addresses, IP addresses, GUIDs, OAuth tokens, and bearer tokens are replaced with `[REDACTED]`. |
+
+### Enabling debug logs
+
+```php
+// wp-config.php
+define( 'WP_DEBUG', true );
+```
 
 ### Common Issues
 
@@ -201,6 +247,7 @@ The plugin includes a **Diagnostics** page to help troubleshoot authentication a
 | **No files/calendar displayed** | Not connected, wrong user targeted, or resource not provisioned | Verify connection in Settings. Check if configured user has mailbox/OneDrive provisioned. |
 | **Specific User warning shown** | No target user configured | Set Specific User (UPN/object ID) in plugin settings. |
 | **Logs are empty** | WP_DEBUG not enabled | Add `define( 'WP_DEBUG', true );` to `wp-config.php` |
+| **Test email failed** | Graph Mail Transport misconfigured or missing `Mail.Send` permission | Verify sender mailbox UPN, check that `Mail.Send` application permission has admin consent, and confirm Graph Mail Transport is enabled. Check debug log for the error detail. |
 
 ---
 
@@ -309,23 +356,33 @@ php tests/test-ms365-auth.php
 
 ```
 wp-ms365-graph/
-├── wp-ms365-graph.php           Main plugin entry point
+├── wp-ms365-graph.php              Main plugin entry point
 ├── includes/
-│   ├── class-ms365-auth.php     App-only token management (client credentials)
-│   ├── class-ms365-graph.php    Graph API HTTP client
-│   ├── class-ms365-admin.php    WordPress admin UI
-│   └── class-ms365-shortcodes.php  Front-end shortcodes
+│   ├── class-ms365-auth.php        App-only token management (client credentials)
+│   ├── class-ms365-graph.php       Graph API HTTP client
+│   ├── class-ms365-admin.php       WordPress admin UI and settings
+│   ├── class-ms365-shortcodes.php  Front-end shortcodes
+│   ├── class-ms365-login.php       Tenant Sign-In (OAuth 2.0 + PKCE)
+│   ├── class-ms365-mail.php        WordPress Mail via Microsoft Graph (wp_mail hook)
+│   └── class-ms365-logger.php      Debug logger with PII redaction
 ├── admin/
 │   ├── views/
-│   │   ├── settings.php         Settings page template
-│   │   └── dashboard.php        Data dashboard template
+│   │   ├── settings.php            Settings page template
+│   │   ├── dashboard.php           Data dashboard template
+│   │   ├── diagnostics.php         Diagnostics page template
+│   │   ├── documentation.php       In-admin documentation
+│   │   ├── access-stats.php        Access statistics (shortcode render counters)
+│   │   └── wording.php             Wording customisation template
 │   └── css/
-│       └── admin.css            Admin stylesheet
+│       └── admin.css               Admin stylesheet
 ├── assets/
 │   └── css/
-│       └── ms365.css            Front-end stylesheet
+│       └── ms365.css               Front-end stylesheet
+├── languages/
+│   ├── wp-ms365-graph-de_DE.po     German translations (source)
+│   └── wp-ms365-graph-de_DE.mo     German translations (compiled)
 └── tests/
-    └── test-ms365-auth.php      Unit tests
+    └── test-ms365-auth.php         Unit tests
 ```
 
 ---

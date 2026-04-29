@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: wp-ms365-graph 1.0.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-04-23 00:00+0000\n"
-"PO-Revision-Date: 2026-04-23 00:00+0000\n"
+"PO-Revision-Date: 2026-05-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de_DE\n"
@@ -381,3 +381,481 @@ msgstr "Modus: %s"
 
 msgid "—"
 msgstr "—"
+
+msgid "Email Transport Test"
+msgstr "E-Mail-Transport-Test"
+
+msgid "Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph."
+msgstr "Senden Sie eine Test-E-Mail über den WordPress-E-Mail-Kanal (wp_mail). Wenn der Graph-Mail-Transport aktiviert ist, wird diese Test-E-Mail über Microsoft Graph gesendet."
+
+msgid "Recipient:"
+msgstr "Empfänger:"
+
+msgid "Send Test Email"
+msgstr "Test-E-Mail senden"
+
+msgid "Test email sent successfully to %s."
+msgstr "Test-E-Mail erfolgreich an %s gesendet."
+
+msgid "Test email failed."
+msgstr "Senden der Test-E-Mail fehlgeschlagen."
+
+msgid "Admin email address is not configured or invalid."
+msgstr "Die Administrator-E-Mail-Adresse ist nicht konfiguriert oder ungültig."
+
+msgid "Rows per page"
+msgstr "Einträge pro Seite"
+
+msgid "Previous"
+msgstr "Zurück"
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "Page %1$d of %2$d"
+msgstr "Seite %1$d von %2$d"
+
+msgid "WordPress Mail via Microsoft Graph"
+msgstr "WordPress-E-Mail über Microsoft Graph"
+
+msgid "Enable Graph Mail Transport"
+msgstr "Graph-Mail-Transport aktivieren"
+
+msgid "Mail Sender Mailbox (UPN or ID)"
+msgstr "Absender-Postfach (UPN oder ID)"
+
+msgid "Save Messages in Sent Items"
+msgstr "Nachrichten im Ordner \"Gesendete Elemente\" speichern"
+
+msgid "Replace WordPress internal mail transport (`wp_mail`) with Microsoft Graph `sendMail`."
+msgstr "Internen WordPress-E-Mail-Transport (`wp_mail`) durch Microsoft Graph `sendMail` ersetzen."
+
+msgid "Mailbox identity used for Graph sendMail requests."
+msgstr "Postfach-Identität für Graph-sendMail-Anfragen."
+
+msgid "Store sent emails in the sender mailbox Sent Items folder."
+msgstr "Gesendete E-Mails im Ordner \"Gesendete Elemente\" des Absender-Postfachs speichern."
+
+msgid "Enable this to route WordPress emails sent via wp_mail() through Microsoft Graph sendMail."
+msgstr "Aktivieren, um WordPress-E-Mails, die über wp_mail() gesendet werden, über Microsoft Graph sendMail zu leiten."
+
+msgid "Required application permission: Mail.Send (grant admin consent in Azure). The sender mailbox must exist and be allowed for app-only sendMail calls."
+msgstr "Erforderliche Anwendungsberechtigung: Mail.Send (Admin-Einwilligung in Azure erteilen). Das Absender-Postfach muss vorhanden sein und sendMail-Aufrufe im Nur-App-Modus erlauben."
+
+msgid "After changing these mail transport settings, deactivate and reactivate the plugin once."
+msgstr "Nach dem Ändern dieser E-Mail-Transport-Einstellungen Plugin einmal deaktivieren und reaktivieren."
+
+msgid "When enabled, wp_mail() is short-circuited and delivered via Microsoft Graph. Disable to revert to default WordPress mail transport."
+msgstr "Wenn aktiviert, wird wp_mail() umgeleitet und über Microsoft Graph zugestellt. Deaktivieren, um zum Standard-WordPress-E-Mail-Transport zurückzukehren."
+
+msgid "Required when Graph mail transport is enabled. Use a mailbox UPN (for example no-reply@contoso.com) or user object ID."
+msgstr "Erforderlich, wenn der Graph-Mail-Transport aktiviert ist. Verwenden Sie eine Postfach-UPN (z. B. no-reply@contoso.com) oder eine Benutzerobjekt-ID."
+
+# Tab navigation
+msgid "Access Statistics"
+msgstr "Zugriffsstatistiken"
+
+msgid "Login Access"
+msgstr "Anmeldezugriff"
+
+msgid "Translations"
+msgstr "Übersetzungen"
+
+msgid "SP Explorer"
+msgstr "SP-Explorer"
+
+# Section titles
+msgid "Teams Settings"
+msgstr "Teams-Einstellungen"
+
+msgid "WordPress Sign-In (Microsoft Tenant)"
+msgstr "WordPress-Anmeldung (Microsoft-Tenant)"
+
+msgid "Calendar & Files Wording"
+msgstr "Texte für Kalender & Dateien"
+
+msgid "Teams Form Wording"
+msgstr "Texte für Teams-Formular"
+
+msgid "Sign-In Wording"
+msgstr "Texte für Anmeldung"
+
+# Section descriptions
+msgid "Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in MS Graph Connect settings to enable profile, calendar, and OneDrive queries."
+msgstr "Ein bestimmter Benutzer ist für den App-Only-Modus erforderlich. Geben Sie in den MS-Graph-Connect-Einstellungen eine UPN (benutzer@domain.com) oder Objekt-ID ein, um Profil, Kalender und OneDrive abzufragen."
+
+msgid "Enter your Entra ID application registration credentials. You can create an app registration at "
+msgstr "Geben Sie die Anmeldedaten Ihrer Entra-ID-App-Registrierung ein. Sie koennen eine App-Registrierung erstellen unter "
+
+msgid "portal.azure.com"
+msgstr "portal.azure.com"
+
+msgid "Configure defaults and anti-spam controls for the Teams message form shortcode."
+msgstr "Konfigurieren Sie Standardwerte und Anti-Spam-Einstellungen fuer den Teams-Nachrichtenformular-Shortcode."
+
+msgid "Allow users to sign in to WordPress using their Microsoft tenant account via OAuth 2.0 Authorization Code + PKCE. The credentials configured in the Azure App Registration section above are reused."
+msgstr "Ermoeglicht die Anmeldung bei WordPress mit einem Microsoft-Tenant-Konto ueber OAuth 2.0 Authorization Code + PKCE. Die in der Azure-App-Registrierung konfigurierten Anmeldedaten werden wiederverwendet."
+
+msgid "Override table headings and empty-state text for calendar and file shortcodes. Leave any field blank to use translated defaults."
+msgstr "Ueberschreiben Sie Tabellenkopfzeilen und Leerstandstexte fuer Kalender- und Datei-Shortcodes. Lassen Sie Felder leer, um die uebersetzten Standardwerte zu verwenden."
+
+msgid "Customize labels, button text, success, and error messages shown in the Teams message form shortcode."
+msgstr "Passen Sie Beschriftungen, Schaltflaechen- und Meldungstexte des Teams-Formular-Shortcodes an."
+
+msgid "Customize the Microsoft Entra sign-in button wording. Leave blank to use the translated default label."
+msgstr "Passen Sie die Beschriftung der Microsoft-Entra-Anmeldeschaltflaeche an. Lassen Sie das Feld leer, um die uebersetzte Standardbeschriftung zu verwenden."
+
+# Teams section – field labels and descriptions
+msgid "Default Teams Team ID"
+msgstr "Standard-Teams-Team-ID"
+
+msgid "Default Teams Channel ID"
+msgstr "Standard-Teams-Kanal-ID"
+
+msgid "Teams Workflow Endpoint URL"
+msgstr "Teams-Workflow-Endpunkt-URL"
+
+msgid "Teams Form Rate Limit: Max Requests"
+msgstr "Teams-Formular Ratenbegrenzung: Max. Anfragen"
+
+msgid "Teams Form Rate Limit: Window (seconds)"
+msgstr "Teams-Formular Ratenbegrenzung: Zeitfenster (Sekunden)"
+
+msgid "Teams Form: Minimum Submit Time (seconds)"
+msgstr "Teams-Formular: Mindestwartezeit beim Absenden (Sekunden)"
+
+# SSO section – field labels
+msgid "Enable Tenant Sign-In"
+msgstr "Tenant-Anmeldung aktivieren"
+
+msgid "Force Entra Sign-In on wp-login.php"
+msgstr "Entra-Anmeldung auf wp-login.php erzwingen"
+
+msgid "Auto-Create Users"
+msgstr "Benutzer automatisch anlegen"
+
+msgid "Use Microsoft Profile Picture"
+msgstr "Microsoft-Profilbild verwenden"
+
+msgid "Default Role for New Users"
+msgstr "Standardrolle fuer neue Benutzer"
+
+msgid "Allowed Email Domains"
+msgstr "Erlaubte E-Mail-Domaenen"
+
+msgid "Post-Login Redirect URL"
+msgstr "Weiterleitungs-URL nach der Anmeldung"
+
+msgid "OAuth Prompt Behavior"
+msgstr "OAuth-Eingabeaufforderungsverhalten"
+
+msgid "Domain Hint"
+msgstr "Domaenenhinweis"
+
+msgid "Login Hint"
+msgstr "Anmeldungshinweis"
+
+msgid "Additional OAuth Scopes"
+msgstr "Zusaetzliche OAuth-Scopes"
+
+msgid "Login Log Retention (days)"
+msgstr "Anmelde-Log-Aufbewahrung (Tage)"
+
+# SSO section – field descriptions
+msgid "Show a \"Sign in with Microsoft\" button on wp-login.php and enable the shortcode."
+msgstr "Zeigt eine Schaltflaeche \"Mit Microsoft anmelden\" auf wp-login.php an und aktiviert den Shortcode."
+
+msgid "Skip the default WordPress login form and redirect directly to Microsoft Entra ID. Append ?ms365_local_login=1 to wp-login.php to bypass when needed."
+msgstr "Ueberspringt das Standard-WordPress-Anmeldeformular und leitet direkt zu Microsoft Entra ID weiter. Haengen Sie ?ms365_local_login=1 an wp-login.php an, um die Umleitung bei Bedarf zu umgehen."
+
+msgid "Automatically create a WordPress account for new Microsoft users."
+msgstr "Erstellt automatisch ein WordPress-Konto fuer neue Microsoft-Benutzer."
+
+msgid "Use the Microsoft Entra profile picture as the WordPress avatar for linked users."
+msgstr "Verwendet das Microsoft-Entra-Profilbild als WordPress-Avatar fuer verknuepfte Benutzer."
+
+msgid "Optional Entra domain hint (for example: contoso.com or organizations)."
+msgstr "Optionaler Entra-Domaenenhinweis (z. B.: contoso.com oder organizations)."
+
+msgid "Optional login hint (usually user email/UPN) to prefill the account."
+msgstr "Optionaler Anmeldungshinweis (ueblicherweise E-Mail/UPN), um das Konto vorzubelegen."
+
+msgid "Optional space- or comma-separated delegated scopes to request in addition to openid email profile."
+msgstr "Optionale, durch Leerzeichen oder Kommas getrennte delegierte Scopes, die zusaetzlich zu openid email profile angefordert werden."
+
+msgid "Number of days to keep login log entries (1–365). Default: 30."
+msgstr "Anzahl der Tage, fuer die Anmelde-Log-Eintraege aufbewahrt werden (1-365). Standard: 30."
+
+# Wording page – Teams form field labels
+msgid "Teams Form: Placeholder"
+msgstr "Teams-Formular: Platzhalter"
+
+msgid "Teams Form: Button Text"
+msgstr "Teams-Formular: Schaltflaechen-Text"
+
+msgid "Teams Form: Label Name"
+msgstr "Teams-Formular: Beschriftung Name"
+
+msgid "Teams Form: Label Email"
+msgstr "Teams-Formular: Beschriftung E-Mail"
+
+msgid "Teams Form: Label Message"
+msgstr "Teams-Formular: Beschriftung Nachricht"
+
+msgid "Teams Form: Success Message"
+msgstr "Teams-Formular: Erfolgsmeldung"
+
+msgid "Teams Form: Error Invalid Nonce"
+msgstr "Teams-Formular: Fehler Ungueltig (Nonce)"
+
+msgid "Teams Form: Error Missing Fields"
+msgstr "Teams-Formular: Fehler Fehlende Felder"
+
+msgid "Teams Form: Error Invalid Email"
+msgstr "Teams-Formular: Fehler Ungueltige E-Mail"
+
+msgid "Teams Form: Error Invalid Form"
+msgstr "Teams-Formular: Fehler Ungueltiges Formular"
+
+msgid "Teams Form: Error Submitted Too Fast"
+msgstr "Teams-Formular: Fehler Zu schnell abgesendet"
+
+msgid "Teams Form: Error Rate Limited"
+msgstr "Teams-Formular: Fehler Ratenlimit erreicht"
+
+msgid "Teams Form: Error Invalid Endpoint"
+msgstr "Teams-Formular: Fehler Ungueltiger Endpunkt"
+
+msgid "Teams Form: Error Delivery Failed"
+msgstr "Teams-Formular: Fehler Zustellung fehlgeschlagen"
+
+msgid "Teams Form: Error Unknown"
+msgstr "Teams-Formular: Fehler Unbekannt"
+
+# Wording page – Sign-In field labels
+msgid "Entra Sign-In Button Text"
+msgstr "Entra-Anmeldeschaltflaechen-Text"
+
+msgid "Entra Sign-In Button Image"
+msgstr "Entra-Anmeldeschaltflaechen-Bild"
+
+# Settings page – static notices
+msgid "Note: App-only access requires Microsoft Graph application permissions."
+msgstr "Hinweis: Der App-Only-Zugriff erfordert Microsoft-Graph-Anwendungsberechtigungen."
+
+msgid "Make sure your Azure app registration includes the following permissions:"
+msgstr "Stellen Sie sicher, dass Ihre Azure-App-Registrierung die folgenden Berechtigungen enthaelt:"
+
+msgid "Teams form submissions are delivered via Teams Workflow endpoint URL (no additional Microsoft Graph permission is required for that form sender)."
+msgstr "Teams-Formular-Einsendungen werden ueber die Teams-Workflow-Endpunkt-URL zugestellt (keine zusaetzliche Microsoft-Graph-Berechtigung fuer den Formularabsender erforderlich)."
+
+msgid "After adding these application permissions, click \"Grant admin consent\" in Azure and save credentials again."
+msgstr "Klicken Sie nach dem Hinzufuegen dieser Anwendungsberechtigungen in Azure auf \"Administratoreinwilligung erteilen\" und speichern Sie die Anmeldedaten erneut."
+
+msgid "Having issues? Check the "
+msgstr "Probleme? Pruefen Sie die "
+
+msgid "Diagnostics page"
+msgstr "Diagnoseseite"
+
+msgid " for troubleshooting and debug logs."
+msgstr " fuer Fehlerbehebung und Debug-Logs."
+
+msgid "Tenant Sign-In is active."
+msgstr "Tenant-Anmeldung ist aktiv."
+
+msgid "Register the following Redirect URI in your Azure app registration:"
+msgstr "Registrieren Sie den folgenden Redirect-URI in Ihrer Azure-App-Registrierung:"
+
+msgid "Required delegated permissions: openid, email, profile."
+msgstr "Erforderliche delegierte Berechtigungen: openid, email, profile."
+
+msgid "Export creates an encrypted file containing plugin settings and shortcode wording. Import decrypts and restores the same data."
+msgstr "Der Export erstellt eine verschluecsselste Datei mit Plugin-Einstellungen und Shortcode-Texten. Der Import entschluesselt und stellt dieselben Daten wieder her."
+
+msgid "Export Encrypted File"
+msgstr "Verschluesselte Datei exportieren"
+
+msgid "Import Encrypted File"
+msgstr "Verschluesselte Datei importieren"
+
+msgid "Import failed: file size is invalid."
+msgstr "Import fehlgeschlagen: Dateigroesse ist unzulaessig."
+
+msgid "Import failed: file upload error."
+msgstr "Import fehlgeschlagen: Fehler beim Datei-Upload."
+
+msgid "Import failed: invalid password or corrupted settings file."
+msgstr "Import fehlgeschlagen: Ungueltiges Passwort oder beschaedigte Einstellungsdatei."
+
+msgid "Import failed: please choose an encrypted settings file."
+msgstr "Import fehlgeschlagen: Bitte waehlen Sie eine verschluesselte Einstellungsdatei aus."
+
+msgid "Import failed: please provide the decryption password."
+msgstr "Import fehlgeschlagen: Bitte geben Sie das Entschluessungspasswort ein."
+
+msgid "Export failed. Encryption may not be available on this server."
+msgstr "Export fehlgeschlagen. Verschluesselung ist auf diesem Server moeglicherweise nicht verfuegbar."
+
+msgid "Tenant ID does not look like a valid GUID."
+msgstr "Die Tenant-ID sieht nicht wie eine gueltige GUID aus."
+
+msgid "Client ID does not look like a valid GUID."
+msgstr "Die Client-ID sieht nicht wie eine gueltige GUID aus."
+
+# ── Access Statistics page ──────────────────────────────────────────────────
+
+msgid "WordPress-origin access only: frontend page/blog/document views and shortcode-driven access to Microsoft 365 items."
+msgstr "Nur WordPress-seitige Zugriffe: Frontend-Seitenaufrufe (Seiten, Blog, Dokumente) und Shortcode-gesteuerte Zugriffe auf Microsoft-365-Elemente."
+
+msgid "All WordPress-origin"
+msgstr "Alle WordPress-seitigen"
+
+msgid "WordPress content"
+msgstr "WordPress-Inhalte"
+
+msgid "WordPress shortcode to M365"
+msgstr "WordPress-Shortcode zu M365"
+
+msgid "Window"
+msgstr "Zeitraum"
+
+msgid "Last 7 days"
+msgstr "Letzte 7 Tage"
+
+msgid "Last 30 days"
+msgstr "Letzte 30 Tage"
+
+msgid "Last 90 days"
+msgstr "Letzte 90 Tage"
+
+msgid "Last 180 days"
+msgstr "Letzte 180 Tage"
+
+msgid "WordPress type"
+msgstr "WordPress-Typ"
+
+msgid "All types"
+msgstr "Alle Typen"
+
+msgid "Blogs"
+msgstr "Beitraege"
+
+msgid "Documents"
+msgstr "Dokumente"
+
+msgid "Shortcode target"
+msgstr "Shortcode-Ziel"
+
+msgid "All Microsoft 365 targets"
+msgstr "Alle Microsoft-365-Ziele"
+
+msgid "OneDrive"
+msgstr "OneDrive"
+
+msgid "Outlook"
+msgstr "Outlook"
+
+msgid "Apply"
+msgstr "Anwenden"
+
+msgid "Summary"
+msgstr "Zusammenfassung"
+
+msgid "WordPress page views"
+msgstr "WordPress-Seitenaufrufe"
+
+msgid "WordPress blog views"
+msgstr "WordPress-Beitragsaufrufe"
+
+msgid "WordPress document views"
+msgstr "WordPress-Dokumentaufrufe"
+
+msgid "Shortcode to SharePoint item accesses"
+msgstr "Shortcode-Zugriffe auf SharePoint-Elemente"
+
+msgid "Shortcode to OneDrive item accesses"
+msgstr "Shortcode-Zugriffe auf OneDrive-Elemente"
+
+msgid "Shortcode to Outlook item accesses"
+msgstr "Shortcode-Zugriffe auf Outlook-Elemente"
+
+msgid "Top Accessed Items"
+msgstr "Meist aufgerufene Elemente"
+
+msgid "No access data available for the current filters yet."
+msgstr "Fuer die aktuellen Filter sind noch keine Zugriffsdaten vorhanden."
+
+msgid "Access count"
+msgstr "Zugriffsanzahl"
+
+msgid "Daily Trend"
+msgstr "Taegllicher Trend"
+
+msgid "No trend data available for the selected period yet."
+msgstr "Fuer den ausgewaehlten Zeitraum sind noch keine Trenddaten vorhanden."
+
+msgid "Total accesses"
+msgstr "Zugriffe gesamt"
+
+msgid "(Untitled)"
+msgstr "(Ohne Titel)"
+
+msgid "WordPress Content"
+msgstr "WordPress-Inhalt"
+
+msgid "WP Shortcode -> Microsoft 365"
+msgstr "WP-Shortcode -> Microsoft 365"
+
+msgid "WP Shortcode -> SharePoint"
+msgstr "WP-Shortcode -> SharePoint"
+
+msgid "WP Shortcode -> OneDrive"
+msgstr "WP-Shortcode -> OneDrive"
+
+msgid "WP Shortcode -> Outlook"
+msgstr "WP-Shortcode -> Outlook"
+
+# ── Login Access page ───────────────────────────────────────────────────────
+
+msgid "Login Logs"
+msgstr "Anmelde-Logs"
+
+msgid "Shows successful and failed WordPress login attempts."
+msgstr "Zeigt erfolgreiche und fehlgeschlagene WordPress-Anmeldeversuche."
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Filter"
+msgstr "Filtern"
+
+msgid "Success"
+msgstr "Erfolgreich"
+
+msgid "Username"
+msgstr "Benutzername"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "Reason"
+msgstr "Grund"
+
+msgid "No login attempts found."
+msgstr "Keine Anmeldeversuche gefunden."
+
+msgid "MS Graph Connect: Daily Trend"
+msgstr "MS Graph Connect: Taeglicher Trend"
+
+msgid "MS Graph Connect: Top Accessed Items"
+msgstr "MS Graph Connect: Meist aufgerufene Elemente"
+
+msgid "Open Access Statistics"
+msgstr "Zugriffsstatistik oeffnen"
+
+msgid "MS Graph Connect: Sign-In Activity"
+msgstr "MS Graph Connect: Anmeldeaktivitaet"
+
+msgid "Open Login Access"
+msgstr "Anmeldezugriffe oeffnen"

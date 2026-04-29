@@ -139,6 +139,20 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 				</div>
 			<?php endif; ?>
 
+			<?php if ( isset( $settings_page_sections['wp_ms365_mail'] ) ) : ?>
+				<div class="msgraph_card msgraph_card--settings">
+					<h2 class="msgraph_card__title"><?php echo esc_html( $settings_page_sections['wp_ms365_mail']['title'] ); ?></h2>
+					<?php
+					if ( ! empty( $settings_page_sections['wp_ms365_mail']['callback'] ) ) {
+						call_user_func( $settings_page_sections['wp_ms365_mail']['callback'] );
+					}
+					?>
+					<table class="form-table" role="presentation">
+						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_mail' ); ?>
+					</table>
+				</div>
+			<?php endif; ?>
+
 			<?php if ( isset( $settings_page_sections['wp_ms365_sso'] ) ) : ?>
 				<div class="msgraph_card msgraph_card--settings">
 					<h2 class="msgraph_card__title"><?php echo esc_html( $settings_page_sections['wp_ms365_sso']['title'] ); ?></h2>
@@ -163,7 +177,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 		<p>
 			<strong><?php esc_html_e( 'Note: App-only access requires Microsoft Graph application permissions.', 'wp-ms365-graph' ); ?></strong><br />
 			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
-			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code>.<br />
+			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code><?php if ( ! empty( $settings['mail_enabled'] ) ) : ?>, <code>Mail.Send</code><?php endif; ?>.<br />
 			<?php esc_html_e( 'Teams form submissions are delivered via Teams Workflow endpoint URL (no additional Microsoft Graph permission is required for that form sender).', 'wp-ms365-graph' ); ?><br />
 			<?php esc_html_e( 'After adding these application permissions, click "Grant admin consent" in Azure and save credentials again.', 'wp-ms365-graph' ); ?>
 		</p>
@@ -181,10 +195,10 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	</div>
 
 	<hr />
-	<h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
+	<!-- <h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
 	<p>
 		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials) for Graph data features. No interactive Microsoft sign-in is required for shortcodes.', 'wp-ms365-graph' ); ?>
-	</p>
+	</p> -->
 
 	<?php if ( ! empty( $settings['sso_enabled'] ) ) : ?>
 	<div class="notice notice-info">
