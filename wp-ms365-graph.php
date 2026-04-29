@@ -3,7 +3,7 @@
  * Plugin Name:       MS Graph Connect
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
  * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            hannesdev63
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'WP_MS365_VERSION',     '1.1.0' );
+define( 'WP_MS365_VERSION',     '1.1.1' );
 define( 'WP_MS365_PLUGIN_FILE', __FILE__ );
 define( 'WP_MS365_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'WP_MS365_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -60,6 +60,9 @@ function wp_ms365_graph_init() {
 
 	// Tenant sign-in (login-page button + SSO callback handler).
 	new WP_MS365_Login();
+
+	// Login logging (successful and failed attempts + admin page).
+	new WP_MS365_Login_Logs();
 
 	// Handle OAuth callback redirect from Microsoft.
 	WP_MS365_Auth::maybe_handle_callback();
@@ -111,13 +114,21 @@ function wp_ms365_graph_activate() {
 		'redirect_uri'  => admin_url( 'admin.php?page=wp-ms365-graph' ),
 		// WordPress tenant sign-in (delegated Auth Code + PKCE).
 		'sso_enabled'         => 0,
+		'sso_force_redirect'  => 0,
 		'sso_auto_create'     => 0,
 		'sso_use_ms_avatar'   => 0,
 		'sso_default_role'    => 'subscriber',
 		'sso_allowed_domains' => '',
 		'sso_redirect_url'    => '',
+		'sso_prompt'          => '',
+		'sso_domain_hint'     => '',
+		'sso_login_hint'      => '',
+		'sso_extra_scopes'    => '',
+		'login_log_retention_days' => 30,
 	);
 	add_option( 'wp_ms365_settings', $defaults );
+	WP_MS365_Login_Logs::create_table();
+	WP_MS365_Login_Logs::schedule_cleanup();
 }
 register_activation_hook( __FILE__, 'wp_ms365_graph_activate' );
 
@@ -126,5 +137,6 @@ register_activation_hook( __FILE__, 'wp_ms365_graph_activate' );
  */
 function wp_ms365_graph_deactivate() {
 	delete_transient( 'wp_ms365_access_token' );
+	WP_MS365_Login_Logs::unschedule_cleanup();
 }
 register_deactivation_hook( __FILE__, 'wp_ms365_graph_deactivate' );

@@ -17,12 +17,144 @@ class WP_MS365_Login {
 	public function __construct() {
 		// Callback handler must run early on every request.
 		add_action( 'init', array( 'WP_MS365_Auth', 'maybe_handle_sso_callback' ), 5 );
+		add_action( 'login_init', array( $this, 'maybe_force_entra_login' ), 1 );
+		add_action( 'wp_logout', array( $this, 'clear_login_related_cookies' ), 20 );
 
 		// Login page additions.
+		add_action( 'login_message',          array( $this, 'render_local_login_notice' ) );
 		add_action( 'login_form',             array( $this, 'render_login_button' ) );
 		add_action( 'login_enqueue_scripts',  array( $this, 'enqueue_assets' ) );
 		add_filter( 'wp_authenticate_user',   array( $this, 'block_local_password_for_entra_users' ), 20, 2 );
 		add_filter( 'pre_get_avatar_data',    array( $this, 'maybe_override_avatar' ), 20, 2 );
+	}
+
+	/**
+	 * Clear all relevant WordPress login/auth cookies on logout.
+	 *
+	 * WordPress clears core auth cookies already, but in some environments stale
+	 * cookies can survive due to differing path/domain combinations. Expire the
+	 * common cookie names on both COOKIEPATH/SITECOOKIEPATH and "/".
+	 *
+	 * @return void
+	 */
+	public function clear_login_related_cookies() {
+		if ( headers_sent() ) {
+			return;
+		}
+
+		$cookie_names = array();
+
+		if ( defined( 'AUTH_COOKIE' ) ) {
+			$cookie_names[] = AUTH_COOKIE;
+		}
+		if ( defined( 'SECURE_AUTH_COOKIE' ) ) {
+			$cookie_names[] = SECURE_AUTH_COOKIE;
+		}
+		if ( defined( 'LOGGED_IN_COOKIE' ) ) {
+			$cookie_names[] = LOGGED_IN_COOKIE;
+		}
+		if ( defined( 'TEST_COOKIE' ) ) {
+			$cookie_names[] = TEST_COOKIE;
+		}
+
+		// Legacy aliases seen in some setups.
+		$cookie_names[] = 'wordpress_logged_in_' . COOKIEHASH;
+		$cookie_names[] = 'wordpress_sec_' . COOKIEHASH;
+		$cookie_names[] = 'wordpress_' . COOKIEHASH;
+
+		$cookie_names = array_unique( array_filter( $cookie_names ) );
+
+		$paths = array( '/', ( defined( 'COOKIEPATH' ) ? COOKIEPATH : '/' ), ( defined( 'SITECOOKIEPATH' ) ? SITECOOKIEPATH : '/' ) );
+		$paths = array_unique( array_filter( $paths ) );
+
+		$domains = array( '', ( defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : '' ) );
+		$domains = array_unique( $domains );
+
+		foreach ( $cookie_names as $name ) {
+			foreach ( $paths as $path ) {
+				foreach ( $domains as $domain ) {
+					setcookie( $name, ' ', time() - YEAR_IN_SECONDS, $path, $domain, is_ssl(), true );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Render a notice when local login bypass is used while forced redirect is enabled.
+	 *
+	 * @param string $message Existing login message HTML.
+	 * @return string
+	 */
+	public function render_local_login_notice( $message ) {
+		$settings = WP_MS365_Auth::get_settings();
+		if ( empty( $settings['sso_enabled'] ) || empty( $settings['sso_force_redirect'] ) ) {
+			return $message;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$local_login_mode = isset( $_GET['ms365_local_login'] );
+		if ( ! $local_login_mode ) {
+			return $message;
+		}
+
+		$notice = '<p class="message">'
+			. esc_html__( 'Local login bypass is active. Remove ?ms365_local_login=1 from the URL to return to automatic Microsoft Entra sign-in.', 'wp-ms365-graph' )
+			. '</p>';
+
+		return $notice . $message;
+	}
+
+	/**
+	 * Optionally redirect default wp-login.php directly to Microsoft Entra sign-in.
+	 *
+	 * Bypass URL: wp-login.php?ms365_local_login=1
+	 *
+	 * @return void
+	 */
+	public function maybe_force_entra_login() {
+		$settings = WP_MS365_Auth::get_settings();
+		if ( empty( $settings['sso_enabled'] ) || empty( $settings['sso_force_redirect'] ) ) {
+			return;
+		}
+
+		if ( is_user_logged_in() ) {
+			return;
+		}
+
+		// Allow emergency local login when explicitly requested.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['ms365_local_login'] ) ) {
+			return;
+		}
+
+		// Do not auto-redirect right after WordPress logout, otherwise users can
+		// be signed back in immediately and see auth cookies reappear.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['loggedout'] ) || isset( $_GET['reauth'] ) || isset( $_GET['checkemail'] ) ) {
+			return;
+		}
+
+		// Do not redirect non-login actions (logout, reset password, register, etc.).
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : 'login';
+		$allowed_actions = array( '', 'login' );
+		if ( ! in_array( $action, $allowed_actions, true ) ) {
+			return;
+		}
+
+		// Preserve the originally requested redirect target when present.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$after = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : '';
+		$login_url = WP_MS365_Auth::get_sso_login_url( $after );
+
+		if ( ! $login_url ) {
+			return;
+		}
+
+		// Entra authorize URL is external; wp_safe_redirect() may reject it and
+		// cause a local redirect loop back to wp-login.php.
+		wp_redirect( esc_url_raw( $login_url ) );
+		exit;
 	}
 
 	/**

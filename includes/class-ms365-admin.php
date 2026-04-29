@@ -168,6 +168,15 @@ class WP_MS365_Admin {
 		);
 
 		add_settings_field(
+			'wp_ms365_sso_force_redirect',
+			__( 'Force Entra Sign-In on wp-login.php', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_force_redirect', 'label' => __( 'Skip the default WordPress login form and redirect directly to Microsoft Entra ID. Append ?ms365_local_login=1 to wp-login.php to bypass when needed.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
 			'wp_ms365_sso_auto_create',
 			__( 'Auto-Create Users', 'wp-ms365-graph' ),
 			array( $this, 'render_checkbox_field' ),
@@ -213,6 +222,66 @@ class WP_MS365_Admin {
 			'wp-ms365-graph',
 			'wp_ms365_sso',
 			array( 'key' => 'sso_redirect_url', 'label' => __( 'Post-Login Redirect URL', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_prompt',
+			__( 'OAuth Prompt Behavior', 'wp-ms365-graph' ),
+			array( $this, 'render_select_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array(
+				'key'     => 'sso_prompt',
+				'options' => array(
+					''               => __( 'Default', 'wp-ms365-graph' ),
+					'select_account' => 'select_account',
+					'login'          => 'login',
+					'consent'        => 'consent',
+					'none'           => 'none',
+				),
+			)
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_domain_hint',
+			__( 'Domain Hint', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_domain_hint', 'label' => __( 'Optional Entra domain hint (for example: contoso.com or organizations).', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_login_hint',
+			__( 'Login Hint', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_login_hint', 'label' => __( 'Optional login hint (usually user email/UPN) to prefill the account.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_sso_extra_scopes',
+			__( 'Additional OAuth Scopes', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array( 'key' => 'sso_extra_scopes', 'label' => __( 'Optional space- or comma-separated delegated scopes to request in addition to openid email profile.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_login_log_retention_days',
+			__( 'Login Log Retention (days)', 'wp-ms365-graph' ),
+			array( $this, 'render_number_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_sso',
+			array(
+				'key'   => 'login_log_retention_days',
+				'label' => __( 'Number of days to keep login log entries (1–365). Default: 30.', 'wp-ms365-graph' ),
+				'min'   => 1,
+				'max'   => 365,
+				'step'  => 1,
+			)
 		);
 
 		add_settings_section(
@@ -490,14 +559,21 @@ class WP_MS365_Admin {
 		// ---- SSO / delegated sign-in settings ----
 		$has_sso_payload =
 			isset( $input['sso_enabled'] ) ||
+			isset( $input['sso_force_redirect'] ) ||
 			isset( $input['sso_auto_create'] ) ||
 			isset( $input['sso_use_ms_avatar'] ) ||
 			isset( $input['sso_default_role'] ) ||
 			isset( $input['sso_allowed_domains'] ) ||
-			isset( $input['sso_redirect_url'] );
+			isset( $input['sso_redirect_url'] ) ||
+			isset( $input['sso_prompt'] ) ||
+			isset( $input['sso_domain_hint'] ) ||
+			isset( $input['sso_login_hint'] ) ||
+			isset( $input['sso_extra_scopes'] ) ||
+			isset( $input['login_log_retention_days'] );
 
 		if ( $has_sso_payload ) {
 			$clean['sso_enabled']       = ! empty( $input['sso_enabled'] ) ? 1 : 0;
+			$clean['sso_force_redirect'] = ! empty( $input['sso_force_redirect'] ) ? 1 : 0;
 			$clean['sso_auto_create']   = ! empty( $input['sso_auto_create'] ) ? 1 : 0;
 			$clean['sso_use_ms_avatar'] = ! empty( $input['sso_use_ms_avatar'] ) ? 1 : 0;
 
@@ -522,6 +598,37 @@ class WP_MS365_Admin {
 
 			if ( isset( $input['sso_redirect_url'] ) ) {
 				$clean['sso_redirect_url'] = esc_url_raw( trim( (string) $input['sso_redirect_url'] ) );
+			}
+
+			if ( isset( $input['sso_prompt'] ) ) {
+				$allowed_prompts      = array( '', 'select_account', 'login', 'consent', 'none' );
+				$submitted_prompt     = sanitize_key( (string) $input['sso_prompt'] );
+				$clean['sso_prompt']  = in_array( $submitted_prompt, $allowed_prompts, true ) ? $submitted_prompt : '';
+			}
+
+			if ( isset( $input['sso_domain_hint'] ) ) {
+				$clean['sso_domain_hint'] = strtolower( trim( sanitize_text_field( (string) $input['sso_domain_hint'] ) ) );
+			}
+
+			if ( isset( $input['sso_login_hint'] ) ) {
+				$clean['sso_login_hint'] = trim( sanitize_text_field( (string) $input['sso_login_hint'] ) );
+			}
+
+			if ( isset( $input['sso_extra_scopes'] ) ) {
+				$raw_scopes = trim( sanitize_text_field( (string) $input['sso_extra_scopes'] ) );
+				$parts      = preg_split( '/[\s,]+/', $raw_scopes );
+				$parts      = is_array( $parts ) ? $parts : array();
+				$parts      = array_filter(
+					array_map( 'trim', $parts ),
+					function ( $scope ) {
+						return (bool) preg_match( '/^[A-Za-z0-9\.\:\/\_\-]+$/', $scope );
+					}
+				);
+				$clean['sso_extra_scopes'] = implode( ' ', array_unique( $parts ) );
+			}
+
+			if ( isset( $input['login_log_retention_days'] ) ) {
+				$clean['login_log_retention_days'] = min( 365, max( 1, absint( $input['login_log_retention_days'] ) ) );
 			}
 		}
 
@@ -822,6 +929,34 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Render a number input field.
+	 *
+	 * @param array $args Field arguments (key, label, min, max, step).
+	 */
+	public function render_number_field( $args ) {
+		$settings = WP_MS365_Auth::get_settings();
+		$key      = $args['key'];
+		$value    = isset( $settings[ $key ] ) ? (int) $settings[ $key ] : '';
+		$min      = isset( $args['min'] ) ? (int) $args['min'] : '';
+		$max      = isset( $args['max'] ) ? (int) $args['max'] : '';
+		$step     = isset( $args['step'] ) ? (int) $args['step'] : 1;
+
+		printf(
+			'<input type="number" id="wp_ms365_%s" name="wp_ms365_settings[%s]" value="%s" class="small-text" min="%s" max="%s" step="%s" />',
+			esc_attr( $key ),
+			esc_attr( $key ),
+			esc_attr( (string) $value ),
+			esc_attr( (string) $min ),
+			esc_attr( (string) $max ),
+			esc_attr( (string) $step )
+		);
+
+		if ( ! empty( $args['label'] ) ) {
+			echo '<p class="description">' . esc_html( $args['label'] ) . '</p>';
+		}
+	}
+
+	/**
 	 * Render an image URL field with a WP media library picker button and live preview.
 	 *
 	 * @param array $args Field arguments (key, label).
@@ -918,6 +1053,8 @@ class WP_MS365_Admin {
 		$legacy_callback_uri = WP_MS365_Auth::get_sso_legacy_redirect_uri();
 		echo '<p>'
 			. esc_html__( 'Allow users to sign in to WordPress using their Microsoft tenant account via OAuth 2.0 Authorization Code + PKCE. The credentials configured in the Azure App Registration section above are reused.', 'wp-ms365-graph' )
+			. '</p><p>'
+			. esc_html__( 'Optional: enable forced Entra sign-in to redirect wp-login.php directly to Microsoft. For emergency local login access, append ?ms365_local_login=1 to wp-login.php.', 'wp-ms365-graph' )
 			. '</p><p>'
 			. '<strong>' . esc_html__( 'Required Azure app registration steps:', 'wp-ms365-graph' ) . '</strong>'
 			. '</p><ol>'

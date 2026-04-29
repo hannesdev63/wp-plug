@@ -226,10 +226,16 @@ class WP_MS365_Auth {
 			'sso_signin_button_image' => '',
 			// WordPress tenant sign-in (delegated Auth Code + PKCE).
 			'sso_enabled'         => 0,
+			'sso_force_redirect'  => 0,
 			'sso_auto_create'     => 0,
 			'sso_default_role'    => 'subscriber',
 			'sso_allowed_domains' => '',
 			'sso_redirect_url'    => '',
+			'sso_prompt'          => '',
+			'sso_domain_hint'     => '',
+			'sso_login_hint'      => '',
+			'sso_extra_scopes'    => '',
+			'login_log_retention_days' => 30,
 		);
 		$settings = get_option( 'wp_ms365_settings', $defaults );
 		return wp_parse_args( $settings, $defaults );
@@ -292,13 +298,25 @@ class WP_MS365_Auth {
 			'client_id'             => $settings['client_id'],
 			'response_type'         => 'code',
 			'redirect_uri'          => self::get_sso_redirect_uri(),
-			'scope'                 => self::SSO_SCOPES,
+			'scope'                 => self::get_sso_scope_string( $settings ),
 			'state'                 => $state,
 			'nonce'                 => $nonce,
 			'code_challenge'        => $challenge,
 			'code_challenge_method' => 'S256',
 			'response_mode'         => 'query',
 		);
+
+		if ( ! empty( $settings['sso_prompt'] ) ) {
+			$params['prompt'] = (string) $settings['sso_prompt'];
+		}
+
+		if ( ! empty( $settings['sso_domain_hint'] ) ) {
+			$params['domain_hint'] = (string) $settings['sso_domain_hint'];
+		}
+
+		if ( ! empty( $settings['sso_login_hint'] ) ) {
+			$params['login_hint'] = (string) $settings['sso_login_hint'];
+		}
 
 		return sprintf(
 			'%s/%s/oauth2/v2.0/authorize?%s',
@@ -366,7 +384,7 @@ class WP_MS365_Auth {
 					'code'          => $code,
 					'redirect_uri'  => self::get_sso_redirect_uri(),
 					'code_verifier' => $state_data['code_verifier'],
-					'scope'         => self::SSO_SCOPES,
+					'scope'         => self::get_sso_scope_string( $settings ),
 				),
 			)
 		);
@@ -481,6 +499,30 @@ class WP_MS365_Auth {
 	 */
 	private static function random_bytes( $length ) {
 		return random_bytes( $length );
+	}
+
+	/**
+	 * Build delegated OAuth scope string for Entra authorization code flow.
+	 *
+	 * Includes required OIDC scopes and optional admin-configured scopes.
+	 *
+	 * @param array $settings Plugin settings.
+	 * @return string
+	 */
+	private static function get_sso_scope_string( array $settings ) {
+		$scopes = preg_split( '/\s+/', trim( self::SSO_SCOPES ) );
+		$scopes = is_array( $scopes ) ? $scopes : array();
+
+		if ( ! empty( $settings['sso_extra_scopes'] ) ) {
+			$extra = preg_split( '/\s+/', trim( (string) $settings['sso_extra_scopes'] ) );
+			$extra = is_array( $extra ) ? $extra : array();
+			$scopes = array_merge( $scopes, $extra );
+		}
+
+		$scopes = array_filter( array_map( 'trim', $scopes ) );
+		$scopes = array_values( array_unique( $scopes ) );
+
+		return implode( ' ', $scopes );
 	}
 
 	// ------------------------------------------------------------------
