@@ -34,14 +34,8 @@ class WP_MS365_WP_Access_Stats {
 	 * @return void
 	 */
 	private function ensure_table_exists() {
-		global $wpdb;
-		$table_name = self::table_name();
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$exists = $wpdb->get_var( "SHOW TABLES LIKE '{$table_name}'" );
-		if ( $exists !== $table_name ) {
-			self::create_table();
-		}
+		// dbDelta handles both create and schema updates.
+		self::create_table();
 	}
 
 	/**
@@ -74,6 +68,7 @@ class WP_MS365_WP_Access_Stats {
 			post_id bigint(20) unsigned NOT NULL,
 			post_type varchar(60) NOT NULL,
 			post_title varchar(191) NOT NULL DEFAULT '',
+			item_url varchar(255) NOT NULL DEFAULT '',
 			hits bigint(20) unsigned NOT NULL DEFAULT 0,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -159,7 +154,38 @@ class WP_MS365_WP_Access_Stats {
 			return;
 		}
 
-		$this->increment_hit( $post, $content_group );
+		$this->increment_hit( $post, $content_group, '' );
+	}
+
+	/**
+	 * Track a shortcode-origin access to an external Microsoft 365 item.
+	 *
+	 * @param string $source    Source key (onedrive|sharepoint|outlook).
+	 * @param string $item_id   Stable item identifier.
+	 * @param string $item_name Human-readable item label.
+	 * @param string $item_url  Optional item URL.
+	 * @return void
+	 */
+	public static function track_external_access( $source, $item_id, $item_name, $item_url = '' ) {
+		$source = sanitize_key( (string) $source );
+		if ( ! in_array( $source, array( 'onedrive', 'sharepoint', 'outlook' ), true ) ) {
+			return;
+		}
+
+		$item_id   = trim( (string) $item_id );
+		$item_name = trim( sanitize_text_field( (string) $item_name ) );
+		$item_url  = esc_url_raw( trim( (string) $item_url ) );
+
+		if ( '' === $item_id || '' === $item_name ) {
+			return;
+		}
+
+		$post_id = abs( (int) crc32( $source . '|' . $item_id ) );
+		if ( 0 === $post_id ) {
+			$post_id = 1;
+		}
+
+		self::insert_hit_row( 'external', $post_id, $source, $item_name, $item_url );
 	}
 
 	/**
@@ -214,28 +240,52 @@ class WP_MS365_WP_Access_Stats {
 	 * @param string  $content_group Content group key.
 	 * @return void
 	 */
-	private function increment_hit( WP_Post $post, $content_group ) {
+	private function increment_hit( WP_Post $post, $content_group, $item_url = '', $forced_title = '' ) {
+		$title = '';
+		if ( '' !== trim( (string) $forced_title ) ) {
+			$title = trim( sanitize_text_field( (string) $forced_title ) );
+		} else {
+			$title = sanitize_text_field( html_entity_decode( get_the_title( $post ), ENT_QUOTES, get_bloginfo( 'charset' ) ) );
+		}
+
+		$item_url = esc_url_raw( trim( (string) $item_url ) );
+
+		self::insert_hit_row( $content_group, (int) $post->ID, (string) $post->post_type, $title, $item_url );
+	}
+
+	/**
+	 * Insert/upsert one hit row.
+	 *
+	 * @param string $content_group Group key.
+	 * @param int    $post_id       Item id.
+	 * @param string $post_type     Item type/source.
+	 * @param string $title         Item title.
+	 * @param string $item_url      Optional item URL.
+	 * @return void
+	 */
+	private static function insert_hit_row( $content_group, $post_id, $post_type, $title, $item_url = '' ) {
 		global $wpdb;
 
 		$table = self::table_name();
 		$date  = gmdate( 'Y-m-d' );
-		$title = sanitize_text_field( html_entity_decode( get_the_title( $post ), ENT_QUOTES, get_bloginfo( 'charset' ) ) );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (stat_date, content_group, post_id, post_type, post_title, hits, updated_at)
-				 VALUES (%s, %s, %d, %s, %s, 1, %s)
+				"INSERT INTO {$table} (stat_date, content_group, post_id, post_type, post_title, item_url, hits, updated_at)
+				 VALUES (%s, %s, %d, %s, %s, %s, 1, %s)
 				 ON DUPLICATE KEY UPDATE
 					hits = hits + 1,
 					post_type = VALUES(post_type),
 					post_title = VALUES(post_title),
+					item_url = VALUES(item_url),
 					updated_at = VALUES(updated_at)",
 				$date,
-				$content_group,
-				(int) $post->ID,
-				(string) $post->post_type,
+				(string) $content_group,
+				(int) $post_id,
+				(string) $post_type,
 				(string) $title,
+				(string) $item_url,
 				gmdate( 'Y-m-d H:i:s' )
 			)
 		);
@@ -297,14 +347,14 @@ class WP_MS365_WP_Access_Stats {
 		$content_group = sanitize_key( (string) $content_group );
 		$table         = self::table_name();
 
-		if ( in_array( $content_group, array( 'page', 'blog', 'document' ), true ) ) {
+		if ( in_array( $content_group, array( 'page', 'blog', 'document', 'external' ), true ) ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$query = $wpdb->prepare(
-				"SELECT post_id, post_type, post_title, content_group, SUM(hits) AS total_hits
+				"SELECT post_id, post_type, post_title, item_url, content_group, SUM(hits) AS total_hits
 				 FROM {$table}
 				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
 					AND content_group = %s
-				 GROUP BY post_id, post_type, post_title, content_group
+				 GROUP BY post_id, post_type, post_title, item_url, content_group
 				 ORDER BY total_hits DESC, post_title ASC
 				 LIMIT %d",
 				$days,
@@ -314,10 +364,10 @@ class WP_MS365_WP_Access_Stats {
 		} else {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$query = $wpdb->prepare(
-				"SELECT post_id, post_type, post_title, content_group, SUM(hits) AS total_hits
+				"SELECT post_id, post_type, post_title, item_url, content_group, SUM(hits) AS total_hits
 				 FROM {$table}
 				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
-				 GROUP BY post_id, post_type, post_title, content_group
+				 GROUP BY post_id, post_type, post_title, item_url, content_group
 				 ORDER BY total_hits DESC, post_title ASC
 				 LIMIT %d",
 				$days,
@@ -333,7 +383,9 @@ class WP_MS365_WP_Access_Stats {
 
 		foreach ( $rows as &$row ) {
 			$post_id = isset( $row['post_id'] ) ? (int) $row['post_id'] : 0;
-			if ( $post_id > 0 ) {
+			if ( ! empty( $row['item_url'] ) ) {
+				$row['url'] = esc_url_raw( (string) $row['item_url'] );
+			} elseif ( $post_id > 0 ) {
 				$permalink = get_permalink( $post_id );
 				$row['url'] = is_string( $permalink ) ? $permalink : '';
 			} else {
@@ -360,7 +412,7 @@ class WP_MS365_WP_Access_Stats {
 		$content_group = sanitize_key( (string) $content_group );
 		$table         = self::table_name();
 
-		if ( in_array( $content_group, array( 'page', 'blog', 'document' ), true ) ) {
+		if ( in_array( $content_group, array( 'page', 'blog', 'document', 'external' ), true ) ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$query = $wpdb->prepare(
 				"SELECT stat_date, SUM(hits) AS total_hits
@@ -378,6 +430,101 @@ class WP_MS365_WP_Access_Stats {
 				"SELECT stat_date, SUM(hits) AS total_hits
 				 FROM {$table}
 				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
+				 GROUP BY stat_date
+				 ORDER BY stat_date ASC",
+				$days
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( $query, ARRAY_A );
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		foreach ( $rows as &$row ) {
+			$row['total_hits'] = isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
+		}
+		unset( $row );
+
+		return $rows;
+	}
+
+	/**
+	 * Return summarized external shortcode-origin interactions by source.
+	 *
+	 * @param int $days Number of days.
+	 * @return array
+	 */
+	public static function get_external_totals_by_source( $days = 7 ) {
+		global $wpdb;
+
+		$days  = max( 1, (int) $days );
+		$table = self::table_name();
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_type, SUM(hits) AS total_hits
+				 FROM {$table}
+				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
+					AND content_group = 'external'
+				 GROUP BY post_type",
+				$days
+			),
+			ARRAY_A
+		);
+
+		$totals = array(
+			'sharepoint' => 0,
+			'onedrive'   => 0,
+			'outlook'    => 0,
+		);
+
+		foreach ( $rows as $row ) {
+			$key = isset( $row['post_type'] ) ? sanitize_key( (string) $row['post_type'] ) : '';
+			if ( isset( $totals[ $key ] ) ) {
+				$totals[ $key ] = (int) $row['total_hits'];
+			}
+		}
+
+		return $totals;
+	}
+
+	/**
+	 * Return daily totals for external shortcode-origin interactions.
+	 *
+	 * @param int    $days   Number of days.
+	 * @param string $source Source key (all|sharepoint|onedrive|outlook).
+	 * @return array
+	 */
+	public static function get_external_daily_trend( $days = 7, $source = 'all' ) {
+		global $wpdb;
+
+		$days   = max( 1, (int) $days );
+		$source = sanitize_key( (string) $source );
+		$table  = self::table_name();
+
+		if ( in_array( $source, array( 'sharepoint', 'onedrive', 'outlook' ), true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$query = $wpdb->prepare(
+				"SELECT stat_date, SUM(hits) AS total_hits
+				 FROM {$table}
+				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
+					AND content_group = 'external'
+					AND post_type = %s
+				 GROUP BY stat_date
+				 ORDER BY stat_date ASC",
+				$days,
+				$source
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$query = $wpdb->prepare(
+				"SELECT stat_date, SUM(hits) AS total_hits
+				 FROM {$table}
+				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
+					AND content_group = 'external'
 				 GROUP BY stat_date
 				 ORDER BY stat_date ASC",
 				$days

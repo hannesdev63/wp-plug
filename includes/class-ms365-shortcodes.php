@@ -85,6 +85,9 @@ class WP_MS365_Shortcodes {
 			wp_die( esc_html( $download_url->get_error_message() ), 403 );
 		}
 
+		$item_web_url = ( ! is_wp_error( $item_info ) && ! empty( $item_info['webUrl'] ) ) ? (string) $item_info['webUrl'] : '';
+		WP_MS365_WP_Access_Stats::track_external_access( 'onedrive', $item_id, $filename, $item_web_url );
+
 		// Use a local safe filename and MIME type from Graph metadata — never
 		// forward the upstream Content-Disposition to prevent header injection.
 		$safe_name = sanitize_file_name( $filename );
@@ -157,6 +160,9 @@ class WP_MS365_Shortcodes {
 			wp_die( esc_html( $download_url->get_error_message() ), 403 );
 		}
 
+		$item_web_url = ( ! is_wp_error( $item_info ) && ! empty( $item_info['webUrl'] ) ) ? (string) $item_info['webUrl'] : '';
+		WP_MS365_WP_Access_Stats::track_external_access( 'sharepoint', $site_id . ':' . $drive_id . ':' . $item_id, $filename, $item_web_url );
+
 		// Use a local safe filename and MIME type from Graph metadata — never
 		// forward the upstream Content-Disposition to prevent header injection.
 		$safe_name = sanitize_file_name( $filename );
@@ -214,6 +220,9 @@ class WP_MS365_Shortcodes {
 		$ics      = $this->build_ics_content( $event );
 		$subject  = isset( $event['subject'] ) ? (string) $event['subject'] : 'event';
 		$filename = sanitize_file_name( $subject ) . '.ics';
+
+		$event_url = isset( $event['webLink'] ) ? (string) $event['webLink'] : '';
+		WP_MS365_WP_Access_Stats::track_external_access( 'outlook', $event_id, $subject, $event_url );
 
 		nocache_headers();
 		header( 'Content-Type: text/calendar; charset=utf-8' );

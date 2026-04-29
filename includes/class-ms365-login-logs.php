@@ -18,7 +18,6 @@ class WP_MS365_Login_Logs {
 		$this->ensure_table_exists();
 		add_action( 'wp_login', array( $this, 'log_success' ), 10, 2 );
 		add_action( 'wp_login_failed', array( $this, 'log_failed' ), 10, 2 );
-		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'wp_ms365_prune_login_logs', array( 'WP_MS365_Login_Logs', 'prune_old_logs' ) );
 	}
 
@@ -119,22 +118,6 @@ class WP_MS365_Login_Logs {
 		) {$charset_collate};";
 
 		dbDelta( $sql );
-	}
-
-	/**
-	 * Register login logs submenu page.
-	 *
-	 * @return void
-	 */
-	public function register_menu() {
-		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Login Logs', 'wp-ms365-graph' ),
-			__( 'Login Logs', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-login-logs',
-			array( $this, 'render_page' )
-		);
 	}
 
 	/**
@@ -250,12 +233,15 @@ class WP_MS365_Login_Logs {
 	 *
 	 * @return void
 	 */
-	public function render_page() {
+	public static function render_page( $context = array() ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
 		}
 
 		global $wpdb;
+
+		$as_tab   = is_array( $context ) && ! empty( $context['as_tab'] );
+		$page_key = $as_tab ? 'wp-ms365-graph' : 'wp-ms365-login-logs';
 
 		$per_page = 50;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -291,7 +277,10 @@ class WP_MS365_Login_Logs {
 		echo '<p>' . esc_html__( 'Shows successful and failed WordPress login attempts.', 'wp-ms365-graph' ) . '</p>';
 
 		echo '<form method="get" style="margin: 1em 0;">';
-		echo '<input type="hidden" name="page" value="wp-ms365-login-logs" />';
+		echo '<input type="hidden" name="page" value="' . esc_attr( $page_key ) . '" />';
+		if ( $as_tab ) {
+			echo '<input type="hidden" name="tab" value="login-access" />';
+		}
 		echo '<label for="ms365-status-filter" style="margin-right:8px;">' . esc_html__( 'Status', 'wp-ms365-graph' ) . '</label>';
 		echo '<select id="ms365-status-filter" name="status">';
 		echo '<option value="">' . esc_html__( 'All', 'wp-ms365-graph' ) . '</option>';
@@ -334,7 +323,8 @@ class WP_MS365_Login_Logs {
 
 		$base_url = add_query_arg(
 			array(
-				'page'   => 'wp-ms365-login-logs',
+				'page'   => $page_key,
+				'tab'    => $as_tab ? 'login-access' : null,
 				'status' => $status_filter,
 			),
 			admin_url( 'admin.php' )

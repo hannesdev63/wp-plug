@@ -651,6 +651,7 @@ class WP_MS365_Admin {
 		$tabs = array(
 			'dashboard'    => __( 'Dashboard', 'wp-ms365-graph' ),
 			'access-stats' => __( 'Access Statistics', 'wp-ms365-graph' ),
+			'login-access' => __( 'Login Access', 'wp-ms365-graph' ),
 			'settings'     => __( 'Settings', 'wp-ms365-graph' ),
 			'documentation'=> __( 'Documentation', 'wp-ms365-graph' ),
 			'sp-explorer'  => __( 'SP Explorer', 'wp-ms365-graph' ),
@@ -685,6 +686,9 @@ class WP_MS365_Admin {
 		switch ( $tab ) {
 			case 'access-stats':
 				$this->render_access_stats();
+				break;
+			case 'login-access':
+				$this->render_login_access();
 				break;
 			case 'settings':
 				$this->render_page();
@@ -761,6 +765,16 @@ class WP_MS365_Admin {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/access-stats.php';
+	}
+
+	/**
+	 * Render login access tab (successful/failed login attempts).
+	 */
+	public function render_login_access() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		WP_MS365_Login_Logs::render_page( array( 'as_tab' => true ) );
 	}
 
 	/**

@@ -1,6 +1,6 @@
 <?php
 /**
- * Unified access statistics page.
+ * WordPress-origin access statistics page.
  *
  * @package WP_MS365_Graph
  */
@@ -9,11 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$is_connected = WP_MS365_Auth::is_connected();
-
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $source = isset( $_GET['ms365_source'] ) ? sanitize_key( wp_unslash( $_GET['ms365_source'] ) ) : 'all';
-if ( ! in_array( $source, array( 'all', 'wordpress', 'sharepoint', 'onedrive' ), true ) ) {
+if ( ! in_array( $source, array( 'all', 'wordpress', 'shortcodes' ), true ) ) {
 	$source = 'all';
 }
 
@@ -29,9 +27,14 @@ if ( ! in_array( $wp_group, array( 'all', 'page', 'blog', 'document' ), true ) )
 	$wp_group = 'all';
 }
 
-$show_wp = in_array( $source, array( 'all', 'wordpress' ), true );
-$show_sp = in_array( $source, array( 'all', 'sharepoint' ), true );
-$show_od = in_array( $source, array( 'all', 'onedrive' ), true );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$shortcode_target = isset( $_GET['ms365_shortcode_target'] ) ? sanitize_key( wp_unslash( $_GET['ms365_shortcode_target'] ) ) : 'all';
+if ( ! in_array( $shortcode_target, array( 'all', 'sharepoint', 'onedrive', 'outlook' ), true ) ) {
+	$shortcode_target = 'all';
+}
+
+$show_wp         = in_array( $source, array( 'all', 'wordpress' ), true );
+$show_shortcodes = in_array( $source, array( 'all', 'shortcodes' ), true );
 
 $wp_totals = array( 'page' => 0, 'blog' => 0, 'document' => 0 );
 $wp_top    = array();
@@ -42,95 +45,83 @@ if ( $show_wp ) {
 	$wp_trend  = WP_MS365_WP_Access_Stats::get_daily_trend( $window, $wp_group );
 }
 
-$period = WP_MS365_Graph::get_report_period( $window );
-
-$sp_site_rows      = array();
-$sp_file_rows      = array();
-$od_account_rows   = array();
-$sp_site_error     = null;
-$sp_file_error     = null;
-$od_error          = null;
-
-if ( $is_connected && $show_sp ) {
-	$sp_site_result = WP_MS365_Graph::get_sharepoint_site_usage_detail( $period );
-	if ( is_wp_error( $sp_site_result ) ) {
-		$sp_site_error = $sp_site_result;
-	} else {
-		$sp_site_rows = WP_MS365_Graph::normalize_sharepoint_site_usage_rows( $sp_site_result );
-	}
-
-	$sp_file_result = WP_MS365_Graph::get_sharepoint_file_usage_detail( $period );
-	if ( is_wp_error( $sp_file_result ) ) {
-		$sp_file_error = $sp_file_result;
-	} else {
-		$sp_file_rows = WP_MS365_Graph::normalize_sharepoint_file_usage_rows( $sp_file_result );
-	}
+$external_totals = array( 'sharepoint' => 0, 'onedrive' => 0, 'outlook' => 0 );
+$external_top    = array();
+$external_trend  = array();
+if ( $show_shortcodes ) {
+	$external_totals = WP_MS365_WP_Access_Stats::get_external_totals_by_source( $window );
+	$external_top    = WP_MS365_WP_Access_Stats::get_top_items( $window, 250, 'external' );
+	$external_trend  = WP_MS365_WP_Access_Stats::get_external_daily_trend( $window, $shortcode_target );
 }
 
-if ( $is_connected && $show_od ) {
-	$od_result = WP_MS365_Graph::get_onedrive_usage_account_detail( $period );
-	if ( is_wp_error( $od_result ) ) {
-		$od_error = $od_result;
-	} else {
-		$od_account_rows = WP_MS365_Graph::normalize_onedrive_usage_rows( $od_result );
-	}
-}
-
-$sp_page_views_total = 0;
-$sp_document_views_total = 0;
-$od_document_views_total = 0;
-
-foreach ( $sp_site_rows as $row ) {
-	$sp_page_views_total += isset( $row['page_views'] ) ? (int) $row['page_views'] : 0;
-}
-foreach ( $sp_file_rows as $row ) {
-	$sp_document_views_total += isset( $row['files_viewed'] ) ? (int) $row['files_viewed'] : 0;
-}
-foreach ( $od_account_rows as $row ) {
-	$od_document_views_total += isset( $row['files_viewed'] ) ? (int) $row['files_viewed'] : 0;
+if ( $show_shortcodes && 'all' !== $shortcode_target ) {
+	$external_top = array_values(
+		array_filter(
+			$external_top,
+			function ( $row ) use ( $shortcode_target ) {
+				return isset( $row['post_type'] ) && $shortcode_target === sanitize_key( (string) $row['post_type'] );
+			}
+		)
+	);
 }
 
 $top_rows = array();
+
+$shortcode_item_keys = array();
+if ( $show_shortcodes ) {
+	foreach ( $external_top as $row ) {
+		$external_url = isset( $row['url'] ) ? trim( (string) $row['url'] ) : '';
+		if ( '' !== $external_url ) {
+			$shortcode_item_keys[ 'url:' . strtolower( untrailingslashit( $external_url ) ) ] = true;
+		}
+
+		$external_label = isset( $row['post_title'] ) ? trim( (string) $row['post_title'] ) : '';
+		if ( '' !== $external_label ) {
+			$shortcode_item_keys[ 'label:' . strtolower( $external_label ) ] = true;
+		}
+	}
+}
+
 if ( $show_wp ) {
 	foreach ( $wp_top as $row ) {
+		$wp_label = isset( $row['post_title'] ) ? trim( (string) $row['post_title'] ) : '';
+		$wp_url   = isset( $row['url'] ) ? trim( (string) $row['url'] ) : '';
+
+		if ( ! empty( $shortcode_item_keys ) ) {
+			$matched_by_url   = '' !== $wp_url && isset( $shortcode_item_keys[ 'url:' . strtolower( untrailingslashit( $wp_url ) ) ] );
+			$matched_by_label = '' !== $wp_label && isset( $shortcode_item_keys[ 'label:' . strtolower( $wp_label ) ] );
+
+			if ( $matched_by_url || $matched_by_label ) {
+				continue;
+			}
+		}
+
+		$top_rows[] = array(
+			'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'wp-ms365-graph' ),
+			'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
+			'source' => __( 'WordPress Content', 'wp-ms365-graph' ),
+			'url'    => $wp_url,
+		);
+	}
+}
+
+if ( $show_shortcodes ) {
+	foreach ( $external_top as $row ) {
+		$type = isset( $row['post_type'] ) ? sanitize_key( (string) $row['post_type'] ) : '';
+		$source_label = __( 'WP Shortcode -> Microsoft 365', 'wp-ms365-graph' );
+		if ( 'sharepoint' === $type ) {
+			$source_label = __( 'WP Shortcode -> SharePoint', 'wp-ms365-graph' );
+		} elseif ( 'onedrive' === $type ) {
+			$source_label = __( 'WP Shortcode -> OneDrive', 'wp-ms365-graph' );
+		} elseif ( 'outlook' === $type ) {
+			$source_label = __( 'WP Shortcode -> Outlook', 'wp-ms365-graph' );
+		}
+
 		$top_rows[] = array(
 			'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'wp-ms365-graph' ),
 			'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
-			'source' => __( 'WordPress', 'wp-ms365-graph' ),
+			'source' => $source_label,
 			'url'    => isset( $row['url'] ) ? (string) $row['url'] : '',
-		);
-	}
-}
-if ( $show_sp ) {
-	$sp_top_pages = WP_MS365_Graph::aggregate_report_top_items( $sp_site_rows, 'label', 'page_views', 10 );
-	foreach ( $sp_top_pages as $row ) {
-		$top_rows[] = array(
-			'label'  => $row['label'],
-			'value'  => $row['value'],
-			'source' => __( 'SharePoint Pages/Blogs', 'wp-ms365-graph' ),
-			'url'    => isset( $row['url'] ) ? $row['url'] : '',
-		);
-	}
-
-	$sp_top_docs = WP_MS365_Graph::aggregate_report_top_items( $sp_site_rows, 'label', 'active_files', 10 );
-	foreach ( $sp_top_docs as $row ) {
-		$top_rows[] = array(
-			'label'  => $row['label'],
-			'value'  => $row['value'],
-			'source' => __( 'SharePoint Documents', 'wp-ms365-graph' ),
-			'url'    => isset( $row['url'] ) ? $row['url'] : '',
-		);
-	}
-}
-if ( $show_od ) {
-	$od_top = WP_MS365_Graph::aggregate_report_top_items( $od_account_rows, 'label', 'files_viewed', 10 );
-	foreach ( $od_top as $row ) {
-		$top_rows[] = array(
-			'label'     => $row['label'],
-			'sub_label' => isset( $row['sub_label'] ) ? $row['sub_label'] : '',
-			'value'     => $row['value'],
-			'source'    => __( 'OneDrive Documents', 'wp-ms365-graph' ),
-			'url'       => isset( $row['url'] ) ? $row['url'] : '',
 		);
 	}
 }
@@ -156,33 +147,17 @@ if ( $show_wp ) {
 		$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
 	}
 }
-if ( $show_sp ) {
-	$sp_daily_pages = WP_MS365_Graph::aggregate_report_daily_metric( $sp_site_rows, 'date', 'page_views' );
-	foreach ( $sp_daily_pages as $row ) {
-		$date = (string) $row['date'];
-		if ( ! isset( $trend_map[ $date ] ) ) {
-			$trend_map[ $date ] = 0;
-		}
-		$trend_map[ $date ] += (int) $row['value'];
-	}
 
-	$sp_daily_docs = WP_MS365_Graph::aggregate_report_daily_metric( $sp_file_rows, 'date', 'files_viewed' );
-	foreach ( $sp_daily_docs as $row ) {
-		$date = (string) $row['date'];
+if ( $show_shortcodes ) {
+	foreach ( $external_trend as $row ) {
+		$date = isset( $row['stat_date'] ) ? (string) $row['stat_date'] : '';
+		if ( '' === $date ) {
+			continue;
+		}
 		if ( ! isset( $trend_map[ $date ] ) ) {
 			$trend_map[ $date ] = 0;
 		}
-		$trend_map[ $date ] += (int) $row['value'];
-	}
-}
-if ( $show_od ) {
-	$od_daily = WP_MS365_Graph::aggregate_report_daily_metric( $od_account_rows, 'date', 'files_viewed' );
-	foreach ( $od_daily as $row ) {
-		$date = (string) $row['date'];
-		if ( ! isset( $trend_map[ $date ] ) ) {
-			$trend_map[ $date ] = 0;
-		}
-		$trend_map[ $date ] += (int) $row['value'];
+		$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
 	}
 }
 ksort( $trend_map );
@@ -195,7 +170,7 @@ ksort( $trend_map );
 	</h1>
 
 	<p class="description">
-		<?php esc_html_e( 'Unified view for WordPress pages/blogs/documents and SharePoint/OneDrive access metrics.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'WordPress-origin access only: frontend page/blog/document views and shortcode-driven access to Microsoft 365 items.', 'wp-ms365-graph' ); ?>
 	</p>
 
 	<form method="get" action="" style="margin:16px 0;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
@@ -204,10 +179,9 @@ ksort( $trend_map );
 		<div>
 			<label for="ms365_source"><strong><?php esc_html_e( 'Source', 'wp-ms365-graph' ); ?></strong></label><br />
 			<select id="ms365_source" name="ms365_source">
-				<option value="all" <?php selected( $source, 'all' ); ?>><?php esc_html_e( 'All', 'wp-ms365-graph' ); ?></option>
-				<option value="wordpress" <?php selected( $source, 'wordpress' ); ?>><?php esc_html_e( 'WordPress', 'wp-ms365-graph' ); ?></option>
-				<option value="sharepoint" <?php selected( $source, 'sharepoint' ); ?>><?php esc_html_e( 'SharePoint', 'wp-ms365-graph' ); ?></option>
-				<option value="onedrive" <?php selected( $source, 'onedrive' ); ?>><?php esc_html_e( 'OneDrive', 'wp-ms365-graph' ); ?></option>
+				<option value="all" <?php selected( $source, 'all' ); ?>><?php esc_html_e( 'All WordPress-origin', 'wp-ms365-graph' ); ?></option>
+				<option value="wordpress" <?php selected( $source, 'wordpress' ); ?>><?php esc_html_e( 'WordPress content', 'wp-ms365-graph' ); ?></option>
+				<option value="shortcodes" <?php selected( $source, 'shortcodes' ); ?>><?php esc_html_e( 'WordPress shortcode to M365', 'wp-ms365-graph' ); ?></option>
 			</select>
 		</div>
 		<div>
@@ -229,15 +203,18 @@ ksort( $trend_map );
 			</select>
 		</div>
 		<div>
+			<label for="ms365_shortcode_target"><strong><?php esc_html_e( 'Shortcode target', 'wp-ms365-graph' ); ?></strong></label><br />
+			<select id="ms365_shortcode_target" name="ms365_shortcode_target">
+				<option value="all" <?php selected( $shortcode_target, 'all' ); ?>><?php esc_html_e( 'All Microsoft 365 targets', 'wp-ms365-graph' ); ?></option>
+				<option value="sharepoint" <?php selected( $shortcode_target, 'sharepoint' ); ?>><?php esc_html_e( 'SharePoint', 'wp-ms365-graph' ); ?></option>
+				<option value="onedrive" <?php selected( $shortcode_target, 'onedrive' ); ?>><?php esc_html_e( 'OneDrive', 'wp-ms365-graph' ); ?></option>
+				<option value="outlook" <?php selected( $shortcode_target, 'outlook' ); ?>><?php esc_html_e( 'Outlook', 'wp-ms365-graph' ); ?></option>
+			</select>
+		</div>
+		<div>
 			<?php submit_button( __( 'Apply', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
 		</div>
 	</form>
-
-	<?php if ( ( $show_sp || $show_od ) && ! $is_connected ) : ?>
-		<div class="notice notice-warning">
-			<p><?php esc_html_e( 'Microsoft 365 is not connected. SharePoint/OneDrive statistics require a connected app and Reports.Read.All application permission.', 'wp-ms365-graph' ); ?></p>
-		</div>
-	<?php endif; ?>
 
 	<div class="msgraph_card">
 		<h2 class="msgraph_card__title"><?php esc_html_e( 'Summary', 'wp-ms365-graph' ); ?></h2>
@@ -254,46 +231,17 @@ ksort( $trend_map );
 				<tr><td><?php esc_html_e( 'WordPress blog views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['blog'] ) ); ?></td></tr>
 				<tr><td><?php esc_html_e( 'WordPress document views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['document'] ) ); ?></td></tr>
 				<?php endif; ?>
-				<?php if ( $show_sp ) : ?>
-				<tr><td><?php esc_html_e( 'SharePoint page/blog views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( $sp_page_views_total ) ); ?></td></tr>
-				<tr><td><?php esc_html_e( 'SharePoint document interactions', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( $sp_document_views_total ) ); ?></td></tr>
-				<?php endif; ?>
-				<?php if ( $show_od ) : ?>
-				<tr><td><?php esc_html_e( 'OneDrive document interactions', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( $od_document_views_total ) ); ?></td></tr>
+				<?php if ( $show_shortcodes ) : ?>
+				<tr><td><?php esc_html_e( 'Shortcode to SharePoint item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['sharepoint'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'Shortcode to OneDrive item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['onedrive'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'Shortcode to Outlook item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['outlook'] ) ); ?></td></tr>
 				<?php endif; ?>
 			</tbody>
 		</table>
 	</div>
 
-	<?php if ( $show_sp && is_wp_error( $sp_site_error ) ) : ?>
-		<div class="notice notice-error"><p><?php echo esc_html( $sp_site_error->get_error_message() ); ?></p></div>
-	<?php endif; ?>
-	<?php if ( $show_sp && is_wp_error( $sp_file_error ) ) : ?>
-		<div class="notice notice-error"><p><?php echo esc_html( $sp_file_error->get_error_message() ); ?></p></div>
-	<?php endif; ?>
-	<?php if ( $show_od && is_wp_error( $od_error ) ) : ?>
-		<div class="notice notice-error"><p><?php echo esc_html( $od_error->get_error_message() ); ?></p></div>
-	<?php endif; ?>
-
 	<div class="msgraph_card">
 		<h2 class="msgraph_card__title"><?php esc_html_e( 'Top Accessed Items', 'wp-ms365-graph' ); ?></h2>
-		<?php if ( $show_sp || $show_od ) : ?>
-			<p class="description">
-				<?php
-				printf(
-					/* translators: %s: URL to Microsoft privacy docs */
-					wp_kses(
-						__( '<strong>Note:</strong> Microsoft 365 report data may show obfuscated user or site names depending on your tenant\'s privacy settings. An admin can reveal real names under <a href="%s" target="_blank" rel="noopener noreferrer">Reports &rarr; Privacy settings</a> in the Microsoft 365 admin center.', 'wp-ms365-graph' ),
-						array(
-							'strong' => array(),
-							'a'      => array( 'href' => array(), 'target' => array(), 'rel' => array() ),
-						)
-					),
-					'https://admin.microsoft.com/#/Settings/Services/:/Settings/L1/Reports'
-				);
-				?>
-			</p>
-		<?php endif; ?>
 		<?php if ( empty( $top_rows ) ) : ?>
 			<p><?php esc_html_e( 'No access data available for the current filters yet.', 'wp-ms365-graph' ); ?></p>
 		<?php else : ?>
@@ -313,9 +261,6 @@ ksort( $trend_map );
 									<a href="<?php echo esc_url( $row['url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $row['label'] ); ?></a>
 								<?php else : ?>
 									<?php echo esc_html( $row['label'] ); ?>
-								<?php endif; ?>
-								<?php if ( ! empty( $row['sub_label'] ) && $row['sub_label'] !== $row['label'] ) : ?>
-									<br><small style="color:#888;"><?php echo esc_html( $row['sub_label'] ); ?></small>
 								<?php endif; ?>
 							</td>
 							<td><?php echo esc_html( $row['source'] ); ?></td>
