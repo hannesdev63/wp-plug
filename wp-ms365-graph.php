@@ -3,7 +3,7 @@
  * Plugin Name:       MS Graph Connect
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
  * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
- * Version:           1.1.1
+ * Version:           1.2.0
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            hannesdev63
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'WP_MS365_VERSION',     '1.1.1' );
+define( 'WP_MS365_VERSION',     '1.2.0' );
 define( 'WP_MS365_PLUGIN_FILE', __FILE__ );
 define( 'WP_MS365_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'WP_MS365_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -61,6 +61,9 @@ function wp_ms365_graph_init() {
 	// Tenant sign-in (login-page button + SSO callback handler).
 	new WP_MS365_Login();
 
+	// Optional replacement for wp_mail() via Microsoft Graph sendMail.
+	new WP_MS365_Mail();
+
 	// Login logging (successful and failed attempts + admin page).
 	new WP_MS365_Login_Logs();
 
@@ -81,6 +84,9 @@ function wp_ms365_graph_activate() {
 		'client_id'     => '',
 		'client_secret' => '',
 		'specific_user' => '',
+		'mail_enabled'  => 0,
+		'mail_sender_user' => '',
+		'mail_save_to_sent_items' => 1,
 		'teams_team_id' => '',
 		'teams_channel_id' => '',
 		'teams_workflow_url' => '',

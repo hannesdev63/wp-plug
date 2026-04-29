@@ -25,6 +25,7 @@ class WP_MS365_Admin {
 		add_action( 'admin_post_wp_ms365_import_settings', array( $this, 'handle_import_settings' ) );
 		add_action( 'admin_post_wp_ms365_disconnect', array( $this, 'handle_request_new_token' ) );
 		add_action( 'admin_post_wp_ms365_reset_shortcode_counts', array( $this, 'handle_reset_shortcode_counts' ) );
+		add_action( 'admin_post_wp_ms365_send_test_email', array( $this, 'handle_send_test_email' ) );
 		add_action( 'wp_ajax_wp_ms365_sp_site_drives', array( $this, 'ajax_get_sharepoint_site_drives' ) );
 		add_action( 'wp_ajax_wp_ms365_sso_test_config', array( $this, 'ajax_sso_test_config' ) );
 	}
@@ -128,6 +129,40 @@ class WP_MS365_Admin {
 			__( 'Teams Settings', 'wp-ms365-graph' ),
 			array( $this, 'section_teams_intro' ),
 			'wp-ms365-graph'
+		);
+
+		add_settings_section(
+			'wp_ms365_mail',
+			__( 'WordPress Mail via Microsoft Graph', 'wp-ms365-graph' ),
+			array( $this, 'section_mail_intro' ),
+			'wp-ms365-graph'
+		);
+
+		add_settings_field(
+			'wp_ms365_mail_enabled',
+			__( 'Enable Graph Mail Transport', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_mail',
+			array( 'key' => 'mail_enabled', 'label' => __( 'Replace WordPress internal mail transport (`wp_mail`) with Microsoft Graph `sendMail`.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_mail_sender_user',
+			__( 'Mail Sender Mailbox (UPN or ID)', 'wp-ms365-graph' ),
+			array( $this, 'render_text_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_mail',
+			array( 'key' => 'mail_sender_user', 'label' => __( 'Mailbox identity used for Graph sendMail requests.', 'wp-ms365-graph' ) )
+		);
+
+		add_settings_field(
+			'wp_ms365_mail_save_to_sent_items',
+			__( 'Save Messages in Sent Items', 'wp-ms365-graph' ),
+			array( $this, 'render_checkbox_field' ),
+			'wp-ms365-graph',
+			'wp_ms365_mail',
+			array( 'key' => 'mail_save_to_sent_items', 'label' => __( 'Store sent emails in the sender mailbox Sent Items folder.', 'wp-ms365-graph' ) )
 		);
 
 		$teams_fields = array(
@@ -400,6 +435,21 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['specific_user'] ) ) {
 			$clean['specific_user'] = sanitize_text_field( $input['specific_user'] );
+		}
+
+		$has_mail_payload =
+			isset( $input['mail_enabled'] ) ||
+			isset( $input['mail_sender_user'] ) ||
+			isset( $input['mail_save_to_sent_items'] );
+
+		if ( $has_mail_payload ) {
+			$clean['mail_enabled'] = ! empty( $input['mail_enabled'] ) ? 1 : 0;
+
+			if ( isset( $input['mail_sender_user'] ) ) {
+				$clean['mail_sender_user'] = sanitize_text_field( $input['mail_sender_user'] );
+			}
+
+			$clean['mail_save_to_sent_items'] = ! empty( $input['mail_save_to_sent_items'] ) ? 1 : 0;
 		}
 
 		if ( isset( $input['teams_team_id'] ) ) {
@@ -838,6 +888,19 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Section description for Graph mail replacement settings.
+	 */
+	public function section_mail_intro() {
+		echo '<p>'
+			. esc_html__( 'Enable this to route WordPress emails sent via wp_mail() through Microsoft Graph sendMail.', 'wp-ms365-graph' )
+			. '</p><p>'
+			. esc_html__( 'Required application permission: Mail.Send (grant admin consent in Azure). The sender mailbox must exist and be allowed for app-only sendMail calls.', 'wp-ms365-graph' )
+			. '</p><p>'
+			. esc_html__( 'After changing these mail transport settings, deactivate and reactivate the plugin once.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
 	 * Section description for calendar/files wording customization.
 	 */
 	public function section_wording_calendar_files_intro() {
@@ -912,6 +975,10 @@ class WP_MS365_Admin {
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
 				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'mail_sender_user' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Required when Graph mail transport is enabled. Use a mailbox UPN (for example no-reply@contoso.com) or user object ID.', 'wp-ms365-graph' )
 				. '</p>';
 		} elseif ( 'teams_team_id' === $key ) {
 			echo '<p class="description">'
@@ -1044,6 +1111,12 @@ class WP_MS365_Admin {
 			checked( $checked, true, false ),
 			esc_html( $label )
 		);
+
+		if ( 'mail_enabled' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'When enabled, wp_mail() is short-circuited and delivered via Microsoft Graph. Disable to revert to default WordPress mail transport.', 'wp-ms365-graph' )
+				. '</p>';
+		}
 	}
 
 	/**
@@ -1468,6 +1541,72 @@ class WP_MS365_Admin {
 				admin_url( 'admin.php' )
 			)
 		);
+		exit;
+	}
+
+	/**
+	 * Send a diagnostics test email and redirect back with status.
+	 *
+	 * @return void
+	 */
+	public function handle_send_test_email() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+		}
+
+		check_admin_referer( 'wp_ms365_send_test_email' );
+
+		$recipient = sanitize_email( (string) get_option( 'admin_email', '' ) );
+		if ( ! is_email( $recipient ) ) {
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+						'page' => 'wp-ms365-graph',
+						'tab'  => 'diagnostics',
+						'mail_test' => 'error',
+						'reason'    => 'invalid_recipient',
+					),
+					admin_url( 'admin.php' )
+				)
+			);
+			exit;
+		}
+
+		$subject = sprintf(
+			/* translators: %s: site name */
+			__( '[%s] MS Graph Connect test email', 'wp-ms365-graph' ),
+			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
+		);
+
+		$message = sprintf(
+			/* translators: 1: site url, 2: datetime */
+			__( 'This is a diagnostics test email from MS Graph Connect.\n\nSite: %1$s\nTime (UTC): %2$s\n', 'wp-ms365-graph' ),
+			home_url( '/' ),
+			gmdate( 'Y-m-d H:i:s' )
+		);
+
+		$error_message = '';
+		$error_listener = function ( $error ) use ( &$error_message ) {
+			if ( $error instanceof WP_Error ) {
+				$error_message = $error->get_error_message();
+			}
+		};
+
+		add_action( 'wp_mail_failed', $error_listener, 10, 1 );
+		$sent = wp_mail( $recipient, $subject, $message );
+		remove_action( 'wp_mail_failed', $error_listener, 10 );
+
+		$args = array(
+			'page' => 'wp-ms365-graph',
+			'tab'  => 'diagnostics',
+			'mail_test' => $sent ? 'success' : 'error',
+		);
+
+		if ( ! $sent && '' !== $error_message ) {
+			$args['reason'] = $error_message;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 

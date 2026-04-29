@@ -14,6 +14,9 @@ $settings           = WP_MS365_Auth::get_settings();
 $logs               = WP_MS365_Logger::get_logs();
 $debug_enabled      = defined( 'WP_DEBUG' ) && WP_DEBUG;
 $configured_user    = WP_MS365_Graph::get_configured_user();
+$mail_test_status   = isset( $_GET['mail_test'] ) ? sanitize_key( wp_unslash( $_GET['mail_test'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$mail_test_reason   = isset( $_GET['reason'] ) ? sanitize_text_field( wp_unslash( $_GET['reason'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$admin_email        = sanitize_email( (string) get_option( 'admin_email', '' ) );
 
 // Live Graph checks – only run when connected and a specific user is configured.
 $diag_user_result     = null;
@@ -39,6 +42,40 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
 		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
 	</h1>
+
+	<?php if ( 'success' === $mail_test_status ) : ?>
+		<div class="notice notice-success is-dismissible">
+			<p><?php printf( esc_html__( 'Test email sent successfully to %s.', 'wp-ms365-graph' ), esc_html( $admin_email ) ); ?></p>
+		</div>
+	<?php elseif ( 'error' === $mail_test_status ) : ?>
+		<div class="notice notice-error is-dismissible">
+			<p>
+				<?php
+				echo esc_html__( 'Test email failed.', 'wp-ms365-graph' );
+				if ( 'invalid_recipient' === $mail_test_reason ) {
+					echo ' ' . esc_html__( 'Admin email address is not configured or invalid.', 'wp-ms365-graph' );
+				} elseif ( '' !== $mail_test_reason ) {
+					echo ' ' . esc_html( $mail_test_reason );
+				}
+				?>
+			</p>
+		</div>
+	<?php endif; ?>
+
+	<div class="msgraph_card">
+		<h2><?php esc_html_e( 'Email Transport Test', 'wp-ms365-graph' ); ?></h2>
+		<p>
+			<?php esc_html_e( 'Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph.', 'wp-ms365-graph' ); ?>
+		</p>
+		<p>
+			<?php echo esc_html__( 'Recipient:', 'wp-ms365-graph' ); ?> <code><?php echo esc_html( $admin_email ); ?></code>
+		</p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="wp_ms365_send_test_email" />
+			<?php wp_nonce_field( 'wp_ms365_send_test_email' ); ?>
+			<?php submit_button( __( 'Send Test Email', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+		</form>
+	</div>
 
 	<!-- System Information -->
 	<div class="msgraph_card">
