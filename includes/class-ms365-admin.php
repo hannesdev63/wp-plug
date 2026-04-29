@@ -700,13 +700,13 @@ class WP_MS365_Admin {
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
 		$tabs = array(
 			'dashboard'    => __( 'Dashboard', 'wp-ms365-graph' ),
+			'settings'     => __( 'Settings', 'wp-ms365-graph' ),
 			'access-stats' => __( 'Access Statistics', 'wp-ms365-graph' ),
 			'login-access' => __( 'Login Access', 'wp-ms365-graph' ),
-			'settings'     => __( 'Settings', 'wp-ms365-graph' ),
+			'wording'      => __( 'Translations', 'wp-ms365-graph' ),
+			'diagnostics'  => __( 'Diagnostics', 'wp-ms365-graph' ),
 			'documentation'=> __( 'Documentation', 'wp-ms365-graph' ),
 			'sp-explorer'  => __( 'SP Explorer', 'wp-ms365-graph' ),
-			'wording'      => __( 'Wording', 'wp-ms365-graph' ),
-			'diagnostics'  => __( 'Diagnostics', 'wp-ms365-graph' ),
 		);
 
 		if ( ! isset( $tabs[ $tab ] ) ) {

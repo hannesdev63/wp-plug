@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: wp-ms365-graph 1.0.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-04-23 00:00+0000\n"
-"PO-Revision-Date: 2026-04-23 00:00+0000\n"
+"PO-Revision-Date: 2026-05-17 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de_DE\n"
@@ -381,3 +381,72 @@ msgstr "Modus: %s"
 
 msgid "—"
 msgstr "—"
+
+msgid "Email Transport Test"
+msgstr "E-Mail-Transport-Test"
+
+msgid "Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph."
+msgstr "Senden Sie eine Test-E-Mail über den WordPress-E-Mail-Kanal (wp_mail). Wenn der Graph-Mail-Transport aktiviert ist, wird diese Test-E-Mail über Microsoft Graph gesendet."
+
+msgid "Recipient:"
+msgstr "Empfänger:"
+
+msgid "Send Test Email"
+msgstr "Test-E-Mail senden"
+
+msgid "Test email sent successfully to %s."
+msgstr "Test-E-Mail erfolgreich an %s gesendet."
+
+msgid "Test email failed."
+msgstr "Senden der Test-E-Mail fehlgeschlagen."
+
+msgid "Admin email address is not configured or invalid."
+msgstr "Die Administrator-E-Mail-Adresse ist nicht konfiguriert oder ungültig."
+
+msgid "Rows per page"
+msgstr "Einträge pro Seite"
+
+msgid "Previous"
+msgstr "Zurück"
+
+msgid "Next"
+msgstr "Weiter"
+
+msgid "Page %1$d of %2$d"
+msgstr "Seite %1$d von %2$d"
+
+msgid "WordPress Mail via Microsoft Graph"
+msgstr "WordPress-E-Mail über Microsoft Graph"
+
+msgid "Enable Graph Mail Transport"
+msgstr "Graph-Mail-Transport aktivieren"
+
+msgid "Mail Sender Mailbox (UPN or ID)"
+msgstr "Absender-Postfach (UPN oder ID)"
+
+msgid "Save Messages in Sent Items"
+msgstr "Nachrichten im Ordner \"Gesendete Elemente\" speichern"
+
+msgid "Replace WordPress internal mail transport (`wp_mail`) with Microsoft Graph `sendMail`."
+msgstr "Internen WordPress-E-Mail-Transport (`wp_mail`) durch Microsoft Graph `sendMail` ersetzen."
+
+msgid "Mailbox identity used for Graph sendMail requests."
+msgstr "Postfach-Identität für Graph-sendMail-Anfragen."
+
+msgid "Store sent emails in the sender mailbox Sent Items folder."
+msgstr "Gesendete E-Mails im Ordner \"Gesendete Elemente\" des Absender-Postfachs speichern."
+
+msgid "Enable this to route WordPress emails sent via wp_mail() through Microsoft Graph sendMail."
+msgstr "Aktivieren, um WordPress-E-Mails, die über wp_mail() gesendet werden, über Microsoft Graph sendMail zu leiten."
+
+msgid "Required application permission: Mail.Send (grant admin consent in Azure). The sender mailbox must exist and be allowed for app-only sendMail calls."
+msgstr "Erforderliche Anwendungsberechtigung: Mail.Send (Admin-Einwilligung in Azure erteilen). Das Absender-Postfach muss vorhanden sein und sendMail-Aufrufe im Nur-App-Modus erlauben."
+
+msgid "After changing these mail transport settings, deactivate and reactivate the plugin once."
+msgstr "Nach dem Ändern dieser E-Mail-Transport-Einstellungen Plugin einmal deaktivieren und reaktivieren."
+
+msgid "When enabled, wp_mail() is short-circuited and delivered via Microsoft Graph. Disable to revert to default WordPress mail transport."
+msgstr "Wenn aktiviert, wird wp_mail() umgeleitet und über Microsoft Graph zugestellt. Deaktivieren, um zum Standard-WordPress-E-Mail-Transport zurückzukehren."
+
+msgid "Required when Graph mail transport is enabled. Use a mailbox UPN (for example no-reply@contoso.com) or user object ID."
+msgstr "Erforderlich, wenn der Graph-Mail-Transport aktiviert ist. Verwenden Sie eine Postfach-UPN (z. B. no-reply@contoso.com) oder eine Benutzerobjekt-ID."
