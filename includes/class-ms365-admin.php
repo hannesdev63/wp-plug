@@ -649,12 +649,13 @@ class WP_MS365_Admin {
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
 		$tabs = array(
-			'dashboard'  => __( 'Dashboard', 'wp-ms365-graph' ),
-			'settings'   => __( 'Settings', 'wp-ms365-graph' ),
-			'documentation' => __( 'Documentation', 'wp-ms365-graph' ),
-			'sp-explorer'=> __( 'SP Explorer', 'wp-ms365-graph' ),
-			'wording'    => __( 'Wording', 'wp-ms365-graph' ),
-			'diagnostics'=> __( 'Diagnostics', 'wp-ms365-graph' ),
+			'dashboard'    => __( 'Dashboard', 'wp-ms365-graph' ),
+			'access-stats' => __( 'Access Statistics', 'wp-ms365-graph' ),
+			'settings'     => __( 'Settings', 'wp-ms365-graph' ),
+			'documentation'=> __( 'Documentation', 'wp-ms365-graph' ),
+			'sp-explorer'  => __( 'SP Explorer', 'wp-ms365-graph' ),
+			'wording'      => __( 'Wording', 'wp-ms365-graph' ),
+			'diagnostics'  => __( 'Diagnostics', 'wp-ms365-graph' ),
 		);
 
 		if ( ! isset( $tabs[ $tab ] ) ) {
@@ -682,6 +683,9 @@ class WP_MS365_Admin {
 		echo '</h2>';
 
 		switch ( $tab ) {
+			case 'access-stats':
+				$this->render_access_stats();
+				break;
 			case 'settings':
 				$this->render_page();
 				break;
@@ -747,6 +751,16 @@ class WP_MS365_Admin {
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/diagnostics.php';
+	}
+
+	/**
+	 * Render the unified access statistics page.
+	 */
+	public function render_access_stats() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		include WP_MS365_PLUGIN_DIR . 'admin/views/access-stats.php';
 	}
 
 	/**

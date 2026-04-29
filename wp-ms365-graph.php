@@ -64,6 +64,9 @@ function wp_ms365_graph_init() {
 	// Login logging (successful and failed attempts + admin page).
 	new WP_MS365_Login_Logs();
 
+	// WordPress content access tracking for the Access Statistics page.
+	new WP_MS365_WP_Access_Stats();
+
 	// Handle OAuth callback redirect from Microsoft.
 	WP_MS365_Auth::maybe_handle_callback();
 }
@@ -129,6 +132,8 @@ function wp_ms365_graph_activate() {
 	add_option( 'wp_ms365_settings', $defaults );
 	WP_MS365_Login_Logs::create_table();
 	WP_MS365_Login_Logs::schedule_cleanup();
+	WP_MS365_WP_Access_Stats::create_table();
+	WP_MS365_WP_Access_Stats::schedule_cleanup();
 }
 register_activation_hook( __FILE__, 'wp_ms365_graph_activate' );
 
@@ -138,5 +143,6 @@ register_activation_hook( __FILE__, 'wp_ms365_graph_activate' );
 function wp_ms365_graph_deactivate() {
 	delete_transient( 'wp_ms365_access_token' );
 	WP_MS365_Login_Logs::unschedule_cleanup();
+	WP_MS365_WP_Access_Stats::unschedule_cleanup();
 }
 register_deactivation_hook( __FILE__, 'wp_ms365_graph_deactivate' );
