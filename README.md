@@ -387,6 +387,187 @@ wp-ms365-graph/
 
 ---
 
+## Shortcode Render Templates
+
+> **Settings location:** WordPress Admin → WP MS365 Graph → *Translations* tab → **Shortcode Render Templates** section.
+
+Each of the four data shortcodes supports an optional HTML template that replaces the built-in rendered output. Templates are stored in the plugin settings and use a simple `{{key}}` placeholder syntax – no PHP is executed.
+
+### Enabling a template
+
+1. Tick the **Enable custom template** checkbox for the shortcode you want to customise.
+2. Enter your HTML in the **Template** textarea.
+3. Save settings.
+
+When the checkbox is unchecked, or when the textarea is empty, the shortcode falls back to its built-in rendering.
+
+### Placeholder syntax
+
+| Syntax | Escaping | Use for |
+|--------|----------|---------|
+| `{{key}}` | `esc_html()` | Plain-text values (titles, counts, flags) |
+| `{{{key}}}` | `wp_kses_post()` | Safe HTML markup (e.g. the built-in rendered output) |
+| `{{#items}}...{{/items}}` | — | Iterate over every item in the list |
+
+Both forms are case-insensitive after `sanitize_key()` normalisation. Unknown keys are silently replaced with an empty string.
+
+Inside a `{{#items}}...{{/items}}` block the per-item fields listed in the tables below are available as regular `{{key}}` or `{{{key}}}` placeholders.
+
+### Per-shortcode placeholder reference
+
+#### `[msgraph_calendar]`
+
+Outer context:
+
+| Placeholder | Type | Description |
+|-------------|------|-------------|
+| `{{shortcode}}` | string | Always `calendar` |
+| `{{{content}}}` | HTML | Full built-in rendered output |
+| `{{title}}` | string | Value of the `title` shortcode attribute |
+| `{{item_count}}` | int | Number of calendar events returned |
+| `{{active_column_count}}` | int | Number of visible table columns |
+| `{{show_headers}}` | `true`/`false` | Whether column headers are displayed |
+
+Per-item fields inside `{{#items}}...{{/items}}`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `{{subject}}` | string | Event title / subject |
+| `{{date}}` | string | Formatted start date/time |
+| `{{duration}}` | string | Duration or start–end range (depends on `duration_display` attribute) |
+| `{{location}}` | string | Location display name |
+| `{{description}}` | string | Plain-text body preview |
+| `{{is_all_day}}` | `true`/`false` | Whether the event is all-day |
+| `{{categories}}` | string | Comma-separated category list |
+| `{{start_raw}}` | string | Raw Graph API start datetime string |
+| `{{end_raw}}` | string | Raw Graph API end datetime string |
+
+#### `[msgraph_files]`
+
+Outer context:
+
+| Placeholder | Type | Description |
+|-------------|------|-------------|
+| `{{shortcode}}` | string | Always `files` |
+| `{{{content}}}` | HTML | Full built-in rendered output |
+| `{{title}}` | string | Value of the `title` shortcode attribute |
+| `{{item_count}}` | int | Number of file items returned |
+| `{{show_headers}}` | `true`/`false` | Whether column headers are displayed |
+
+Per-item fields inside `{{#items}}...{{/items}}`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `{{name}}` | string | File name |
+| `{{size}}` | string | Formatted file size (e.g. `1.2 MB`) |
+| `{{modified}}` | string | Formatted last-modified date |
+| `{{download_url}}` | string | Plugin-proxied download URL |
+| `{{item_id}}` | string | Raw Graph item ID |
+
+#### `[msgraph_sharepoint_library]`
+
+Outer context:
+
+| Placeholder | Type | Description |
+|-------------|------|-------------|
+| `{{shortcode}}` | string | Always `sharepoint` |
+| `{{{content}}}` | HTML | Full built-in rendered output |
+| `{{title}}` | string | Value of the `title` shortcode attribute |
+| `{{item_count}}` | int | Number of library items returned |
+| `{{show_headers}}` | `true`/`false` | Whether column headers are displayed |
+| `{{site_id}}` | string | SharePoint site ID used for the query |
+| `{{drive_id}}` | string | Drive/library ID used for the query |
+
+Per-item fields inside `{{#items}}...{{/items}}`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `{{name}}` | string | File name |
+| `{{size}}` | string | Formatted file size |
+| `{{modified}}` | string | Formatted last-modified date |
+| `{{download_url}}` | string | Plugin-proxied SharePoint download URL |
+| `{{item_id}}` | string | Raw Graph item ID |
+
+#### `[msgraph_teams_message_form]`
+
+| Placeholder | Type | Description |
+|-------------|------|-------------|
+| `{{shortcode}}` | string | Always `teams_form` |
+| `{{{content}}}` | HTML | Full built-in rendered output |
+| `{{title}}` | string | Value of the `title` shortcode attribute |
+| `{{endpoint_url}}` | string | Resolved REST endpoint URL |
+| `{{use_adaptive_card}}` | `true`/`false` | Whether the adaptive card format is active |
+
+### Example templates
+
+**Calendar – custom event list:**
+
+```html
+<div class="my-calendar">
+    <h2>{{title}}</h2>
+    <ul>
+        {{#items}}
+        <li>
+            <strong>{{subject}}</strong> — {{date}}
+            <span class="location">{{location}}</span>
+        </li>
+        {{/items}}
+    </ul>
+</div>
+```
+
+**Files – download links:**
+
+```html
+<div class="my-files">
+    <h2>{{title}}</h2>
+    <ul>
+        {{#items}}
+        <li><a href="{{download_url}}">{{name}}</a> ({{size}}, {{modified}})</li>
+        {{/items}}
+    </ul>
+</div>
+```
+
+**Wrap built-in output:**
+
+```html
+<section class="my-wrapper">
+    <h2>{{title}}</h2>
+    <p>Showing {{item_count}} items.</p>
+    {{{content}}}
+</section>
+```
+
+### PHP-level override filter
+
+For more advanced use-cases (e.g. conditional logic, data injection), a WordPress filter fires after template rendering:
+
+```php
+add_filter(
+    'wp_ms365_shortcode_custom_render',
+    function ( string $output, string $scope, array $context, string $default_html ): string {
+        if ( 'calendar' === $scope ) {
+            // $output is the template result (or default_html if template is disabled/empty)
+            // $default_html is always the original built-in rendered HTML
+            return '<div class="overridden">' . $output . '</div>';
+        }
+        return $output;
+    },
+    10,
+    4
+);
+```
+
+### Security notes
+
+- Templates are stored after passing through `wp_kses_post()` and are limited to 20 000 characters.
+- `{{key}}` output is run through `esc_html()` – safe for all text content.
+- `{{{key}}}` output is run through `wp_kses_post()` – safe HTML; `<script>` and `<style>` blocks are stripped.
+- No PHP evaluation occurs; the template engine is a pure string-substitution pass.
+
+---
+
 ## License
 
 GPL-2.0-or-later – see [LICENSE](LICENSE).

@@ -410,6 +410,36 @@ class WP_MS365_Admin {
 			'wp_ms365_wording_signin',
 			array( 'key' => 'sso_signin_button_image', 'label' => __( 'Entra Sign-In Button Image', 'wp-ms365-graph' ) )
 		);
+
+		add_settings_section(
+			'wp_ms365_wording_render_templates',
+			__( 'Shortcode Render Templates', 'wp-ms365-graph' ),
+			array( $this, 'section_wording_render_templates_intro' ),
+			'wp-ms365-wording'
+		);
+
+		$render_template_fields = array(
+			'shortcode_render_calendar_enabled'   => array( 'label' => __( 'Enable custom template: Calendar', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
+			'shortcode_render_calendar_template'  => array( 'label' => __( 'Calendar template', 'wp-ms365-graph' ), 'type' => 'text' ),
+			'shortcode_render_files_enabled'      => array( 'label' => __( 'Enable custom template: OneDrive Files', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
+			'shortcode_render_files_template'     => array( 'label' => __( 'OneDrive files template', 'wp-ms365-graph' ), 'type' => 'text' ),
+			'shortcode_render_sharepoint_enabled' => array( 'label' => __( 'Enable custom template: SharePoint Library', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
+			'shortcode_render_sharepoint_template'=> array( 'label' => __( 'SharePoint library template', 'wp-ms365-graph' ), 'type' => 'text' ),
+			'shortcode_render_teams_form_enabled' => array( 'label' => __( 'Enable custom template: Teams Form', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
+			'shortcode_render_teams_form_template'=> array( 'label' => __( 'Teams form template', 'wp-ms365-graph' ), 'type' => 'text' ),
+		);
+
+		foreach ( $render_template_fields as $key => $field ) {
+			$callback = ( 'checkbox' === $field['type'] ) ? 'render_checkbox_field' : 'render_text_field';
+			add_settings_field(
+				'wp_ms365_' . $key,
+				$field['label'],
+				array( $this, $callback ),
+				'wp-ms365-wording',
+				'wp_ms365_wording_render_templates',
+				array( 'key' => $key, 'label' => $field['label'] )
+			);
+		}
 	}
 
 	/**
@@ -587,6 +617,44 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['sso_signin_button_image'] ) ) {
 			$clean['sso_signin_button_image'] = esc_url_raw( trim( (string) $input['sso_signin_button_image'] ) );
+		}
+
+		$render_toggle_keys = array(
+			'shortcode_render_calendar_enabled',
+			'shortcode_render_files_enabled',
+			'shortcode_render_sharepoint_enabled',
+			'shortcode_render_teams_form_enabled',
+		);
+
+		$render_template_keys = array(
+			'shortcode_render_calendar_template',
+			'shortcode_render_files_template',
+			'shortcode_render_sharepoint_template',
+			'shortcode_render_teams_form_template',
+		);
+
+		$has_render_payload = false;
+		foreach ( array_merge( $render_toggle_keys, $render_template_keys ) as $render_key ) {
+			if ( isset( $input[ $render_key ] ) ) {
+				$has_render_payload = true;
+				break;
+			}
+		}
+
+		if ( $has_render_payload ) {
+			foreach ( $render_toggle_keys as $toggle_key ) {
+				$clean[ $toggle_key ] = ! empty( $input[ $toggle_key ] ) ? 1 : 0;
+			}
+		}
+
+		foreach ( $render_template_keys as $template_key ) {
+			if ( ! isset( $input[ $template_key ] ) ) {
+				continue;
+			}
+
+			$template = wp_kses_post( (string) $input[ $template_key ] );
+			$template = substr( $template, 0, 20000 );
+			$clean[ $template_key ] = $template;
 		}
 
 		// Basic UUID format validation for tenant/client IDs.
@@ -1241,6 +1309,17 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Section description for custom shortcode render templates.
+	 */
+	public function section_wording_render_templates_intro() {
+		echo '<p>'
+			. esc_html__( 'Provide optional HTML templates to override shortcode output. Use {{content}} to inject the default rendered markup, and placeholders such as {{title}}, {{item_count}}, or {{shortcode}} for escaped values.', 'wp-ms365-graph' )
+			. '</p><p>'
+			. esc_html__( 'Use triple braces (for example {{{content}}}) when you intentionally want unescaped markup from built-in renderer output.', 'wp-ms365-graph' )
+			. '</p>';
+	}
+
+	/**
 	 * Render a single text/password field.
 	 *
 	 * @param array $args Field arguments.
@@ -1249,6 +1328,24 @@ class WP_MS365_Admin {
 		$settings = WP_MS365_Auth::get_settings();
 		$key      = $args['key'];
 		$value    = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+
+		if ( false !== strpos( $key, 'shortcode_render_' ) && false !== strpos( $key, '_template' ) ) {
+			printf(
+				'<textarea id="wp_ms365_%s" name="wp_ms365_settings[%s]" class="large-text code" rows="10" placeholder="&lt;div class=&quot;custom-render&quot;&gt;&#10;  &lt;h2&gt;{{title}}&lt;/h2&gt;&#10;  {{{content}}}&#10;&lt;/div&gt;">%s</textarea>',
+				esc_attr( $key ),
+				esc_attr( $key ),
+				esc_textarea( $value )
+			);
+			echo '<p class="description">'
+				. esc_html__(
+					'Optional HTML template. Use {{key}} for escaped text, {{{key}}} for safe HTML. '
+					. 'Common placeholders: {{shortcode}}, {{title}}, {{item_count}}, {{show_headers}}, {{{content}}}. '
+					. 'Iterate over list items with {{#items}}...{{/items}}; inside the loop use e.g. {{subject}}, {{date}}, {{location}} (calendar) or {{name}}, {{size}}, {{modified}}, {{download_url}} (files/SharePoint).',
+					'wp-ms365-graph'
+				)
+				. '</p>';
+			return;
+		}
 
 		if ( 'custom_css' === $key ) {
 			printf(

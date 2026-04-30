@@ -633,6 +633,36 @@ class WP_MS365_Shortcodes {
 			set_transient( $calendar_cache_key, $items, $this->get_shortcode_cache_ttl() );
 		}
 
+		// Build per-item context for custom templates.
+		$template_items = array();
+		foreach ( $items as $event ) {
+			$ev_subject  = isset( $event['subject'] ) ? (string) $event['subject'] : '';
+			$ev_tz       = isset( $event['start']['timeZone'] ) ? (string) $event['start']['timeZone'] : (string) $atts['timezone'];
+			$ev_start    = isset( $event['start']['dateTime'] ) ? (string) $event['start']['dateTime'] : '';
+			$ev_end      = isset( $event['end']['dateTime'] ) ? (string) $event['end']['dateTime'] : '';
+			$ev_location = isset( $event['location']['displayName'] ) ? (string) $event['location']['displayName'] : '';
+			$ev_desc     = $this->get_event_description_for_display( $event );
+			$ev_all_day  = ! empty( $event['isAllDay'] );
+			$ev_date_display = $ev_start ? $this->format_event_datetime_for_display( $ev_start, $ev_tz, $ev_all_day ) : '';
+			$ev_duration     = 'start_end' === $duration_display_mode
+				? $this->format_event_time_range_for_display( $ev_start, $ev_end, $ev_tz, $ev_all_day, $all_day_label )
+				: $this->format_event_duration_for_display( $ev_start, $ev_end, $ev_all_day, $ev_tz );
+			$ev_categories   = isset( $event['categories'] ) && is_array( $event['categories'] )
+				? implode( ', ', $event['categories'] )
+				: '';
+			$template_items[] = array(
+				'subject'     => $ev_subject,
+				'date'        => $ev_date_display,
+				'duration'    => $ev_duration,
+				'location'    => $ev_location,
+				'description' => $ev_desc,
+				'is_all_day'  => $ev_all_day ? 'true' : 'false',
+				'start_raw'   => $ev_start,
+				'end_raw'     => $ev_end,
+				'categories'  => $ev_categories,
+			);
+		}
+
 		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $calendar_wrap_class ); ?>">
@@ -787,7 +817,17 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 		</div>
 		<?php
-		return ob_get_clean();
+		$default_html = ob_get_clean();
+		return $this->maybe_render_custom_template(
+			'calendar',
+			$default_html,
+			array(
+				'title'               => (string) $atts['title'],
+				'item_count'          => count( $items ),
+				'active_column_count' => count( $active_columns ),
+				'show_headers'        => $show_headers,
+			)
+		);
 	}
 
 	/**
@@ -1163,7 +1203,17 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 		</div>
 		<?php
-		return ob_get_clean();
+		$default_html = ob_get_clean();
+		return $this->maybe_render_custom_template(
+			'files',
+			$default_html,
+			array(
+				'title'        => (string) $atts['title'],
+				'item_count'   => count( $items ),
+				'show_headers' => $show_headers,
+				'items'        => $template_items,
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -1257,6 +1307,59 @@ class WP_MS365_Shortcodes {
 			set_transient( $sp_files_cache_key, $items, $this->get_shortcode_cache_ttl() );
 		}
 
+		// Build per-item context for custom templates.
+		$template_items = array();
+		foreach ( $items as $item ) {
+			$fi_name     = isset( $item['name'] ) ? (string) $item['name'] : '';
+			$fi_size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
+			$fi_modified = isset( $item['lastModifiedDateTime'] )
+				? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
+				: '';
+			$fi_url = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
+				? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
+				: '';
+			$template_items[] = array(
+				'name'         => $fi_name,
+				'size'         => $fi_size,
+				'modified'     => $fi_modified,
+				'download_url' => $fi_url,
+				'item_id'      => isset( $item['id'] ) ? (string) $item['id'] : '',
+			);
+		}
+
+		// Build per-item context for custom templates.
+		$template_items = array();
+		foreach ( $items as $item ) {
+			$sp_name     = isset( $item['name'] ) ? (string) $item['name'] : '';
+			$sp_size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
+			$sp_modified = isset( $item['lastModifiedDateTime'] )
+				? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
+				: '';
+			$sp_url = '';
+			if ( isset( $item['id'] ) && '' !== (string) $item['id'] ) {
+				$sp_url = add_query_arg(
+					'ms365_sp_download',
+					$this->encode_local_token_param(
+						wp_json_encode(
+							array(
+								'site_id'  => $site_id,
+								'drive_id' => $drive_id,
+								'item_id'  => (string) $item['id'],
+							)
+						)
+					),
+					home_url( '/' )
+				);
+			}
+			$template_items[] = array(
+				'name'         => $sp_name,
+				'size'         => $sp_size,
+				'modified'     => $sp_modified,
+				'download_url' => $sp_url,
+				'item_id'      => isset( $item['id'] ) ? (string) $item['id'] : '',
+			);
+		}
+
 		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $sp_wrap_class ); ?>">
@@ -1321,7 +1424,19 @@ class WP_MS365_Shortcodes {
 			<?php endif; ?>
 		</div>
 		<?php
-		return ob_get_clean();
+		$default_html = ob_get_clean();
+		return $this->maybe_render_custom_template(
+			'sharepoint',
+			$default_html,
+			array(
+				'title'        => (string) $atts['title'],
+				'item_count'   => count( $items ),
+				'show_headers' => $show_headers,
+				'site_id'      => $site_id,
+				'drive_id'     => $drive_id,
+				'items'        => $template_items,
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------
@@ -1505,7 +1620,16 @@ class WP_MS365_Shortcodes {
 			</form>
 		</div>
 		<?php
-		return ob_get_clean();
+		$default_html = ob_get_clean();
+		return $this->maybe_render_custom_template(
+			'teams_form',
+			$default_html,
+			array(
+				'title'           => (string) $atts['title'],
+				'endpoint_url'    => $endpoint_url,
+				'use_adaptive_card' => $adaptive_mode,
+			)
+		);
 	}
 
 	/**
@@ -2007,6 +2131,137 @@ class WP_MS365_Shortcodes {
 	// ------------------------------------------------------------------
 	// Utility
 	// ------------------------------------------------------------------
+
+	/**
+	 * Apply optional custom template rendering for a shortcode output.
+	 *
+	 * @param  string $scope        Template scope key.
+	 * @param  string $default_html Default rendered HTML.
+	 * @param  array  $context      Placeholder context values.
+	 * @return string
+	 */
+	private function maybe_render_custom_template( $scope, $default_html, array $context = array() ) {
+		$scope        = sanitize_key( (string) $scope );
+		$default_html = (string) $default_html;
+		$output       = $default_html;
+
+		if ( '' !== $scope ) {
+			$settings     = WP_MS365_Auth::get_settings();
+			$enabled_key  = 'shortcode_render_' . $scope . '_enabled';
+			$template_key = 'shortcode_render_' . $scope . '_template';
+			$enabled      = ! empty( $settings[ $enabled_key ] );
+			$template     = isset( $settings[ $template_key ] ) ? (string) $settings[ $template_key ] : '';
+
+			if ( $enabled && '' !== trim( $template ) ) {
+				$template_context = array_merge(
+					array(
+						'shortcode' => $scope,
+						'content'   => $default_html,
+					),
+					$context
+				);
+
+				$candidate = $this->render_snippet_template( $template, $template_context );
+				if ( '' !== trim( $candidate ) ) {
+					$output = $candidate;
+				}
+			}
+		}
+
+		$filtered = apply_filters( 'wp_ms365_shortcode_custom_render', $output, $scope, $context, $default_html );
+		return is_string( $filtered ) ? $filtered : $output;
+	}
+
+	/**
+	 * Render a snippet template by replacing placeholder keys.
+	 *
+	 * Supported placeholder forms:
+	 * - {{key}} for escaped output.
+	 * - {{{key}}} for markup-safe output.
+	 *
+	 * @param  string $template Template source.
+	 * @param  array  $context  Placeholder context map.
+	 * @return string
+	 */
+	private function render_snippet_template( $template, array $context ) {
+		$template = (string) $template;
+
+		// First pre-pass: handle loop blocks {{#key}}...{{/key}}.
+		// Each iteration renders the inner template with the item's own fields as context.
+		$template = preg_replace_callback(
+			'/\{\{#\s*([a-zA-Z0-9_\-]+)\s*\}\}(.*?)\{\{\/\s*\1\s*\}\}/s',
+			function ( $matches ) use ( $context ) {
+				$key   = isset( $matches[1] ) ? sanitize_key( (string) $matches[1] ) : '';
+				$inner = isset( $matches[2] ) ? (string) $matches[2] : '';
+				if ( '' === $key || ! isset( $context[ $key ] ) || ! is_array( $context[ $key ] ) ) {
+					return '';
+				}
+				$output = '';
+				foreach ( $context[ $key ] as $item ) {
+					if ( is_array( $item ) ) {
+						$output .= $this->render_snippet_template( $inner, $item );
+					}
+				}
+				return $output;
+			},
+			$template
+		);
+
+		$template = preg_replace_callback(
+			'/\{\{\{\s*([a-zA-Z0-9_\-]+)\s*\}\}\}/',
+			function ( $matches ) use ( $context ) {
+				$key = isset( $matches[1] ) ? sanitize_key( (string) $matches[1] ) : '';
+				if ( '' === $key ) {
+					return '';
+				}
+
+				$value = $this->get_snippet_context_value( $context, $key );
+				return wp_kses_post( $value );
+			},
+			$template
+		);
+
+		$template = preg_replace_callback(
+			'/\{\{\s*([a-zA-Z0-9_\-]+)\s*\}\}/',
+			function ( $matches ) use ( $context ) {
+				$key = isset( $matches[1] ) ? sanitize_key( (string) $matches[1] ) : '';
+				if ( '' === $key ) {
+					return '';
+				}
+
+				$value = $this->get_snippet_context_value( $context, $key );
+				return esc_html( $value );
+			},
+			$template
+		);
+
+		return $template;
+	}
+
+	/**
+	 * Normalize context values used by snippet placeholders.
+	 *
+	 * @param  array  $context Placeholder context map.
+	 * @param  string $key     Placeholder key.
+	 * @return string
+	 */
+	private function get_snippet_context_value( array $context, $key ) {
+		if ( ! array_key_exists( $key, $context ) ) {
+			return '';
+		}
+
+		$value = $context[ $key ];
+
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_scalar( $value ) || null === $value ) {
+			return (string) $value;
+		}
+
+		return (string) wp_json_encode( $value );
+	}
 
 	/**
 	 * Return a "not connected" notice HTML string.

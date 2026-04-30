@@ -1,0 +1,36 @@
+  PASS: Missing key returns empty string
+  PASS: Boolean true returns "true"
+  PASS: Boolean false returns "false"
+  PASS: Integer scalar cast to string
+  PASS: Float scalar cast to string
+  PASS: Null cast to empty string
+  PASS: String value returned as-is
+  PASS: Array encoded via wp_json_encode
+  PASS: Object encoded via wp_json_encode
+  PASS: Basic double-brace substitution
+  PASS: HTML in context value is esc_html escaped for {{}}
+  PASS: Raw <b> not present after {{}} escaping
+  PASS: Script tag in context value escaped by {{}}
+  PASS: Missing key replaced with empty string
+  PASS: Multiple double-brace placeholders
+  PASS: Whitespace inside double-braces is trimmed
+  PASS: Triple-brace passes safe HTML through wp_kses_post
+  PASS: Script tag stripped by wp_kses_post in {{{  }}}
+  PASS: Safe HTML remains after script strip in {{{  }}}
+  PASS: Triple-brace allows <em> tag through wp_kses_post
+  PASS: Missing key in triple-brace replaced with empty
+  PASS: Mixed: triple-brace allows markup
+  PASS: Mixed: double-brace escapes markup
+  PASS: Mixed: double-brace output is HTML-encoded
+  PASS: Disabled toggle: falls back to default_html
+  PASS: Enabled but empty template: falls back to default_html
+  PASS: Whitespace-only template renders default
+  PASS: Enabled valid template: template output returned
+  PASS: {{{content}}} auto-injects default_html
+  PASS: {{shortcode}} auto-injected as scope key
+  PASS: Unknown scope: returns default_html
+  PASS: Filter override replaces output
+  PASS: Filter returning null falls back to $output
+  PASS: Triple-brace: script in context stripped by wp_kses_post
+  FAIL: Inline event handler in context value escaped by esc_html
+Results: 34 passed, 1 failed.

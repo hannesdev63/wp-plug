@@ -420,7 +420,7 @@ class WP_MS365_WP_Access_Stats {
 				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
 					AND content_group = %s
 				 GROUP BY stat_date
-				 ORDER BY stat_date ASC",
+				 ORDER BY stat_date DESC",
 				$days,
 				$content_group
 			);
@@ -431,7 +431,7 @@ class WP_MS365_WP_Access_Stats {
 				 FROM {$table}
 				 WHERE stat_date >= DATE_SUB(CURDATE(), INTERVAL %d DAY)
 				 GROUP BY stat_date
-				 ORDER BY stat_date ASC",
+				 ORDER BY stat_date DESC",
 				$days
 			);
 		}
