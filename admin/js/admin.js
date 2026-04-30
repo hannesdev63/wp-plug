@@ -63,4 +63,65 @@
 		$btn.hide();
 	} );
 
+	// ------------------------------------------------------------------
+	// Custom template toggle: pre-fill textarea on first activation.
+	//
+	// Rules:
+	//  - Uncheck  → leave textarea content untouched.
+	//  - Check, textarea already has content → leave it untouched.
+	//  - Check, textarea is empty (first activation) → insert a starter
+	//    template so the user has a working starting point.
+	// ------------------------------------------------------------------
+	var templateStarters = {
+		shortcode_render_calendar_enabled: [
+			'<div class="ms365-calendar-wrapper">',
+			'  <h2>{{title}}</h2>',
+			'  {{{content}}}',
+			'</div>',
+		].join( '\n' ),
+
+		shortcode_render_files_enabled: [
+			'<div class="ms365-files-wrapper">',
+			'  <h2>{{title}}</h2>',
+			'  {{{content}}}',
+			'</div>',
+		].join( '\n' ),
+
+		shortcode_render_sharepoint_enabled: [
+			'<div class="ms365-sharepoint-wrapper">',
+			'  <h2>{{title}}</h2>',
+			'  {{{content}}}',
+			'</div>',
+		].join( '\n' ),
+
+		shortcode_render_teams_form_enabled: [
+			'<div class="ms365-teams-form-wrapper">',
+			'  <h2>{{title}}</h2>',
+			'  {{{content}}}',
+			'</div>',
+		].join( '\n' ),
+	};
+
+	$.each( templateStarters, function ( enabledKey, starter ) {
+		var templateKey = enabledKey.replace( '_enabled', '_template' );
+		var $checkbox   = $( '#wp_ms365_' + enabledKey );
+		var $textarea   = $( '#wp_ms365_' + templateKey );
+
+		if ( ! $checkbox.length || ! $textarea.length ) {
+			return;
+		}
+
+		$checkbox.on( 'change', function () {
+			if ( ! this.checked ) {
+				// Unchecking: leave template content as-is.
+				return;
+			}
+			if ( $textarea.val().trim() === '' ) {
+				// First activation and no existing template: seed with starter.
+				$textarea.val( starter );
+			}
+			// Existing template: leave it as-is.
+		} );
+	} );
+
 } )( jQuery );

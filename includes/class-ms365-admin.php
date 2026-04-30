@@ -1336,14 +1336,39 @@ class WP_MS365_Admin {
 				esc_attr( $key ),
 				esc_textarea( $value )
 			);
-			echo '<p class="description">'
-				. esc_html__(
-					'Optional HTML template. Use {{key}} for escaped text, {{{key}}} for safe HTML. '
-					. 'Common placeholders: {{shortcode}}, {{title}}, {{item_count}}, {{show_headers}}, {{{content}}}. '
-					. 'Iterate over list items with {{#items}}...{{/items}}; inside the loop use e.g. {{subject}}, {{date}}, {{location}} (calendar) or {{name}}, {{size}}, {{modified}}, {{download_url}} (files/SharePoint).',
-					'wp-ms365-graph'
-				)
-				. '</p>';
+
+			$template_descriptions = array(
+				'shortcode_render_calendar_template'  => array(
+					/* translators: description for the calendar custom-template textarea */
+					__( 'HTML template for [msgraph_calendar]. Outer placeholders: {{title}}, {{item_count}}, {{active_column_count}}, {{show_headers}}, {{{content}}}, {{shortcode}}.', 'wp-ms365-graph' ),
+					/* translators: per-item loop fields list for the calendar template */
+					__( 'Per-event fields inside {{#items}}…{{/items}}: {{subject}}, {{date}}, {{duration}}, {{location}}, {{description}}, {{is_all_day}}, {{categories}}, {{start_raw}}, {{end_raw}}.', 'wp-ms365-graph' ),
+				),
+				'shortcode_render_files_template'     => array(
+					/* translators: description for the OneDrive files custom-template textarea */
+					__( 'HTML template for [msgraph_files]. Outer placeholders: {{title}}, {{item_count}}, {{show_headers}}, {{{content}}}, {{shortcode}}.', 'wp-ms365-graph' ),
+					/* translators: per-item loop fields list for the files template */
+					__( 'Per-file fields inside {{#items}}…{{/items}}: {{name}}, {{size}}, {{modified}}, {{download_url}}, {{item_id}}.', 'wp-ms365-graph' ),
+				),
+				'shortcode_render_sharepoint_template' => array(
+					/* translators: description for the SharePoint library custom-template textarea */
+					__( 'HTML template for [msgraph_sharepoint_library]. Outer placeholders: {{title}}, {{item_count}}, {{show_headers}}, {{site_id}}, {{drive_id}}, {{{content}}}, {{shortcode}}.', 'wp-ms365-graph' ),
+					/* translators: per-item loop fields list for the SharePoint template */
+					__( 'Per-file fields inside {{#items}}…{{/items}}: {{name}}, {{size}}, {{modified}}, {{download_url}}, {{item_id}}.', 'wp-ms365-graph' ),
+				),
+				'shortcode_render_teams_form_template' => array(
+					/* translators: description for the Teams form custom-template textarea */
+					__( 'HTML template for [msgraph_teams_message_form]. Outer placeholders: {{title}}, {{endpoint_url}}, {{use_adaptive_card}}, {{{content}}}, {{shortcode}}.', 'wp-ms365-graph' ),
+					/* translators: reminder about syntax for the Teams form template */
+					__( 'Use {{key}} for escaped text and {{{key}}} for safe HTML. The form itself is always injected via {{{content}}}.', 'wp-ms365-graph' ),
+				),
+			);
+
+			$lines = isset( $template_descriptions[ $key ] ) ? $template_descriptions[ $key ] : array(
+				__( 'Optional HTML template. Use {{key}} for escaped text and {{{key}}} for safe HTML.', 'wp-ms365-graph' ),
+			);
+
+			echo '<p class="description">' . implode( '<br>', array_map( 'esc_html', $lines ) ) . '</p>';
 			return;
 		}
 
