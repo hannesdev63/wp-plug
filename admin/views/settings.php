@@ -16,6 +16,18 @@ $token_requested = isset( $_GET['token_requested'] ) && '1' === $_GET['token_req
 $operation       = isset( $_GET['op'] ) ? sanitize_key( wp_unslash( $_GET['op'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $op_status       = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['reason'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$import_plugin_version  = isset( $_GET['import_plugin_version'] ) ? sanitize_text_field( wp_unslash( $_GET['import_plugin_version'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$current_plugin_version = isset( $_GET['current_plugin_version'] ) ? sanitize_text_field( wp_unslash( $_GET['current_plugin_version'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$imported_categories    = isset( $_GET['imported_categories'] ) ? sanitize_text_field( wp_unslash( $_GET['imported_categories'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+$_import_category_labels = array(
+	'azure_app' => __( 'Azure App Registration', 'wp-ms365-graph' ),
+	'mail'      => __( 'Mail settings', 'wp-ms365-graph' ),
+	'teams'     => __( 'Teams settings', 'wp-ms365-graph' ),
+	'sso'       => __( 'Sign-in / SSO', 'wp-ms365-graph' ),
+	'wording'   => __( 'Wording &amp; Custom CSS', 'wp-ms365-graph' ),
+	'templates' => __( 'Shortcode render templates', 'wp-ms365-graph' ),
+);
 ?>
 <div class="wrap msgraph_settings">
 	<h1 class="msgraph_settings__heading">
@@ -32,6 +44,39 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<?php if ( 'success' === $op_status && 'import' === $operation ) : ?>
 		<div class="notice notice-success is-dismissible">
 			<p><?php esc_html_e( 'Settings import completed successfully.', 'wp-ms365-graph' ); ?></p>
+			<?php if ( '' !== $imported_categories ) : ?>
+				<p>
+					<?php
+					$_cat_parts  = array_filter( explode( ',', $imported_categories ) );
+					$_cat_names  = array();
+					foreach ( $_cat_parts as $_cat_key ) {
+						$_cat_names[] = isset( $_import_category_labels[ $_cat_key ] )
+							? $_import_category_labels[ $_cat_key ]
+							: esc_html( $_cat_key );
+					}
+					printf(
+						/* translators: %s: comma-separated list of imported category names */
+						esc_html__( 'Imported categories: %s.', 'wp-ms365-graph' ),
+						wp_kses_post( implode( ', ', $_cat_names ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+			<?php if ( '' !== $import_plugin_version || '' !== $current_plugin_version ) : ?>
+				<p>
+					<?php
+					printf(
+						/* translators: 1: imported plugin version, 2: current plugin version */
+						esc_html__( 'Import metadata: export version %1$s, current plugin version %2$s.', 'wp-ms365-graph' ),
+						esc_html( '' !== $import_plugin_version ? $import_plugin_version : __( 'unknown', 'wp-ms365-graph' ) ),
+						esc_html( '' !== $current_plugin_version ? $current_plugin_version : __( 'unknown', 'wp-ms365-graph' ) )
+					);
+					?>
+				</p>
+				<?php if ( '' !== $import_plugin_version && '' !== $current_plugin_version && $import_plugin_version !== $current_plugin_version ) : ?>
+					<p><strong><?php esc_html_e( 'Warning: the imported file was created with a different plugin version.', 'wp-ms365-graph' ); ?></strong></p>
+				<?php endif; ?>
+			<?php endif; ?>
 		</div>
 	<?php elseif ( 'error' === $op_status && 'import' === $operation ) : ?>
 		<div class="notice notice-error is-dismissible">
@@ -258,9 +303,16 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 					<label for="wp_ms365_import_password"><strong><?php esc_html_e( 'Decryption password', 'wp-ms365-graph' ); ?></strong></label><br />
 					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
 				</p>
-				<p class="description">
-					<?php esc_html_e( 'Import replaces current plugin settings and wording values.', 'wp-ms365-graph' ); ?>
-				</p>
+				<fieldset style="margin:12px 0;">
+					<legend><strong><?php esc_html_e( 'What to import', 'wp-ms365-graph' ); ?></strong></legend>
+					<p class="description" style="margin-bottom:8px;"><?php esc_html_e( 'Select the categories you want to restore. Unselected categories keep their current values.', 'wp-ms365-graph' ); ?></p>
+					<?php foreach ( $_import_category_labels as $_cat_key => $_cat_label ) : ?>
+						<label style="display:block;margin-bottom:4px;">
+							<input type="checkbox" name="import_categories[]" value="<?php echo esc_attr( $_cat_key ); ?>" checked />
+							<?php echo wp_kses_post( $_cat_label ); ?>
+						</label>
+					<?php endforeach; ?>
+				</fieldset>
 				<?php submit_button( __( 'Import Encrypted File', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
 			</form>
 		</div>

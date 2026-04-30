@@ -216,5 +216,105 @@
     }
     to {
         background-position: -200% 0;
-    }
+}
+
+/* ---------- Named templates repeater ---------- */
+.ms365-named-templates__list {
+    margin-bottom: 8px;
+}
+
+.ms365-named-templates__row {
+    border: 1px solid #dcdcde;
+    border-radius: 3px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #f9f9f9;
+}
+
+.ms365-named-templates__row-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.ms365-named-templates__row-header label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    flex: 1;
+}
+
+.ms365-named-templates__row-header label input {
+    font-weight: 400;
+}
+
+.ms365-named-templates__key-label {
+    white-space: nowrap;
+}
+
+.ms365-named-templates__remove {
+    color: #b32d2e;
+    text-decoration: none;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.ms365-named-templates__remove:hover {
+    color: #a00;
+    text-decoration: underline;
+}
+
+.ms365-named-templates__textarea {
+    display: block;
+    box-sizing: border-box;
+}
+
+.ms365-named-templates__add {
+    margin-top: 4px;
+}
+
+.ms365-named-templates__top-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.ms365-named-templates__top-controls .ms365-named-templates__add {
+    margin-top: 0;
+}
+
+.ms365-named-templates__picker-wrap {
+    margin-top: 0;
+}
+
+.ms365-named-templates__picker {
+    min-width: 320px;
+    margin-top: 4px;
+}
+
+.ms365-named-templates__picker-snippet {
+    margin-top: 6px;
+    width: 100%;
+    max-width: 640px;
+}
+
+.ms365-named-templates__save {
+    margin-top: 0 !important;
+}
+
+.ms365-named-templates__placeholder-tools {
+    margin-top: 8px;
+}
+
+.ms365-named-templates__placeholder-picker {
+    min-width: 360px;
+    margin-right: 8px;
+}
+
+.ms365-named-templates__placeholder-hint {
+    margin-top: 6px;
 }

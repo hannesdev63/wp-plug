@@ -418,26 +418,21 @@ class WP_MS365_Admin {
 			'wp-ms365-wording'
 		);
 
-		$render_template_fields = array(
-			'shortcode_render_calendar_enabled'   => array( 'label' => __( 'Enable custom template: Calendar', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
-			'shortcode_render_calendar_template'  => array( 'label' => __( 'Calendar template', 'wp-ms365-graph' ), 'type' => 'text' ),
-			'shortcode_render_files_enabled'      => array( 'label' => __( 'Enable custom template: OneDrive Files', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
-			'shortcode_render_files_template'     => array( 'label' => __( 'OneDrive files template', 'wp-ms365-graph' ), 'type' => 'text' ),
-			'shortcode_render_sharepoint_enabled' => array( 'label' => __( 'Enable custom template: SharePoint Library', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
-			'shortcode_render_sharepoint_template'=> array( 'label' => __( 'SharePoint library template', 'wp-ms365-graph' ), 'type' => 'text' ),
-			'shortcode_render_teams_form_enabled' => array( 'label' => __( 'Enable custom template: Teams Form', 'wp-ms365-graph' ), 'type' => 'checkbox' ),
-			'shortcode_render_teams_form_template'=> array( 'label' => __( 'Teams form template', 'wp-ms365-graph' ), 'type' => 'text' ),
+		$render_scopes = array(
+			'calendar'   => __( 'Calendar templates', 'wp-ms365-graph' ),
+			'files'      => __( 'OneDrive files templates', 'wp-ms365-graph' ),
+			'sharepoint' => __( 'SharePoint library templates', 'wp-ms365-graph' ),
+			'teams_form' => __( 'Teams form templates', 'wp-ms365-graph' ),
 		);
 
-		foreach ( $render_template_fields as $key => $field ) {
-			$callback = ( 'checkbox' === $field['type'] ) ? 'render_checkbox_field' : 'render_text_field';
+		foreach ( $render_scopes as $scope => $label ) {
 			add_settings_field(
-				'wp_ms365_' . $key,
-				$field['label'],
-				array( $this, $callback ),
+				'wp_ms365_shortcode_render_' . $scope . '_named_templates',
+				$label,
+				array( $this, 'render_named_templates_field' ),
 				'wp-ms365-wording',
 				'wp_ms365_wording_render_templates',
-				array( 'key' => $key, 'label' => $field['label'] )
+				array( 'scope' => $scope )
 			);
 		}
 	}
@@ -619,42 +614,32 @@ class WP_MS365_Admin {
 			$clean['sso_signin_button_image'] = esc_url_raw( trim( (string) $input['sso_signin_button_image'] ) );
 		}
 
-		$render_toggle_keys = array(
-			'shortcode_render_calendar_enabled',
-			'shortcode_render_files_enabled',
-			'shortcode_render_sharepoint_enabled',
-			'shortcode_render_teams_form_enabled',
-		);
-
-		$render_template_keys = array(
-			'shortcode_render_calendar_template',
-			'shortcode_render_files_template',
-			'shortcode_render_sharepoint_template',
-			'shortcode_render_teams_form_template',
-		);
-
-		$has_render_payload = false;
-		foreach ( array_merge( $render_toggle_keys, $render_template_keys ) as $render_key ) {
-			if ( isset( $input[ $render_key ] ) ) {
-				$has_render_payload = true;
-				break;
+		// Named templates — only process when the wording form is submitted.
+		// Wording submissions include wording fields (such as calendar_empty_text)
+		// or an explicit per-scope wording_submit button.
+		if ( isset( $input['calendar_empty_text'] ) || isset( $input['wording_submit'] ) ) {
+			foreach ( array( 'calendar', 'files', 'sharepoint', 'teams_form' ) as $scope ) {
+				$nt_key  = 'shortcode_render_' . $scope . '_named_templates';
+				$entries = array();
+				if ( isset( $input[ $nt_key ] ) && is_array( $input[ $nt_key ] ) ) {
+					foreach ( $input[ $nt_key ] as $entry ) {
+						if ( ! is_array( $entry ) ) {
+							continue;
+						}
+						$ek = sanitize_key( (string) ( isset( $entry['key'] ) ? $entry['key'] : '' ) );
+						$et = wp_kses_post( (string) ( isset( $entry['template'] ) ? $entry['template'] : '' ) );
+						$et = substr( $et, 0, 20000 );
+						if ( '' === $ek || '' === trim( $et ) ) {
+							continue;
+						}
+						if ( count( $entries ) >= 20 ) {
+							break;
+						}
+						$entries[] = array( 'key' => $ek, 'template' => $et );
+					}
+				}
+				$clean[ $nt_key ] = $entries;
 			}
-		}
-
-		if ( $has_render_payload ) {
-			foreach ( $render_toggle_keys as $toggle_key ) {
-				$clean[ $toggle_key ] = ! empty( $input[ $toggle_key ] ) ? 1 : 0;
-			}
-		}
-
-		foreach ( $render_template_keys as $template_key ) {
-			if ( ! isset( $input[ $template_key ] ) ) {
-				continue;
-			}
-
-			$template = wp_kses_post( (string) $input[ $template_key ] );
-			$template = substr( $template, 0, 20000 );
-			$clean[ $template_key ] = $template;
 		}
 
 		// Basic UUID format validation for tenant/client IDs.
@@ -1062,7 +1047,7 @@ class WP_MS365_Admin {
 			$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
 		}
 
-		ksort( $trend_map );
+		krsort( $trend_map );
 
 		return array(
 			'top_rows'  => $top_rows,
@@ -1555,6 +1540,191 @@ class WP_MS365_Admin {
 	}
 
 	/**
+	 * Render the named-templates repeater for one shortcode scope.
+	 *
+	 * @param array $args Field arguments (scope).
+	 */
+	public function render_named_templates_field( $args ) {
+		$scope    = sanitize_key( (string) $args['scope'] );
+		$settings = WP_MS365_Auth::get_settings();
+		$opt_key  = 'shortcode_render_' . $scope . '_named_templates';
+		$entries  = isset( $settings[ $opt_key ] ) && is_array( $settings[ $opt_key ] ) ? $settings[ $opt_key ] : array();
+		$placeholder_options_by_scope = array(
+			'calendar'   => array(
+				array( 'token' => '{{title}}', 'label' => __( 'Title', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{item_count}}', 'label' => __( 'Item count', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{active_column_count}}', 'label' => __( 'Active column count', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{show_headers}}', 'label' => __( 'Show headers', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{{content}}}', 'label' => __( 'Rendered content (HTML)', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{shortcode}}', 'label' => __( 'Shortcode scope', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{subject}}', 'label' => __( 'Event subject', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{date}}', 'label' => __( 'Event date', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{duration}}', 'label' => __( 'Event duration', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{location}}', 'label' => __( 'Event location', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{description}}', 'label' => __( 'Event description', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{is_all_day}}', 'label' => __( 'All-day flag', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{categories}}', 'label' => __( 'Event categories', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{start_raw}}', 'label' => __( 'Raw start datetime', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{end_raw}}', 'label' => __( 'Raw end datetime', 'wp-ms365-graph' ), 'list_only' => true ),
+			),
+			'files'      => array(
+				array( 'token' => '{{title}}', 'label' => __( 'Title', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{item_count}}', 'label' => __( 'Item count', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{show_headers}}', 'label' => __( 'Show headers', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{{content}}}', 'label' => __( 'Rendered content (HTML)', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{shortcode}}', 'label' => __( 'Shortcode scope', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{name}}', 'label' => __( 'File name', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{size}}', 'label' => __( 'File size', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{modified}}', 'label' => __( 'Last modified', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{download_url}}', 'label' => __( 'Download URL', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{item_id}}', 'label' => __( 'Item ID', 'wp-ms365-graph' ), 'list_only' => true ),
+			),
+			'sharepoint' => array(
+				array( 'token' => '{{title}}', 'label' => __( 'Title', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{item_count}}', 'label' => __( 'Item count', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{show_headers}}', 'label' => __( 'Show headers', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{site_id}}', 'label' => __( 'Site ID', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{drive_id}}', 'label' => __( 'Drive ID', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{{content}}}', 'label' => __( 'Rendered content (HTML)', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{shortcode}}', 'label' => __( 'Shortcode scope', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{name}}', 'label' => __( 'File name', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{size}}', 'label' => __( 'File size', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{modified}}', 'label' => __( 'Last modified', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{download_url}}', 'label' => __( 'Download URL', 'wp-ms365-graph' ), 'list_only' => true ),
+				array( 'token' => '{{item_id}}', 'label' => __( 'Item ID', 'wp-ms365-graph' ), 'list_only' => true ),
+			),
+			'teams_form' => array(
+				array( 'token' => '{{title}}', 'label' => __( 'Title', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{endpoint_url}}', 'label' => __( 'Endpoint URL', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{use_adaptive_card}}', 'label' => __( 'Use adaptive card', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{{content}}}', 'label' => __( 'Rendered content (HTML)', 'wp-ms365-graph' ), 'list_only' => false ),
+				array( 'token' => '{{shortcode}}', 'label' => __( 'Shortcode scope', 'wp-ms365-graph' ), 'list_only' => false ),
+			),
+		);
+		$scope_placeholder_options = isset( $placeholder_options_by_scope[ $scope ] ) ? $placeholder_options_by_scope[ $scope ] : array();
+		$placeholder_json = wp_json_encode( $scope_placeholder_options );
+		if ( ! is_string( $placeholder_json ) ) {
+			$placeholder_json = '[]';
+		}
+		$shortcode_map = array(
+			'calendar'   => 'msgraph_calendar',
+			'files'      => 'msgraph_files',
+			'sharepoint' => 'msgraph_sharepoint_library',
+			'teams_form' => 'msgraph_teams_message_form',
+		);
+		$shortcode_tag = isset( $shortcode_map[ $scope ] ) ? $shortcode_map[ $scope ] : '';
+		$max      = 20;
+		$base     = 'wp_ms365_settings[' . $opt_key . ']';
+		$tpl_raw  = '<div class="custom-render">' . "\n  " . '<h2>{{title}}</h2>' . "\n  " . '{{{content}}}' . "\n" . '</div>';
+
+		printf(
+			'<div class="ms365-named-templates" data-scope="%s" data-max="%d" data-i18n-key="%s" data-i18n-key-ph="%s" data-i18n-remove="%s" data-i18n-tpl-ph="%s" data-i18n-ph-prompt="%s" data-i18n-ph-insert="%s" data-i18n-ph-group-general="%s" data-i18n-ph-group-list="%s" data-i18n-ph-list-hint="%s" data-placeholder-options="%s">',
+			esc_attr( $scope ),
+			(int) $max,
+			esc_attr__( 'Template key', 'wp-ms365-graph' ),
+			esc_attr__( 'e.g. compact', 'wp-ms365-graph' ),
+			esc_attr__( 'Remove', 'wp-ms365-graph' ),
+			esc_attr( $tpl_raw ),
+			esc_attr__( 'Insert placeholder...', 'wp-ms365-graph' ),
+			esc_attr__( 'Insert', 'wp-ms365-graph' ),
+			esc_attr__( 'Template-level placeholders', 'wp-ms365-graph' ),
+			esc_attr__( 'Item-list placeholders (inside {{#items}})', 'wp-ms365-graph' ),
+			esc_attr__( 'List placeholders are wrapped in {{#items}}...{{/items}} when inserted outside a list block.', 'wp-ms365-graph' ),
+			esc_attr( $placeholder_json )
+		);
+
+		$disabled = count( $entries ) >= $max ? ' disabled="disabled"' : '';
+
+		if ( '' !== $shortcode_tag ) {
+			$shortcode_example = '[' . $shortcode_tag . ']';
+			if ( 'msgraph_sharepoint_library' === $shortcode_tag ) {
+				$shortcode_example = '[msgraph_sharepoint_library site_id="..." drive_id="..."]';
+			}
+			$scope_labels = array(
+				'calendar'   => __( 'Calendar', 'wp-ms365-graph' ),
+				'files'      => __( 'OneDrive Files', 'wp-ms365-graph' ),
+				'sharepoint' => __( 'SharePoint Library', 'wp-ms365-graph' ),
+				'teams_form' => __( 'Teams Form', 'wp-ms365-graph' ),
+			);
+			$scope_label = isset( $scope_labels[ $scope ] ) ? $scope_labels[ $scope ] : __( 'Shortcode', 'wp-ms365-graph' );
+
+			echo '<div class="ms365-named-templates__top-controls">';
+			printf(
+				'<button type="button" class="button ms365-named-templates__add"%s>%s</button>',
+				$disabled,
+				esc_html__( '+ Add template', 'wp-ms365-graph' )
+			);
+
+			echo '<div class="ms365-named-templates__picker-wrap">';
+			echo '<label for="ms365_template_picker_' . esc_attr( $scope ) . '"><strong>' . esc_html__( 'Template picker', 'wp-ms365-graph' ) . ':</strong></label> ';
+			echo '<select id="ms365_template_picker_' . esc_attr( $scope ) . '" class="ms365-named-templates__picker" data-shortcode-tag="' . esc_attr( $shortcode_tag ) . '">';
+			echo '<option value="">' . esc_html__( 'Built-in output (no template attribute)', 'wp-ms365-graph' ) . '</option>';
+			foreach ( $entries as $entry ) {
+				$entry_key = sanitize_key( (string) ( isset( $entry['key'] ) ? $entry['key'] : '' ) );
+				if ( '' === $entry_key ) {
+					continue;
+				}
+				echo '<option value="' . esc_attr( $entry_key ) . '">' . esc_html( $entry_key ) . '</option>';
+			}
+			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'Select a named template key to preview a ready-to-use shortcode snippet.', 'wp-ms365-graph' ) . '</p>';
+			echo '<input type="text" class="regular-text code ms365-named-templates__picker-snippet" readonly="readonly" value="' . esc_attr( $shortcode_example ) . '" data-default-snippet="' . esc_attr( $shortcode_example ) . '" />';
+			echo '</div>';
+
+			submit_button(
+				sprintf(
+					/* translators: %s: shortcode scope label, e.g. Calendar */
+					__( 'Save %s templates', 'wp-ms365-graph' ),
+					$scope_label
+				),
+				'secondary',
+				'wording_submit',
+				false,
+				array(
+					'value' => $scope,
+					'class' => 'ms365-named-templates__save',
+				)
+			);
+			echo '</div>';
+		}
+
+		echo '<div class="ms365-named-templates__list">';
+		foreach ( $entries as $i => $entry ) {
+			$ek = isset( $entry['key'] )      ? (string) $entry['key']      : '';
+			$et = isset( $entry['template'] ) ? (string) $entry['template'] : '';
+			$i  = (int) $i;
+			?>
+			<div class="ms365-named-templates__row">
+				<div class="ms365-named-templates__row-header">
+					<label><?php esc_html_e( 'Template key:', 'wp-ms365-graph' ); ?>
+						<input type="text"
+							name="<?php echo esc_attr( $base . '[' . $i . '][key]' ); ?>"
+							value="<?php echo esc_attr( $ek ); ?>"
+							placeholder="<?php esc_attr_e( 'e.g. compact', 'wp-ms365-graph' ); ?>"
+							class="regular-text"
+						/>
+					</label>
+					<button type="button" class="button-link ms365-named-templates__remove"><?php esc_html_e( 'Remove', 'wp-ms365-graph' ); ?></button>
+				</div>
+				<textarea
+					name="<?php echo esc_attr( $base . '[' . $i . '][template]' ); ?>"
+					class="large-text code ms365-named-templates__textarea"
+					rows="8"
+					placeholder="&lt;div class=&quot;custom-render&quot;&gt;&#10;  &lt;h2&gt;{{title}}&lt;/h2&gt;&#10;  {{{content}}}&#10;&lt;/div&gt;"
+				><?php echo esc_textarea( $et ); ?></textarea>
+			</div>
+			<?php
+		}
+		echo '</div>';
+
+		echo '<p class="description">'
+			. esc_html__( 'Each named template is selected with the template="key" shortcode attribute, e.g. [msgraph_calendar template="compact"]. Keys must be lowercase letters, numbers, hyphens, or underscores. If no template attribute is given (or the key is missing), the shortcode uses the built-in output.', 'wp-ms365-graph' )
+			. '</p>';
+
+		echo '</div>';
+	}
+
+	/**
 	 * Render a select/dropdown setting field.
 	 *
 	 * @param array $args Field arguments (key, options).
@@ -1747,7 +1917,17 @@ class WP_MS365_Admin {
 		}
 
 		$settings = WP_MS365_Auth::get_settings();
-		$payload  = $this->encrypt_settings_blob( $settings, $password );
+		$payload  = $this->encrypt_settings_blob(
+			array(
+				'plugin_version'    => WP_MS365_VERSION,
+				'configurable_data' => array(
+					'wp_ms365_settings' => $settings,
+				),
+				// Backward-compatible alias consumed by older import logic.
+				'settings'          => $settings,
+			),
+			$password
+		);
 
 		if ( is_wp_error( $payload ) ) {
 			$this->redirect_to_settings_with_import_export_notice( 'export', 'error', 'encryption_failed' );
@@ -1804,15 +1984,112 @@ class WP_MS365_Admin {
 			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'invalid_file' );
 		}
 
-		$decrypted_settings = $this->decrypt_settings_blob( (string) $encrypted_blob, $password );
-		if ( is_wp_error( $decrypted_settings ) || ! is_array( $decrypted_settings ) ) {
+		$decrypted_payload = $this->decrypt_settings_blob( (string) $encrypted_blob, $password );
+		if ( is_wp_error( $decrypted_payload ) || ! is_array( $decrypted_payload ) ) {
 			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'decrypt_failed' );
 		}
 
-		$clean = $this->sanitize_settings( $decrypted_settings );
+		$import_settings = array();
+		if (
+			isset( $decrypted_payload['configurable_data'] )
+			&& is_array( $decrypted_payload['configurable_data'] )
+			&& isset( $decrypted_payload['configurable_data']['wp_ms365_settings'] )
+			&& is_array( $decrypted_payload['configurable_data']['wp_ms365_settings'] )
+		) {
+			$import_settings = $decrypted_payload['configurable_data']['wp_ms365_settings'];
+		} elseif ( isset( $decrypted_payload['settings'] ) && is_array( $decrypted_payload['settings'] ) ) {
+			// Backward compatibility with older exports.
+			$import_settings = $decrypted_payload['settings'];
+		}
+
+		if ( empty( $import_settings ) ) {
+			$this->redirect_to_settings_with_import_export_notice( 'import', 'error', 'invalid_content' );
+		}
+
+		// Determine which categories the admin chose to import.
+		$raw_cats       = isset( $_POST['import_categories'] ) && is_array( $_POST['import_categories'] )
+			? array_map( 'sanitize_key', (array) wp_unslash( $_POST['import_categories'] ) )
+			: array_keys( self::get_import_categories() );
+		$all_categories = self::get_import_categories();
+		$selected_cats  = array_intersect( $raw_cats, array_keys( $all_categories ) );
+
+		// Start from current saved settings and overwrite only selected-category keys.
+		$current_settings = WP_MS365_Auth::get_settings();
+		$sanitized_import = $this->sanitize_settings( $import_settings );
+
+		foreach ( $selected_cats as $cat ) {
+			foreach ( $all_categories[ $cat ] as $key ) {
+				if ( array_key_exists( $key, $sanitized_import ) ) {
+					$current_settings[ $key ] = $sanitized_import[ $key ];
+				}
+			}
+		}
+
+		$clean = $this->sanitize_settings( $current_settings );
 		update_option( 'wp_ms365_settings', $clean, false );
 
-		$this->redirect_to_settings_with_import_export_notice( 'import', 'success' );
+		$imported_cats_label = implode( ',', $selected_cats );
+
+		$imported_plugin_version = isset( $decrypted_payload['plugin_version'] )
+			? preg_replace( '/[^0-9A-Za-z\.\-\_]/', '', (string) $decrypted_payload['plugin_version'] )
+			: '';
+
+		$this->redirect_to_settings_with_import_export_notice(
+			'import',
+			'success',
+			'',
+			array(
+				'import_plugin_version'  => (string) $imported_plugin_version,
+				'current_plugin_version' => (string) WP_MS365_VERSION,
+				'imported_categories'    => $imported_cats_label,
+			)
+		);
+	}
+
+	/**
+	 * Return the configurable import categories and the settings keys that belong to each.
+	 *
+	 * @return array<string, array<string>>
+	 */
+	private static function get_import_categories() {
+		return array(
+			'azure_app' => array(
+				'tenant_id', 'client_id', 'client_secret', 'specific_user', 'redirect_uri',
+			),
+			'mail' => array(
+				'mail_enabled', 'mail_sender_user', 'mail_save_to_sent_items',
+			),
+			'teams' => array(
+				'teams_team_id', 'teams_channel_id', 'teams_workflow_url', 'teams_webhook_url',
+				'teams_rate_limit_max', 'teams_rate_limit_window', 'teams_min_submit_seconds',
+			),
+			'sso' => array(
+				'sso_enabled', 'sso_force_redirect', 'sso_auto_create', 'sso_use_ms_avatar',
+				'sso_default_role', 'sso_allowed_domains', 'sso_redirect_url', 'sso_prompt',
+				'sso_domain_hint', 'sso_login_hint', 'sso_extra_scopes', 'login_log_retention_days',
+				'sso_signin_button_text', 'sso_signin_button_image',
+			),
+			'wording' => array(
+				'custom_css',
+				'calendar_empty_text', 'calendar_header_date', 'calendar_header_event',
+				'calendar_header_duration', 'calendar_header_location',
+				'files_empty_text', 'files_header_file', 'files_header_size', 'files_header_modified',
+				'teams_form_placeholder', 'teams_form_button_text',
+				'teams_form_label_name', 'teams_form_label_email', 'teams_form_label_message',
+				'teams_form_success',
+				'teams_form_error_invalid_nonce', 'teams_form_error_missing_fields',
+				'teams_form_error_invalid_email', 'teams_form_error_invalid_form',
+				'teams_form_error_submitted_too_fast', 'teams_form_error_rate_limited',
+				'teams_form_error_invalid_endpoint', 'teams_form_error_post_fail',
+				'teams_form_error_unknown',
+			),
+			'templates' => array(
+				'shortcode_render_calendar_named_templates',
+				'shortcode_render_files_named_templates',
+				'shortcode_render_sharepoint_named_templates',
+				'shortcode_render_teams_form_named_templates',
+			),
+		);
 	}
 
 	/**
@@ -1821,9 +2098,10 @@ class WP_MS365_Admin {
 	 * @param string $operation Operation key (import|export).
 	 * @param string $status    Status key (success|error).
 	 * @param string $reason    Optional error reason.
+	 * @param array  $extra     Optional extra redirect query args.
 	 * @return void
 	 */
-	private function redirect_to_settings_with_import_export_notice( $operation, $status, $reason = '' ) {
+	private function redirect_to_settings_with_import_export_notice( $operation, $status, $reason = '', array $extra = array() ) {
 		$args = array(
 			'page'   => 'wp-ms365-graph',
 			'tab'    => 'settings',
@@ -1835,6 +2113,16 @@ class WP_MS365_Admin {
 			$args['reason'] = sanitize_key( (string) $reason );
 		}
 
+		if ( ! empty( $extra ) ) {
+			foreach ( $extra as $key => $value ) {
+				$clean_key = sanitize_key( (string) $key );
+				if ( '' === $clean_key ) {
+					continue;
+				}
+				$args[ $clean_key ] = sanitize_text_field( (string) $value );
+			}
+		}
+
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
@@ -1842,21 +2130,33 @@ class WP_MS365_Admin {
 	/**
 	 * Encrypt settings array using password-derived key.
 	 *
-	 * @param  array  $settings Settings payload.
+	 * @param  array  $payload  Export payload.
 	 * @param  string $password Export password.
 	 * @return string|WP_Error
 	 */
-	private function encrypt_settings_blob( array $settings, $password ) {
+	private function encrypt_settings_blob( array $payload, $password ) {
 		if ( ! function_exists( 'openssl_encrypt' ) ) {
 			return new WP_Error( 'ms365_encrypt_unavailable', __( 'OpenSSL is not available.', 'wp-ms365-graph' ) );
 		}
 
+		$plaintext_payload = wp_parse_args(
+			$payload,
+			array(
+				'plugin_version'    => WP_MS365_VERSION,
+				'configurable_data' => array(),
+				'settings'          => array(),
+			)
+		);
+
 		$plaintext = wp_json_encode(
 			array(
-				'format'      => self::SETTINGS_EXPORT_FORMAT,
-				'version'     => self::SETTINGS_EXPORT_VERSION,
-				'exported_at' => gmdate( 'c' ),
-				'settings'    => $settings,
+				'format'           => self::SETTINGS_EXPORT_FORMAT,
+				'version'          => self::SETTINGS_EXPORT_VERSION,
+				'plugin_version'   => (string) $plaintext_payload['plugin_version'],
+				'exported_at'      => gmdate( 'c' ),
+				'configurable_data'=> $plaintext_payload['configurable_data'],
+				// Backward-compatible alias.
+				'settings'         => $plaintext_payload['settings'],
 			)
 		);
 
@@ -1885,6 +2185,7 @@ class WP_MS365_Admin {
 		$package = array(
 			'format'     => self::SETTINGS_EXPORT_FORMAT,
 			'version'    => self::SETTINGS_EXPORT_VERSION,
+			'plugin_version' => WP_MS365_VERSION,
 			'cipher'     => 'aes-256-cbc',
 			'kdf'        => 'pbkdf2-sha256',
 			'iterations' => $iterations,
@@ -1903,7 +2204,7 @@ class WP_MS365_Admin {
 	}
 
 	/**
-	 * Decrypt encrypted settings payload and return settings array.
+	 * Decrypt encrypted settings payload and return export payload array.
 	 *
 	 * @param  string $encrypted_blob Encrypted JSON package.
 	 * @param  string $password       Import password.
@@ -1946,11 +2247,24 @@ class WP_MS365_Admin {
 		}
 
 		$decoded = json_decode( $plaintext, true );
-		if ( ! is_array( $decoded ) || empty( $decoded['settings'] ) || ! is_array( $decoded['settings'] ) ) {
+		if ( ! is_array( $decoded ) ) {
 			return new WP_Error( 'ms365_import_invalid_content', __( 'Decrypted settings payload is invalid.', 'wp-ms365-graph' ) );
 		}
 
-		return $decoded['settings'];
+		$has_configurable_settings = (
+			isset( $decoded['configurable_data'] )
+			&& is_array( $decoded['configurable_data'] )
+			&& isset( $decoded['configurable_data']['wp_ms365_settings'] )
+			&& is_array( $decoded['configurable_data']['wp_ms365_settings'] )
+		);
+
+		$has_legacy_settings = isset( $decoded['settings'] ) && is_array( $decoded['settings'] );
+
+		if ( ! $has_configurable_settings && ! $has_legacy_settings ) {
+			return new WP_Error( 'ms365_import_invalid_content', __( 'Decrypted settings payload is invalid.', 'wp-ms365-graph' ) );
+		}
+
+		return $decoded;
 	}
 
 	/**

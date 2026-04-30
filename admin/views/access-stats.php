@@ -160,7 +160,7 @@ if ( $show_shortcodes ) {
 		$trend_map[ $date ] += isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0;
 	}
 }
-ksort( $trend_map );
+krsort( $trend_map );
 ?>
 
 <div class="wrap msgraph_access-stats">

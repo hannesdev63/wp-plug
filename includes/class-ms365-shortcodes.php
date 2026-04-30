@@ -472,7 +472,9 @@ class WP_MS365_Shortcodes {
 	 *   timezone – IANA timezone string (default WP site timezone)
 	 *   title    – heading text (default "Upcoming Events")
 	 *   past_days – include events that ended in the last N days (default 0)
-	 *   columns – comma-separated columns to show (default: all)
+	 *   columns – comma-separated list of columns to show (default: all).
+	 *             Supported values: date, event, duration, location.
+	 *             Example: columns="date,event"
 	 *   duration_display – duration column mode: "hours_minutes" or "start_end" (default "hours_minutes")
 	 *   group_by_date – group events by start date (default false)
 	 *   categories – comma-separated category names to include (default: all)
@@ -501,12 +503,13 @@ class WP_MS365_Shortcodes {
 				'group_by_date'      => 'false',
 				'categories'         => '',
 				'show_headers'       => 'true',
+				'template'           => '',
 			),
 			$atts,
 			'msgraph_calendar'
 		);
 
-		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+			$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
 		$calendar_wrap_class  = $this->merge_css_classes( 'msgraph_calendar', $atts['class'] );
 		$calendar_table_class = $this->merge_css_classes( 'msgraph_table msgraph_calendar__table', $atts['table_class'] );
 		$calendar_item_class  = $this->merge_css_classes( 'msgraph_calendar__item', $atts['item_class'] );
@@ -826,7 +829,9 @@ class WP_MS365_Shortcodes {
 				'item_count'          => count( $items ),
 				'active_column_count' => count( $active_columns ),
 				'show_headers'        => $show_headers,
-			)
+				'items'               => $template_items,
+			),
+			sanitize_key( (string) $atts['template'] )
 		);
 	}
 
@@ -1079,9 +1084,12 @@ class WP_MS365_Shortcodes {
 	 * Render a OneDrive file listing.
 	 *
 	 * Attributes:
-	 *   limit  – max number of items (default 50)
-	 *   folder – OneDrive folder path (default: root)
-	 *   title  – heading text (default "My Files")
+	 *   limit        – max number of items (default 50)
+	 *   folder       – OneDrive folder path (default: root)
+	 *   title        – heading text (default "My Files")
+	 *   columns      – comma-separated list of columns to show (default: all).
+	 *                  Supported values: file, size, modified.
+	 *                  Example: columns="file,modified"
 	 *   show_headers – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
@@ -1094,22 +1102,49 @@ class WP_MS365_Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'limit'  => 50,
-				'folder' => '',
-				'title'  => '',
-				'class'  => '',
-				'table_class' => '',
-				'item_class'  => '',
+				'limit'        => 50,
+				'folder'       => '',
+				'title'        => '',
+				'class'        => '',
+				'table_class'  => '',
+				'item_class'   => '',
+				'columns'      => '',
 				'show_headers' => 'true',
+				'template'     => '',
 			),
 			$atts,
 			'msgraph_files'
 		);
 
-		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
-		$files_wrap_class  = $this->merge_css_classes( 'msgraph_files', $atts['class'] );
-		$files_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
+			$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+			$files_wrap_class  = $this->merge_css_classes( 'msgraph_files', $atts['class'] );
+			$files_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
 		$files_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
+
+		$files_available_columns = array(
+			'file'     => $wording['files_header_file'],
+			'size'     => $wording['files_header_size'],
+			'modified' => $wording['files_header_modified'],
+		);
+		$files_requested_columns = array_filter(
+			array_map( 'trim', explode( ',', strtolower( (string) $atts['columns'] ) ) ),
+			function ( $column ) {
+				return '' !== $column;
+			}
+		);
+		if ( empty( $files_requested_columns ) ) {
+			$files_active_columns = array_keys( $files_available_columns );
+		} else {
+			$files_active_columns = array();
+			foreach ( $files_requested_columns as $column ) {
+				if ( isset( $files_available_columns[ $column ] ) && ! in_array( $column, $files_active_columns, true ) ) {
+					$files_active_columns[] = $column;
+				}
+			}
+			if ( empty( $files_active_columns ) ) {
+				$files_active_columns = array_keys( $files_available_columns );
+			}
+		}
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
@@ -1152,6 +1187,26 @@ class WP_MS365_Shortcodes {
 			set_transient( $files_cache_key, $items, $this->get_shortcode_cache_ttl() );
 		}
 
+		// Build per-item context for custom templates.
+		$template_items = array();
+		foreach ( $items as $item ) {
+			$fi_name     = isset( $item['name'] ) ? (string) $item['name'] : '';
+			$fi_size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
+			$fi_modified = isset( $item['lastModifiedDateTime'] )
+				? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
+				: '';
+			$fi_url = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
+				? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
+				: '';
+			$template_items[] = array(
+				'name'         => $fi_name,
+				'size'         => $fi_size,
+				'modified'     => $fi_modified,
+				'download_url' => $fi_url,
+				'item_id'      => isset( $item['id'] ) ? (string) $item['id'] : '',
+			);
+		}
+
 		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $files_wrap_class ); ?>">
@@ -1166,9 +1221,9 @@ class WP_MS365_Shortcodes {
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
-								<th scope="col"><?php echo esc_html( $wording['files_header_file'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_size'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_modified'] ); ?></th>
+								<?php foreach ( $files_active_columns as $col ) : ?>
+									<th scope="col"><?php echo esc_html( $files_available_columns[ $col ] ); ?></th>
+								<?php endforeach; ?>
 							</tr>
 						</thead>
 					<?php endif; ?>
@@ -1185,17 +1240,23 @@ class WP_MS365_Shortcodes {
 								: '';
 							?>
 							<tr class="<?php echo esc_attr( $files_item_class ); ?>">
-								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
-									<?php if ( $download_link ) : ?>
-										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
-											<?php echo esc_html( $name ); ?>
-										</a>
-									<?php else : ?>
-										<?php echo esc_html( $name ); ?>
+								<?php foreach ( $files_active_columns as $col ) : ?>
+									<?php if ( 'file' === $col ) : ?>
+										<td class="msgraph_files__name" data-label="<?php echo esc_attr( $files_available_columns[ $col ] ); ?>">
+											<?php if ( $download_link ) : ?>
+												<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
+													<?php echo esc_html( $name ); ?>
+												</a>
+											<?php else : ?>
+												<?php echo esc_html( $name ); ?>
+											<?php endif; ?>
+										</td>
+									<?php elseif ( 'size' === $col ) : ?>
+										<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $files_available_columns[ $col ] ); ?>"><?php echo esc_html( $size ); ?></td>
+									<?php elseif ( 'modified' === $col ) : ?>
+										<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $files_available_columns[ $col ] ); ?>"><?php echo esc_html( $modified ); ?></td>
 									<?php endif; ?>
-								</td>
-								<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $wording['files_header_size'] ); ?>"><?php echo esc_html( $size ); ?></td>
-								<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $wording['files_header_modified'] ); ?>"><?php echo esc_html( $modified ); ?></td>
+								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -1212,7 +1273,8 @@ class WP_MS365_Shortcodes {
 				'item_count'   => count( $items ),
 				'show_headers' => $show_headers,
 				'items'        => $template_items,
-			)
+			),
+			sanitize_key( (string) $atts['template'] )
 		);
 	}
 
@@ -1226,9 +1288,12 @@ class WP_MS365_Shortcodes {
 	 * Attributes:
 	 *   site_id      – SharePoint site ID (required)
 	 *   drive_id     – SharePoint document library drive ID (required)
-	 *   limit        – max number of items (default 10)
+	 *   limit        – max number of items (default 50)
 	 *   folder       – folder path inside the library (default: root)
 	 *   title        – heading text (default empty)
+	 *   columns      – comma-separated list of columns to show (default: all).
+	 *                  Supported values: file, size, modified.
+	 *                  Example: columns="file,modified"
 	 *   show_headers – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
@@ -1249,19 +1314,46 @@ class WP_MS365_Shortcodes {
 				'class'        => '',
 				'table_class'  => '',
 				'item_class'   => '',
+				'columns'      => '',
 				'show_headers' => 'true',
+				'template'     => '',
 			),
 			$atts,
 			'msgraph_sharepoint_library'
 		);
 
-		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
-		$sp_wrap_class  = $this->merge_css_classes( 'msgraph_files msgraph_files--sharepoint', $atts['class'] );
-		$sp_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
-		$sp_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
+			$show_headers   = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+			$sp_wrap_class  = $this->merge_css_classes( 'msgraph_files msgraph_files--sharepoint', $atts['class'] );
+			$sp_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
+			$sp_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
 		$site_id      = trim( (string) $atts['site_id'] );
 		$drive_id     = trim( (string) $atts['drive_id'] );
 		$folder       = trim( (string) $atts['folder'] );
+
+		$sp_available_columns = array(
+			'file'     => $wording['files_header_file'],
+			'size'     => $wording['files_header_size'],
+			'modified' => $wording['files_header_modified'],
+		);
+		$sp_requested_columns = array_filter(
+			array_map( 'trim', explode( ',', strtolower( (string) $atts['columns'] ) ) ),
+			function ( $column ) {
+				return '' !== $column;
+			}
+		);
+		if ( empty( $sp_requested_columns ) ) {
+			$sp_active_columns = array_keys( $sp_available_columns );
+		} else {
+			$sp_active_columns = array();
+			foreach ( $sp_requested_columns as $column ) {
+				if ( isset( $sp_available_columns[ $column ] ) && ! in_array( $column, $sp_active_columns, true ) ) {
+					$sp_active_columns[] = $column;
+				}
+			}
+			if ( empty( $sp_active_columns ) ) {
+				$sp_active_columns = array_keys( $sp_available_columns );
+			}
+		}
 
 		if ( '' === $site_id || '' === $drive_id ) {
 			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
@@ -1305,26 +1397,6 @@ class WP_MS365_Shortcodes {
 			);
 
 			set_transient( $sp_files_cache_key, $items, $this->get_shortcode_cache_ttl() );
-		}
-
-		// Build per-item context for custom templates.
-		$template_items = array();
-		foreach ( $items as $item ) {
-			$fi_name     = isset( $item['name'] ) ? (string) $item['name'] : '';
-			$fi_size     = isset( $item['size'] ) ? self::format_bytes_public( $item['size'] ) : '';
-			$fi_modified = isset( $item['lastModifiedDateTime'] )
-				? date_i18n( get_option( 'date_format' ), strtotime( $item['lastModifiedDateTime'] ) )
-				: '';
-			$fi_url = ( isset( $item['id'] ) && '' !== (string) $item['id'] )
-				? add_query_arg( 'ms365_download', $this->encode_local_token_param( (string) $item['id'] ), home_url( '/' ) )
-				: '';
-			$template_items[] = array(
-				'name'         => $fi_name,
-				'size'         => $fi_size,
-				'modified'     => $fi_modified,
-				'download_url' => $fi_url,
-				'item_id'      => isset( $item['id'] ) ? (string) $item['id'] : '',
-			);
 		}
 
 		// Build per-item context for custom templates.
@@ -1374,9 +1446,9 @@ class WP_MS365_Shortcodes {
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
-								<th scope="col"><?php echo esc_html( $wording['files_header_file'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_size'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_modified'] ); ?></th>
+								<?php foreach ( $sp_active_columns as $col ) : ?>
+									<th scope="col"><?php echo esc_html( $sp_available_columns[ $col ] ); ?></th>
+								<?php endforeach; ?>
 							</tr>
 						</thead>
 					<?php endif; ?>
@@ -1406,17 +1478,23 @@ class WP_MS365_Shortcodes {
 							}
 							?>
 							<tr class="<?php echo esc_attr( $sp_item_class ); ?>">
-								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
-									<?php if ( $download_link ) : ?>
-										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
-											<?php echo esc_html( $name ); ?>
-										</a>
-									<?php else : ?>
-										<?php echo esc_html( $name ); ?>
+								<?php foreach ( $sp_active_columns as $col ) : ?>
+									<?php if ( 'file' === $col ) : ?>
+										<td class="msgraph_files__name" data-label="<?php echo esc_attr( $sp_available_columns[ $col ] ); ?>">
+											<?php if ( $download_link ) : ?>
+												<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
+													<?php echo esc_html( $name ); ?>
+												</a>
+											<?php else : ?>
+												<?php echo esc_html( $name ); ?>
+											<?php endif; ?>
+										</td>
+									<?php elseif ( 'size' === $col ) : ?>
+										<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $sp_available_columns[ $col ] ); ?>"><?php echo esc_html( $size ); ?></td>
+									<?php elseif ( 'modified' === $col ) : ?>
+										<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $sp_available_columns[ $col ] ); ?>"><?php echo esc_html( $modified ); ?></td>
 									<?php endif; ?>
-								</td>
-								<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $wording['files_header_size'] ); ?>"><?php echo esc_html( $size ); ?></td>
-								<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $wording['files_header_modified'] ); ?>"><?php echo esc_html( $modified ); ?></td>
+								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -1435,7 +1513,8 @@ class WP_MS365_Shortcodes {
 				'site_id'      => $site_id,
 				'drive_id'     => $drive_id,
 				'items'        => $template_items,
-			)
+			),
+			sanitize_key( (string) $atts['template'] )
 		);
 	}
 
@@ -1446,16 +1525,19 @@ class WP_MS365_Shortcodes {
 	/**
 	 * Render a public form that submits a message to a Teams channel.
 	 *
+	 * Routing (endpoint, team, channel) is taken exclusively from plugin settings.
+	 *
 	 * Attributes:
-	 *   team_id     – Teams ID (optional metadata label)
-	 *   channel_id  – Teams channel ID (optional metadata label)
-	 *   endpoint_url – Teams workflow endpoint URL (optional if configured in plugin settings)
-	 *   webhook_url – Legacy alias for endpoint_url
-	 *   use_adaptive_card – auto|true|false (default auto)
-	 *   title       – optional heading text
-	 *   placeholder – textarea placeholder
-	 *   button_text – submit button label
-	 *   max_length  – max message length (default 1000, hard max 4000)
+	 *   title        – optional heading text
+	 *   placeholder  – textarea placeholder
+	 *   button_text  – submit button label
+	 *   max_length   – max message length (default 1000, hard max 4000)
+	 *   class        – extra CSS class on the outer wrapper
+	 *   form_class   – extra CSS class on the <form> element
+	 *   input_class  – extra CSS class on text/email inputs
+	 *   textarea_class – extra CSS class on the textarea
+	 *   submit_class – extra CSS class on the submit button
+	 *   template     – named render template key
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -1467,40 +1549,26 @@ class WP_MS365_Shortcodes {
 		$wording  = $this->get_shortcode_wording();
 		$atts     = shortcode_atts(
 			array(
-				'team_id'     => '',
-				'channel_id'  => '',
-				'endpoint_url' => '',
-				'webhook_url' => '',
-				'use_adaptive_card' => 'auto',
-				'title'       => '',
-				'class'       => '',
-				'form_class'  => '',
-				'input_class' => '',
+				'title'          => '',
+				'class'          => '',
+				'form_class'     => '',
+				'input_class'    => '',
 				'textarea_class' => '',
-				'submit_class' => '',
-				'placeholder' => $wording['teams_form_placeholder'],
-				'button_text' => $wording['teams_form_button_text'],
-				'max_length'  => 1000,
+				'submit_class'   => '',
+				'placeholder'    => $wording['teams_form_placeholder'],
+				'button_text'    => $wording['teams_form_button_text'],
+				'max_length'     => 1000,
+				'template'       => '',
 			),
 			$atts,
 			'msgraph_teams_message_form'
 		);
 
-		$team_id = trim( (string) $atts['team_id'] );
-		if ( '' === $team_id && ! empty( $settings['teams_team_id'] ) ) {
-			$team_id = trim( (string) $settings['teams_team_id'] );
-		}
+		$team_id    = ! empty( $settings['teams_team_id'] ) ? trim( (string) $settings['teams_team_id'] ) : '';
+		$channel_id = ! empty( $settings['teams_channel_id'] ) ? trim( (string) $settings['teams_channel_id'] ) : '';
 
-		$channel_id = trim( (string) $atts['channel_id'] );
-		if ( '' === $channel_id && ! empty( $settings['teams_channel_id'] ) ) {
-			$channel_id = trim( (string) $settings['teams_channel_id'] );
-		}
-
-		$endpoint_url = trim( (string) $atts['endpoint_url'] );
-		if ( '' === $endpoint_url ) {
-			$endpoint_url = trim( (string) $atts['webhook_url'] );
-		}
-		if ( '' === $endpoint_url && ! empty( $settings['teams_workflow_url'] ) ) {
+		$endpoint_url = '';
+		if ( ! empty( $settings['teams_workflow_url'] ) ) {
 			$endpoint_url = trim( (string) $settings['teams_workflow_url'] );
 		}
 		if ( '' === $endpoint_url && ! empty( $settings['teams_webhook_url'] ) ) {
@@ -1508,12 +1576,11 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( '' === $endpoint_url || ! wp_http_validate_url( $endpoint_url ) ) {
-			return $this->error_notice( __( 'Teams form is not configured. Set a valid endpoint_url in shortcode attributes or plugin settings.', 'wp-ms365-graph' ) );
+			return $this->error_notice( __( 'Teams form is not configured. Set a valid Teams endpoint URL in the plugin settings.', 'wp-ms365-graph' ) );
 		}
 
-		$max_length = max( 20, min( 4000, (int) $atts['max_length'] ) );
-		$use_adaptive_card = sanitize_key( (string) $atts['use_adaptive_card'] );
-		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
+		$max_length    = max( 20, min( 4000, (int) $atts['max_length'] ) );
+		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, 'auto' );
 		$teams_wrap_class     = $this->merge_css_classes( 'msgraph_teams_form-wrap', $atts['class'] );
 		$teams_form_class     = $this->merge_css_classes( 'msgraph_teams_form', $atts['form_class'] );
 		$teams_input_class    = $this->merge_css_classes( 'msgraph_teams_form__input', $atts['input_class'] );
@@ -1561,13 +1628,6 @@ class WP_MS365_Shortcodes {
 
 			<form id="<?php echo esc_attr( $form_id ); ?>" class="<?php echo esc_attr( $teams_form_class ); ?>" method="post" action="<?php echo esc_url( $this->get_current_request_url() ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_submit_teams_message" />
-				<?php if ( ! $adaptive_mode ) : ?>
-					<input type="hidden" name="team_id" value="<?php echo esc_attr( $team_id ); ?>" />
-					<input type="hidden" name="channel_id" value="<?php echo esc_attr( $channel_id ); ?>" />
-				<?php endif; ?>
-				<input type="hidden" name="endpoint_url" value="<?php echo esc_url( $endpoint_url ); ?>" />
-				<input type="hidden" name="use_adaptive_card" value="<?php echo esc_attr( $use_adaptive_card ); ?>" />
-				<input type="hidden" name="redirect_to" value="<?php echo esc_url( $this->get_current_request_url() ); ?>" />
 				<input type="hidden" name="ms365_form_started_at" value="<?php echo esc_attr( (string) $form_started_at ); ?>" />
 				<input type="hidden" name="ms365_form_token" value="<?php echo esc_attr( $form_token ); ?>" />
 				<?php wp_nonce_field( 'wp_ms365_submit_teams_message', 'wp_ms365_teams_nonce' ); ?>
@@ -1625,10 +1685,11 @@ class WP_MS365_Shortcodes {
 			'teams_form',
 			$default_html,
 			array(
-				'title'           => (string) $atts['title'],
-				'endpoint_url'    => $endpoint_url,
+				'title'             => (string) $atts['title'],
+				'endpoint_url'      => $endpoint_url,
 				'use_adaptive_card' => $adaptive_mode,
-			)
+			),
+			sanitize_key( (string) $atts['template'] )
 		);
 	}
 
@@ -1638,10 +1699,7 @@ class WP_MS365_Shortcodes {
 	 * @return void
 	 */
 	public function handle_teams_message_submission() {
-		$redirect_to = isset( $_POST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ) : '';
-		if ( '' === $redirect_to ) {
-			$redirect_to = home_url( '/' );
-		}
+		$redirect_to = $this->get_current_request_url();
 
 		if ( 'POST' !== strtoupper( (string) $_SERVER['REQUEST_METHOD'] ) ) {
 			wp_safe_redirect( $this->append_teams_form_status( $redirect_to, 'error', 'unknown' ) );
@@ -1654,14 +1712,10 @@ class WP_MS365_Shortcodes {
 			exit;
 		}
 
-		$team_id    = isset( $_POST['team_id'] ) ? sanitize_text_field( wp_unslash( $_POST['team_id'] ) ) : '';
-		$channel_id = isset( $_POST['channel_id'] ) ? sanitize_text_field( wp_unslash( $_POST['channel_id'] ) ) : '';
-		$endpoint_url = isset( $_POST['endpoint_url'] ) ? esc_url_raw( wp_unslash( $_POST['endpoint_url'] ) ) : '';
-		if ( '' === $endpoint_url ) {
-			$endpoint_url = isset( $_POST['webhook_url'] ) ? esc_url_raw( wp_unslash( $_POST['webhook_url'] ) ) : '';
-		}
-		$use_adaptive_card = isset( $_POST['use_adaptive_card'] ) ? sanitize_key( wp_unslash( $_POST['use_adaptive_card'] ) ) : 'auto';
-		$message    = isset( $_POST['message'] ) ? trim( sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) ) : '';
+		$team_id      = '';
+		$channel_id   = '';
+		$endpoint_url = '';
+		$message      = isset( $_POST['message'] ) ? trim( sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) ) : '';
 		$sender_name  = isset( $_POST['sender_name'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['sender_name'] ) ) ) : '';
 		$sender_email = isset( $_POST['sender_email'] ) ? trim( sanitize_email( wp_unslash( $_POST['sender_email'] ) ) ) : '';
 		$honeypot     = isset( $_POST['website'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['website'] ) ) ) : '';
@@ -1681,12 +1735,12 @@ class WP_MS365_Shortcodes {
 			exit;
 		}
 
-		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, $use_adaptive_card );
+		$adaptive_mode = $this->should_use_teams_adaptive_card( $endpoint_url, 'auto' );
 		if ( ! $adaptive_mode ) {
-			if ( '' === $team_id && ! empty( $settings['teams_team_id'] ) ) {
+			if ( ! empty( $settings['teams_team_id'] ) ) {
 				$team_id = trim( (string) $settings['teams_team_id'] );
 			}
-			if ( '' === $channel_id && ! empty( $settings['teams_channel_id'] ) ) {
+			if ( ! empty( $settings['teams_channel_id'] ) ) {
 				$channel_id = trim( (string) $settings['teams_channel_id'] );
 			}
 		} else {
@@ -2140,33 +2194,49 @@ class WP_MS365_Shortcodes {
 	 * @param  array  $context      Placeholder context values.
 	 * @return string
 	 */
-	private function maybe_render_custom_template( $scope, $default_html, array $context = array() ) {
+	private function maybe_render_custom_template( $scope, $default_html, array $context = array(), $named_key = '' ) {
 		$scope        = sanitize_key( (string) $scope );
 		$default_html = (string) $default_html;
 		$output       = $default_html;
 
-		if ( '' !== $scope ) {
-			$settings     = WP_MS365_Auth::get_settings();
-			$enabled_key  = 'shortcode_render_' . $scope . '_enabled';
-			$template_key = 'shortcode_render_' . $scope . '_template';
-			$enabled      = ! empty( $settings[ $enabled_key ] );
-			$template     = isset( $settings[ $template_key ] ) ? (string) $settings[ $template_key ] : '';
+		$named_key = sanitize_key( (string) $named_key );
+		if ( '' !== $named_key && '' !== $scope ) {
+			try {
+				$settings        = WP_MS365_Auth::get_settings();
+				$nt_settings_key = 'shortcode_render_' . $scope . '_named_templates';
+				$named_list      = isset( $settings[ $nt_settings_key ] ) && is_array( $settings[ $nt_settings_key ] )
+					? $settings[ $nt_settings_key ]
+					: array();
 
-			if ( $enabled && '' !== trim( $template ) ) {
-				$template_context = array_merge(
-					array(
-						'shortcode' => $scope,
-						'content'   => $default_html,
-					),
-					$context
-				);
-
-				$candidate = $this->render_snippet_template( $template, $template_context );
-				if ( '' !== trim( $candidate ) ) {
-					$output = $candidate;
+				$template = '';
+				foreach ( $named_list as $entry ) {
+					if ( is_array( $entry ) && isset( $entry['key'] ) && $entry['key'] === $named_key ) {
+						$template = isset( $entry['template'] ) ? (string) $entry['template'] : '';
+						break;
+					}
 				}
+
+				if ( '' !== trim( $template ) ) {
+					$template_context = array_merge(
+						array(
+							'shortcode' => $scope,
+							'content'   => $default_html,
+						),
+						$context
+					);
+					$candidate = $this->render_snippet_template( $template, $template_context );
+					if ( '' !== trim( $candidate ) ) {
+						$output = $candidate;
+					}
+					// Template rendered empty → fall through to built-in output.
+				}
+				// Key not found or template blank → $output stays as $default_html.
+			} catch ( Exception $e ) {
+				// Any unexpected failure → use built-in output.
+				$output = $default_html;
 			}
 		}
+		// No template= attribute → always use built-in output.
 
 		$filtered = apply_filters( 'wp_ms365_shortcode_custom_render', $output, $scope, $context, $default_html );
 		return is_string( $filtered ) ? $filtered : $output;

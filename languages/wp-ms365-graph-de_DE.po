@@ -364,6 +364,45 @@ msgstr "Nicht mit Microsoft 365 verbunden. Konfigurieren Sie die Anmeldedaten in
 msgid "Settings import completed successfully."
 msgstr "Einstellungsimport erfolgreich abgeschlossen."
 
+msgid "Imported categories: %s."
+msgstr "Importierte Kategorien: %s."
+
+msgid "What to import"
+msgstr "Was importieren"
+
+msgid "Select the categories you want to restore. Unselected categories keep their current values."
+msgstr "Wählen Sie die Kategorien aus, die Sie wiederherstellen möchten. Nicht ausgewählte Kategorien behalten ihre aktuellen Werte."
+
+msgid "Azure App Registration"
+msgstr "Azure App-Registrierung"
+
+msgid "Mail settings"
+msgstr "E-Mail-Einstellungen"
+
+msgid "Teams settings"
+msgstr "Teams-Einstellungen"
+
+msgid "Sign-in / SSO"
+msgstr "Anmeldung / SSO"
+
+msgid "Wording &amp; Custom CSS"
+msgstr "Beschriftungen &amp; Eigenes CSS"
+
+msgid "Shortcode render templates"
+msgstr "Shortcode-Render-Vorlagen"
+
+msgid "Teams form is not configured. Set a valid Teams endpoint URL in the plugin settings."
+msgstr "Das Teams-Formular ist nicht konfiguriert. Bitte hinterlegen Sie eine gültige Teams-Endpunkt-URL in den Plugin-Einstellungen."
+
+msgid "Import metadata: export version %1$s, current plugin version %2$s."
+msgstr "Import-Metadaten: Exportversion %1$s, aktuelle Plugin-Version %2$s."
+
+msgid "Warning: the imported file was created with a different plugin version."
+msgstr "Warnung: Die importierte Datei wurde mit einer anderen Plugin-Version erstellt."
+
+msgid "unknown"
+msgstr "unbekannt"
+
 msgid "Import failed. Please verify your file and password."
 msgstr "Import fehlgeschlagen. Bitte überprüfen Sie Datei und Passwort."
 
