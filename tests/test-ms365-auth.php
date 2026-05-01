@@ -18,6 +18,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', __DIR__ . '/../' );
 }
 
+if ( ! defined( 'MINUTE_IN_SECONDS' ) ) {
+	define( 'MINUTE_IN_SECONDS', 60 );
+}
+
 $_option_store    = array();
 $_transient_store = array();
 
@@ -72,6 +76,11 @@ function sanitize_text_field( $str ) {
 }
 
 function add_query_arg( $args, $url = '' ) {
+	if ( ! is_array( $args ) ) {
+		$args = array( (string) $args => (string) func_get_arg( 1 ) );
+		$url  = func_num_args() > 2 ? (string) func_get_arg( 2 ) : '';
+	}
+
 	if ( empty( $url ) ) {
 		return http_build_query( $args );
 	}
@@ -81,6 +90,27 @@ function add_query_arg( $args, $url = '' ) {
 
 function admin_url( $path = '' ) {
 	return 'https://example.com/wp-admin/' . ltrim( $path, '/' );
+}
+
+function home_url( $path = '/' ) {
+	return 'https://example.com' . (string) $path;
+}
+
+function esc_url_raw( $url ) {
+	return (string) $url;
+}
+
+function wp_validate_redirect( $url, $default = '' ) {
+	$parts = parse_url( (string) $url );
+	if ( ! is_array( $parts ) ) {
+		return $default;
+	}
+
+	if ( ! empty( $parts['host'] ) && 'example.com' !== $parts['host'] ) {
+		return $default;
+	}
+
+	return (string) $url;
 }
 
 function wp_create_nonce( $action ) {
@@ -148,6 +178,7 @@ update_option( 'wp_ms365_settings', array(
 	'tenant_id'     => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
 	'client_id'     => 'ffffffff-0000-1111-2222-333333333333',
 	'client_secret' => 's3cr3t',
+	'sso_enabled'   => 1,
 ) );
 $settings = WP_MS365_Auth::get_settings();
 assert_equals( 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', $settings['tenant_id'],     'tenant_id read correctly' );
@@ -159,10 +190,12 @@ $uri = WP_MS365_Auth::get_redirect_uri();
 assert_contains( 'admin.php', $uri, 'redirect_uri contains admin.php' );
 assert_contains( 'wp-ms365-graph', $uri, 'redirect_uri contains page parameter' );
 
-echo "\n=== Test: get_authorization_url() builds a valid Microsoft login URL ===\n";
-$auth_url = WP_MS365_Auth::get_authorization_url();
+echo "\n=== Test: get_sso_login_url() builds a valid Microsoft login URL ===\n";
+$auth_url = WP_MS365_Auth::get_sso_login_url();
+assert_true( is_string( $auth_url ) && '' !== $auth_url, 'SSO login URL is generated when SSO is enabled' );
 assert_contains( 'login.microsoftonline.com', $auth_url, 'auth URL targets Microsoft identity platform' );
 assert_contains( 'response_type=code',        $auth_url, 'auth URL requests authorization code' );
+assert_contains( 'code_challenge_method=S256', $auth_url, 'auth URL includes PKCE challenge method' );
 assert_contains( 'ffffffff', $auth_url, 'auth URL embeds client_id' );
 
 echo "\n=== Test: is_connected() returns false when no token is stored ===\n";

@@ -1,5 +1,7 @@
 # WP Microsoft 365 Graph
 
+[![Standalone Tests](https://github.com/hannesdev63/wp-plug/actions/workflows/standalone-tests.yml/badge.svg)](https://github.com/hannesdev63/wp-plug/actions/workflows/standalone-tests.yml)
+
 A WordPress plugin that integrates with the **Microsoft 365 Graph API**, enabling you to display Outlook Calendar events, OneDrive files, and user profile data directly on your WordPress site.
 
 ---
@@ -346,10 +348,20 @@ Displays a public Teams message form (name and email required).
 
 ### Running tests
 
-The included standalone test script does not require PHPUnit or a full WordPress install:
+The standalone test suite does not require PHPUnit or a full WordPress install.
+
+Run all tests:
+
+```bash
+./bin/test.sh
+```
+
+Run a single test script:
 
 ```bash
 php tests/test-ms365-auth.php
+php tests/test-ms365-admin.php
+php tests/test-ms365-login.php
 ```
 
 ### Plugin file structure
@@ -357,6 +369,9 @@ php tests/test-ms365-auth.php
 ```
 wp-ms365-graph/
 ├── wp-ms365-graph.php              Main plugin entry point
+├── bin/
+│   ├── package-plugin.sh           Packaging utility
+│   └── test.sh                     Runs standalone test scripts
 ├── includes/
 │   ├── class-ms365-auth.php        App-only token management (client credentials)
 │   ├── class-ms365-graph.php       Graph API HTTP client
@@ -382,7 +397,9 @@ wp-ms365-graph/
 │   ├── wp-ms365-graph-de_DE.po     German translations (source)
 │   └── wp-ms365-graph-de_DE.mo     German translations (compiled)
 └── tests/
-    └── test-ms365-auth.php         Unit tests
+   ├── test-ms365-auth.php         Unit tests for auth helpers
+   ├── test-ms365-admin.php        Unit tests for admin settings sanitation
+   └── test-ms365-login.php        Unit tests for login bypass and redirect logic
 ```
 
 ---

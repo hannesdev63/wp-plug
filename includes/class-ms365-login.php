@@ -91,8 +91,7 @@ class WP_MS365_Login {
 			return $message;
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$local_login_mode = isset( $_GET['ms365_local_login'] );
+		$local_login_mode = $this->is_local_login_bypass_requested();
 		if ( ! $local_login_mode ) {
 			return $message;
 		}
@@ -122,8 +121,16 @@ class WP_MS365_Login {
 		}
 
 		// Allow emergency local login when explicitly requested.
+		if ( $this->is_local_login_bypass_requested() ) {
+			return;
+		}
+
+		// Allow WordPress to process local credential submissions.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['ms365_local_login'] ) ) {
+		$is_post = isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$is_login_action = isset( $_REQUEST['action'] ) ? 'login' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : true;
+		if ( $is_post && $is_login_action ) {
 			return;
 		}
 
@@ -210,6 +217,9 @@ class WP_MS365_Login {
 		}
 
 		?>
+		<?php if ( $this->is_local_login_bypass_requested() ) : ?>
+			<input type="hidden" name="ms365_local_login" value="1" />
+		<?php endif; ?>
 		<div class="ms365-login-separator">
 			<span><?php esc_html_e( 'or', 'wp-ms365-graph' ); ?></span>
 		</div>
@@ -348,5 +358,24 @@ class WP_MS365_Login {
 			array(),
 			WP_MS365_VERSION
 		);
+	}
+
+	/**
+	 * Check whether local-login bypass is requested on the current login request.
+	 *
+	 * Supports both query-string and POST submissions so bypass mode survives
+	 * the credentials form submit.
+	 *
+	 * @return bool
+	 */
+	private function is_local_login_bypass_requested() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_REQUEST['ms365_local_login'] ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$value = sanitize_text_field( wp_unslash( $_REQUEST['ms365_local_login'] ) );
+		return '' !== $value && '0' !== $value;
 	}
 }
