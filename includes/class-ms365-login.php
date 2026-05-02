@@ -121,23 +121,13 @@ class WP_MS365_Login {
 		}
 
 		// Allow emergency local login when explicitly requested.
-		if ( $this->is_local_login_bypass_requested() ) {
+		if ( $this->is_local_login_bypass_requested() || $this->is_local_login_bypass_postback() ) {
 			return;
 		}
 
-		// Allow WordPress to process local credential submissions.
+		// Keep checkemail flows on the local page for password/reset notices.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$is_post = isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) );
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$is_login_action = isset( $_REQUEST['action'] ) ? 'login' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : true;
-		if ( $is_post && $is_login_action ) {
-			return;
-		}
-
-		// Do not auto-redirect right after WordPress logout, otherwise users can
-		// be signed back in immediately and see auth cookies reappear.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['loggedout'] ) || isset( $_GET['reauth'] ) || isset( $_GET['checkemail'] ) ) {
+		if ( isset( $_GET['checkemail'] ) ) {
 			return;
 		}
 
@@ -361,21 +351,48 @@ class WP_MS365_Login {
 	}
 
 	/**
-	 * Check whether local-login bypass is requested on the current login request.
+	 * Check whether local-login bypass is requested via query string.
 	 *
-	 * Supports both query-string and POST submissions so bypass mode survives
-	 * the credentials form submit.
+	 * Local login UI is only allowed when ms365_local_login=1 is present in URL.
 	 *
 	 * @return bool
 	 */
 	private function is_local_login_bypass_requested() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( ! isset( $_REQUEST['ms365_local_login'] ) ) {
+		if ( ! isset( $_GET['ms365_local_login'] ) ) {
 			return false;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$value = sanitize_text_field( wp_unslash( $_REQUEST['ms365_local_login'] ) );
-		return '' !== $value && '0' !== $value;
+		$value = sanitize_text_field( wp_unslash( $_GET['ms365_local_login'] ) );
+		return '1' === $value || 1 === (int) $value;
+	}
+
+	/**
+	 * Allow a local-login form POST only when the bypass flag is posted back.
+	 *
+	 * @return bool
+	 */
+	private function is_local_login_bypass_postback() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$is_post = isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) );
+		if ( ! $is_post ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : 'login';
+		if ( ! in_array( $action, array( '', 'login' ), true ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_POST['ms365_local_login'] ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$value = sanitize_text_field( wp_unslash( $_POST['ms365_local_login'] ) );
+		return '1' === $value || 1 === (int) $value;
 	}
 }

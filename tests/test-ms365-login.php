@@ -162,7 +162,7 @@ try {
 
 assert_equals( 0, count( $_wp_redirect_calls ), 'No redirect during local wp-login POST processing' );
 
-echo "\n=== Test: bypass notice also works from POST/request context ===\n";
+echo "\n=== Test: bypass notice requires query-string flag ===\n";
 reset_request_state();
 update_option(
 	'wp_ms365_settings',
@@ -171,14 +171,13 @@ update_option(
 		'sso_force_redirect' => 1,
 	)
 );
-$_POST['ms365_local_login']    = '1';
-$_REQUEST['ms365_local_login'] = '1';
+$_GET['ms365_local_login'] = '1';
 
 $message = $login->render_local_login_notice( 'ORIGINAL' );
 
 assert_true(
 	false !== strpos( $message, 'Local login bypass is active.' ),
-	'Bypass notice is rendered when bypass flag is present in request payload'
+	'Bypass notice is rendered when bypass flag is present in query string'
 );
 assert_true(
 	false !== strpos( $message, 'ORIGINAL' ),
