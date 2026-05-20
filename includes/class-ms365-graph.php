@@ -227,9 +227,10 @@ class WP_MS365_Graph {
 	 * @param  string $timezone  IANA timezone string (default UTC).
 	 * @param  string $user      Optional explicit user identifier.
 	 * @param  int    $past_days Include events that started in this many past days.
+	 * @param  string $calendar_id Optional explicit calendar identifier.
 	 * @return array|WP_Error   Array with 'value' key containing events.
 	 */
-	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '', $past_days = 0 ) {
+	public static function get_calendar_events( $limit = 10, $timezone = 'UTC', $user = '', $past_days = 0, $calendar_id = '' ) {
 		// Validate timezone against PHP's known IANA list before injecting into
 		// the Prefer header. An unrecognised or malformed value falls back to UTC.
 		if ( '' === $timezone || ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
@@ -239,7 +240,7 @@ class WP_MS365_Graph {
 		$past_days   = max( 0, (int) $past_days );
 		$start       = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '-' . $past_days . ' days' ) );
 		$end   = gmdate( 'Y-m-d\TH:i:s\Z', strtotime( '+30 days' ) );
-		$user_prefix = self::get_user_endpoint_prefix( $user );
+		$user_prefix = self::get_calendar_endpoint_prefix( $user, $calendar_id );
 
 		return self::get(
 			$user_prefix . '/calendarView',
@@ -259,21 +260,70 @@ class WP_MS365_Graph {
 	/**
 	 * Retrieve a specific calendar event.
 	 *
-	 * @param  string $event_id Calendar event ID.
-	 * @param  string $user     Optional explicit user identifier.
+	 * @param  string $event_id   Calendar event ID.
+	 * @param  string $user       Optional explicit user identifier.
+	 * @param  string $calendar_id Optional explicit calendar identifier.
 	 * @return array|WP_Error
 	 */
-	public static function get_calendar_event( $event_id, $user = '' ) {
+	public static function get_calendar_event( $event_id, $user = '', $calendar_id = '' ) {
 		$event_id = trim( (string) $event_id );
 		if ( '' === $event_id ) {
 			return new WP_Error( 'ms365_invalid_event_id', __( 'Invalid calendar event ID.', 'wp-ms365-graph' ) );
 		}
 
-		$user_prefix = self::get_user_endpoint_prefix( $user );
+		$user_prefix = self::get_calendar_endpoint_prefix( $user, $calendar_id );
 		return self::get(
 			$user_prefix . '/events/' . rawurlencode( $event_id ),
 			array( '$select' => 'id,subject,start,end,location,isAllDay,bodyPreview' )
 		);
+	}
+
+	/**
+	 * Retrieve calendars accessible to the configured user.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @return array|WP_Error Array with 'value' key containing calendar objects.
+	 */
+	public static function get_user_calendars( $user = '' ) {
+		$result = self::get(
+			self::get_user_endpoint_prefix( $user ) . '/calendars',
+			array(
+				'$select' => 'id,name,color,owner,isDefaultCalendar,canEdit,canShare,canViewPrivateItems',
+			)
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$calendars = array();
+		if ( ! empty( $result['value'] ) && is_array( $result['value'] ) ) {
+			$calendars = $result['value'];
+		}
+
+		if ( ! empty( $calendars ) ) {
+			usort(
+				$calendars,
+				function ( $a, $b ) {
+					$a_default = ! empty( $a['isDefaultCalendar'] );
+					$b_default = ! empty( $b['isDefaultCalendar'] );
+
+					if ( $a_default !== $b_default ) {
+						return $a_default ? -1 : 1;
+					}
+
+					return strcasecmp(
+						isset( $a['name'] ) ? (string) $a['name'] : '',
+						isset( $b['name'] ) ? (string) $b['name'] : ''
+					);
+				}
+			);
+		}
+
+		$result['value'] = $calendars;
+		unset( $result['@odata.nextLink'] );
+
+		return $result;
 	}
 
 	/**
@@ -1359,5 +1409,23 @@ class WP_MS365_Graph {
 		}
 
 		return '/users/' . rawurlencode( $effective_user );
+	}
+
+	/**
+	 * Get endpoint prefix for a calendar scoped under the effective user.
+	 *
+	 * @param  string $user Optional explicit user identifier.
+	 * @param  string $calendar_id Optional explicit calendar identifier.
+	 * @return string
+	 */
+	private static function get_calendar_endpoint_prefix( $user = '', $calendar_id = '' ) {
+		$calendar_id = trim( (string) $calendar_id );
+		$prefix      = self::get_user_endpoint_prefix( $user );
+
+		if ( '' === $calendar_id ) {
+			return $prefix;
+		}
+
+		return $prefix . '/calendars/' . rawurlencode( $calendar_id );
 	}
 }

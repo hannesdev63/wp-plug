@@ -477,6 +477,7 @@ class WP_MS365_Shortcodes {
 	 *   group_by_date – group events by start date (default false)
 	 *   categories – comma-separated category names to include (default: all)
 	 *   show_headers – whether to render table headers (default true)
+	 *   calendar – optional calendar ID to render instead of the default calendar
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -501,6 +502,7 @@ class WP_MS365_Shortcodes {
 				'group_by_date'      => 'false',
 				'categories'         => '',
 				'show_headers'       => 'true',
+				'calendar'           => '',
 			),
 			$atts,
 			'msgraph_calendar'
@@ -547,6 +549,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		$group_by_date = $this->shortcode_att_to_bool( $atts['group_by_date'], false );
+		$calendar_id   = trim( (string) $atts['calendar'] );
 
 		$category_filter = array_filter(
 			array_map( 'trim', explode( ',', (string) $atts['categories'] ) ),
@@ -572,6 +575,7 @@ class WP_MS365_Shortcodes {
 				'past_days'  => $past_days,
 				'categories' => $category_filter,
 				'user'       => $configured_user,
+				'calendar'   => $calendar_id,
 			)
 		);
 
@@ -589,7 +593,7 @@ class WP_MS365_Shortcodes {
 			$query_limit            = min( max( $limit * $query_limit_multiplier, 12 ), $query_limit_max );
 			$query_past_days        = max( $past_days, 14 );
 
-			$events = WP_MS365_Graph::get_calendar_events( $query_limit, $atts['timezone'], '', $query_past_days );
+			$events = WP_MS365_Graph::get_calendar_events( $query_limit, $atts['timezone'], '', $query_past_days, $calendar_id );
 			if ( is_wp_error( $events ) ) {
 				return $this->error_notice( $events->get_error_message() );
 			}

@@ -708,6 +708,7 @@ class WP_MS365_Admin {
 			'diagnostics'  => __( 'Diagnostics', 'wp-ms365-graph' ),
 			'documentation'=> __( 'Documentation', 'wp-ms365-graph' ),
 			'sp-explorer'  => __( 'SP Explorer', 'wp-ms365-graph' ),
+			'calendar-explorer' => __( 'Calendar Explorer', 'wp-ms365-graph' ),
 		);
 
 		if ( ! isset( $tabs[ $tab ] ) ) {
@@ -749,6 +750,9 @@ class WP_MS365_Admin {
 				break;
 			case 'sp-explorer':
 				$this->render_sharepoint_explorer();
+				break;
+			case 'calendar-explorer':
+				$this->render_calendar_explorer();
 				break;
 			case 'wording':
 				$this->render_wording_page();
@@ -1148,6 +1152,16 @@ class WP_MS365_Admin {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/sharepoint-explorer.php';
+	}
+
+	/**
+	 * Render the Calendar Explorer page.
+	 */
+	public function render_calendar_explorer() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+		}
+		include WP_MS365_PLUGIN_DIR . 'admin/views/calendar-explorer.php';
 	}
 
 	/**
