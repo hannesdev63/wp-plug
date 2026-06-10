@@ -37,6 +37,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tr><td><code>[msgraph_calendar]</code></td><td><code>Calendars.Read</code></td></tr>
 			<tr><td><code>[msgraph_files]</code> (OneDrive)</td><td><code>Files.Read.All</code></td></tr>
 			<tr><td><code>[msgraph_sharepoint_library]</code> (SharePoint)</td><td><code>Sites.Read.All</code></td></tr>
+			<tr><td><code>[msgraph_sharepoint_team]</code> (SharePoint XLSX)</td><td><code>Sites.Read.All</code></td></tr>
 			<tr><td><code>[msgraph_teams_message_form]</code></td><td><?php esc_html_e( 'No Graph permission required (uses Teams Workflow endpoint URL).', 'wp-ms365-graph' ); ?></td></tr>
 		</tbody>
 	</table>
@@ -137,6 +138,41 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents/HR" limit="30" title="HR Library"]</code></p>
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" show_headers="false"]</code></p>
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" class="my-sp-files" table_class="my-sp-table" item_class="my-sp-row"]</code></p>
+
+	<hr />
+	<h2><code>[msgraph_sharepoint_team]</code></h2>
+	<p><?php esc_html_e( 'Reads an XLSX file from a SharePoint document library and renders rows using the columns available in the sheet. Rows where column Aktiv equals Aktiv are hidden (case-insensitive).', 'wp-ms365-graph' ); ?></p>
+	<table class="widefat striped msgraph_shortcode-table">
+		<thead>
+			<tr>
+				<th><?php esc_html_e( 'Parameter', 'wp-ms365-graph' ); ?></th>
+				<th><?php esc_html_e( 'Default', 'wp-ms365-graph' ); ?></th>
+				<th><?php esc_html_e( 'Description', 'wp-ms365-graph' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr><td><code>site_id</code></td><td><code>required</code></td><td><?php esc_html_e( 'SharePoint site identifier.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>drive_id</code></td><td><code>required</code></td><td><?php esc_html_e( 'Document library drive identifier.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>folder</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional relative folder path inside the library.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>name</code></td><td><code>team.xlsx</code></td><td><?php esc_html_e( 'XLSX filename in the selected SharePoint folder.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>title</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional heading above the table.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>show_headers</code></td><td><code>true</code></td><td><?php esc_html_e( 'Show or hide the table header row.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>sort_columns</code></td><td><code>Position, Order, Name</code></td><td><?php esc_html_e( 'Comma-separated list of column names used to sort rows. Missing columns are ignored.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>display_columns</code></td><td><code>all columns</code></td><td><?php esc_html_e( 'Comma-separated list of columns to display. By default, all available columns are shown.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>hide_columns</code></td><td><code>none</code></td><td><?php esc_html_e( 'Comma-separated list of columns to hide. If a column is in both display_columns and hide_columns, hide_columns wins.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>formatter</code></td><td><code>none</code></td><td><?php esc_html_e( 'Per-column numeric formatter rules separated by semicolons. Syntax: Column:decimals[:decimal_point[:thousands_sep]] or Column:locale[:decimals]. Supported locales: de-DE, en-US, en-GB, fr-FR, it-IT, es-ES (also short forms like de, en, fr).', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>class</code></td><td><code>msgraph_team msgraph_team--sharepoint</code></td><td><?php esc_html_e( 'Additional wrapper classes merged with default team wrapper classes.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>table_class</code></td><td><code>msgraph_table msgraph_team__table</code></td><td><?php esc_html_e( 'Additional classes merged with default team table classes.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>item_class</code></td><td><code>msgraph_team__item</code></td><td><?php esc_html_e( 'Additional classes merged with each team row item.', 'wp-ms365-graph' ); ?></td></tr>
+		</tbody>
+	</table>
+	<p><strong><?php esc_html_e( 'Samples', 'wp-ms365-graph' ); ?>:</strong></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123"]</code></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents/Teams" name="TeamTemplate2.xlsx" title="Team"]</code></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" sort_columns="Position,Order,Name" display_columns="Name,Position,Number" hide_columns="Number"]</code></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" formatter="Order:0; Salary:2:,:."]</code></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" formatter="Salary:de-DE:2; MarketValue:en-US:0"]</code></p>
+	<p><code>[msgraph_sharepoint_team site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" show_headers="false" class="my-team" table_class="my-team-table" item_class="my-team-row"]</code></p>
 
 	<hr />
 	<h2><code>[msgraph_login_button]</code></h2>

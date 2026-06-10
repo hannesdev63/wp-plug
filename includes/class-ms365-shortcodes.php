@@ -5,6 +5,7 @@
  * [msgraph_calendar]   – renders upcoming calendar events.
  * [msgraph_files]      – renders OneDrive file listing.
  * [msgraph_sharepoint_library] – renders SharePoint document library file listing.
+ * [msgraph_sharepoint_team] – renders team rows from a SharePoint XLSX file.
  *
  * @package WP_MS365_Graph
  */
@@ -20,6 +21,7 @@ class WP_MS365_Shortcodes {
 		add_shortcode( 'msgraph_calendar', array( $this, 'render_calendar' ) );
 		add_shortcode( 'msgraph_files',    array( $this, 'render_files' ) );
 		add_shortcode( 'msgraph_sharepoint_library', array( $this, 'render_sharepoint_library' ) );
+		add_shortcode( 'msgraph_sharepoint_team', array( $this, 'render_sharepoint_team' ) );
 		add_shortcode( 'msgraph_teams_message_form', array( $this, 'render_teams_message_form' ) );
 		add_shortcode( 'msgraph_login_button',       array( $this, 'render_login_button' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
@@ -1329,6 +1331,974 @@ class WP_MS365_Shortcodes {
 	}
 
 	// ------------------------------------------------------------------
+	// Shortcode: [msgraph_sharepoint_team]
+	// ------------------------------------------------------------------
+
+	/**
+	 * Render team rows from an XLSX file stored in a SharePoint library.
+	 *
+	 * Attributes:
+	 *   site_id      – SharePoint site ID (required)
+	 *   drive_id     – SharePoint document library drive ID (required)
+	 *   folder       – folder path inside the library (default: root)
+	 *   name         – file name inside folder (default: team.xlsx)
+	 *   title        – heading text (default empty)
+	 *   show_headers – whether to render table headers (default true)
+	 *   sort_columns – comma-separated columns used for sorting (default: Position, Order, Name)
+	 *   display_columns – comma-separated columns to render (default: all columns)
+	 *   hide_columns – comma-separated columns to hide (default: none)
+	 *   formatter – per-column numeric formatter rules (default: none)
+	 *
+	 * @param  array $atts Shortcode attributes.
+	 * @return string HTML output.
+	 */
+	public function render_sharepoint_team( $atts ) {
+		$this->track_shortcode_render( 'msgraph_sharepoint_team' );
+
+		$atts = shortcode_atts(
+			array(
+				'site_id'      => '',
+				'drive_id'     => '',
+				'folder'       => '',
+				'name'         => 'team.xlsx',
+				'title'        => '',
+				'class'        => '',
+				'table_class'  => '',
+				'item_class'   => '',
+				'show_headers' => 'true',
+				'sort_columns' => 'Position, Order, Name',
+				'display_columns' => '',
+				'hide_columns' => '',
+				'formatter'    => '',
+			),
+			$atts,
+			'msgraph_sharepoint_team'
+		);
+
+		$site_id      = trim( (string) $atts['site_id'] );
+		$drive_id     = trim( (string) $atts['drive_id'] );
+		$folder       = trim( (string) $atts['folder'] );
+		$file_name    = trim( (string) $atts['name'] );
+		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
+		$sort_columns = $this->parse_shortcode_column_list( $atts['sort_columns'] );
+		$display_columns = $this->parse_shortcode_column_list( $atts['display_columns'] );
+		$hide_columns = $this->parse_shortcode_column_list( $atts['hide_columns'] );
+
+		if ( '' === $site_id || '' === $drive_id ) {
+			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
+		}
+
+		if ( '' === $file_name ) {
+			$file_name = 'team.xlsx';
+		}
+
+		if ( ! WP_MS365_Auth::is_connected() ) {
+			return $this->not_connected_notice();
+		}
+
+		$team_wrap_class  = $this->merge_css_classes( 'msgraph_team msgraph_team--sharepoint', $atts['class'] );
+		$team_table_class = $this->merge_css_classes( 'msgraph_table msgraph_team__table', $atts['table_class'] );
+		$team_item_class  = $this->merge_css_classes( 'msgraph_team__item', $atts['item_class'] );
+
+		$team_cache_key = $this->get_shortcode_cache_key(
+			'sharepoint_team_xlsx_v2',
+			array(
+				'site_id'  => $site_id,
+				'drive_id' => $drive_id,
+				'folder'   => $folder,
+				'name'     => $file_name,
+			)
+		);
+
+		$cache_busted = $this->is_cache_busted();
+		if ( $cache_busted ) {
+			delete_transient( $team_cache_key );
+		}
+
+		$payload = $cache_busted ? false : get_transient( $team_cache_key );
+		if ( ! is_array( $payload ) || ! isset( $payload['headers'] ) || ! isset( $payload['rows'] ) ) {
+			$items_result = WP_MS365_Graph::get_sharepoint_library_items( $site_id, $drive_id, $folder, 999 );
+			if ( is_wp_error( $items_result ) ) {
+				return $this->error_notice( $items_result->get_error_message() );
+			}
+
+			$target_item = array();
+			$items       = isset( $items_result['value'] ) && is_array( $items_result['value'] ) ? $items_result['value'] : array();
+			foreach ( $items as $item ) {
+				if ( isset( $item['folder'] ) ) {
+					continue;
+				}
+
+				$item_name = isset( $item['name'] ) ? trim( (string) $item['name'] ) : '';
+				if ( '' !== $item_name && 0 === strcasecmp( $item_name, $file_name ) ) {
+					$target_item = $item;
+					break;
+				}
+			}
+
+			if ( empty( $target_item['id'] ) ) {
+				return $this->error_notice(
+					sprintf(
+						/* translators: %s: file name */
+						__( 'File "%s" was not found in the SharePoint library folder.', 'wp-ms365-graph' ),
+						esc_html( $file_name )
+					)
+				);
+			}
+
+			$download_url = WP_MS365_Graph::get_sharepoint_library_item_download_url( $site_id, $drive_id, (string) $target_item['id'] );
+			if ( is_wp_error( $download_url ) ) {
+				return $this->error_notice( $download_url->get_error_message() );
+			}
+
+			$response = wp_remote_get(
+				$download_url,
+				array(
+					'timeout'     => 45,
+					'redirection' => 3,
+					'sslverify'   => true,
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				return $this->error_notice( $response->get_error_message() );
+			}
+
+			$status_code = (int) wp_remote_retrieve_response_code( $response );
+			if ( $status_code < 200 || $status_code >= 300 ) {
+				return $this->error_notice( __( 'Unable to download the team XLSX file from SharePoint.', 'wp-ms365-graph' ) );
+			}
+
+			$xlsx_body = (string) wp_remote_retrieve_body( $response );
+			if ( '' === $xlsx_body ) {
+				return $this->error_notice( __( 'Downloaded team XLSX file is empty.', 'wp-ms365-graph' ) );
+			}
+
+			$parsed = $this->parse_xlsx_sheet_rows( $xlsx_body );
+			if ( is_wp_error( $parsed ) ) {
+				return $this->error_notice( $parsed->get_error_message() );
+			}
+
+			$payload = array(
+				'headers' => $parsed['headers'],
+				'rows'    => $parsed['rows'],
+			);
+
+			set_transient( $team_cache_key, $payload, $this->get_shortcode_cache_ttl() );
+		}
+
+		$headers = isset( $payload['headers'] ) && is_array( $payload['headers'] ) ? $payload['headers'] : array();
+		$rows    = isset( $payload['rows'] ) && is_array( $payload['rows'] ) ? $payload['rows'] : array();
+
+		$prepared_table = $this->prepare_team_table_data( $headers, $rows, $sort_columns, $display_columns, $hide_columns );
+		$headers        = $prepared_table['headers'];
+		$rows           = $prepared_table['rows'];
+		$number_formatters = $this->parse_team_number_formatters( $atts['formatter'], $headers );
+
+		ob_start();
+		?>
+		<div class="<?php echo esc_attr( $team_wrap_class ); ?>">
+			<?php if ( $atts['title'] ) : ?>
+				<h3 class="msgraph_team__title"><?php echo esc_html( $atts['title'] ); ?></h3>
+			<?php endif; ?>
+
+			<?php if ( empty( $rows ) || empty( $headers ) ) : ?>
+				<p class="msgraph_team__empty"><?php echo esc_html__( 'No matching team rows found.', 'wp-ms365-graph' ); ?></p>
+			<?php else : ?>
+				<table class="<?php echo esc_attr( $team_table_class ); ?>">
+					<?php if ( $show_headers ) : ?>
+						<thead>
+							<tr>
+								<?php foreach ( $headers as $header ) : ?>
+									<th scope="col"><?php echo esc_html( $header ); ?></th>
+								<?php endforeach; ?>
+							</tr>
+						</thead>
+					<?php endif; ?>
+					<tbody>
+						<?php foreach ( $rows as $row ) : ?>
+							<tr class="<?php echo esc_attr( $team_item_class ); ?>">
+								<?php foreach ( $headers as $header ) : ?>
+									<?php
+									$raw_value       = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
+									$display_value   = $this->format_team_cell_value( $header, $raw_value, $number_formatters );
+									?>
+									<td data-label="<?php echo esc_attr( $header ); ?>"><?php echo esc_html( $display_value ); ?></td>
+								<?php endforeach; ?>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Parse first worksheet rows from an XLSX binary.
+	 *
+	 * @param  string $xlsx_binary XLSX file body.
+	 * @return array|WP_Error
+	 */
+	private function parse_xlsx_sheet_rows( $xlsx_binary ) {
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			return new WP_Error( 'ms365_zip_unavailable', __( 'ZipArchive is required to read XLSX files on this server.', 'wp-ms365-graph' ) );
+		}
+
+		$tmp_file = wp_tempnam( 'ms365_team_xlsx' );
+		if ( ! $tmp_file ) {
+			return new WP_Error( 'ms365_tmp_file_error', __( 'Unable to create a temporary file for XLSX parsing.', 'wp-ms365-graph' ) );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === @file_put_contents( $tmp_file, $xlsx_binary ) ) {
+			@unlink( $tmp_file );
+			return new WP_Error( 'ms365_tmp_write_error', __( 'Unable to write temporary XLSX data.', 'wp-ms365-graph' ) );
+		}
+
+		$zip = new ZipArchive();
+		if ( true !== $zip->open( $tmp_file ) ) {
+			@unlink( $tmp_file );
+			return new WP_Error( 'ms365_xlsx_open_error', __( 'Unable to open the XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$shared_strings = $this->xlsx_get_shared_strings( $zip );
+		$sheet_path     = $this->xlsx_get_first_sheet_path( $zip );
+		if ( is_wp_error( $sheet_path ) ) {
+			$zip->close();
+			@unlink( $tmp_file );
+			return $sheet_path;
+		}
+
+		$sheet_xml = $zip->getFromName( $sheet_path );
+		$zip->close();
+		@unlink( $tmp_file );
+
+		if ( false === $sheet_xml || '' === trim( (string) $sheet_xml ) ) {
+			return new WP_Error( 'ms365_xlsx_sheet_missing', __( 'Could not read worksheet data from the XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$xml = simplexml_load_string( $sheet_xml );
+		if ( false === $xml ) {
+			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Could not parse worksheet XML from the XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$namespaces = $xml->getNamespaces( true );
+		$has_default_namespace = isset( $namespaces[''] ) && '' !== (string) $namespaces[''];
+		if ( isset( $namespaces[''] ) ) {
+			$xml->registerXPathNamespace( 'x', $namespaces[''] );
+		}
+
+		$row_nodes = $xml->xpath( $has_default_namespace ? '//x:sheetData/x:row' : '//sheetData/row' );
+		if ( ! is_array( $row_nodes ) || empty( $row_nodes ) ) {
+			return new WP_Error( 'ms365_xlsx_empty_sheet', __( 'The XLSX worksheet has no rows.', 'wp-ms365-graph' ) );
+		}
+
+		$rows = array();
+		foreach ( $row_nodes as $row_node ) {
+			$indexed_values = array();
+			$cell_nodes     = $row_node->xpath( './*[local-name()="c"]' );
+			if ( ! is_array( $cell_nodes ) ) {
+				$rows[] = array();
+				continue;
+			}
+
+			$fallback_col_index = 0;
+			foreach ( $cell_nodes as $cell_node ) {
+				$cell_ref  = isset( $cell_node['r'] ) ? (string) $cell_node['r'] : '';
+				$col_index = $this->xlsx_col_index_from_ref( $cell_ref );
+				if ( null === $col_index ) {
+					$col_index = $fallback_col_index;
+				}
+
+				$cell_type = isset( $cell_node['t'] ) ? (string) $cell_node['t'] : '';
+				$cell_val  = '';
+
+				if ( 's' === $cell_type ) {
+					$shared_index = isset( $cell_node->v ) ? (int) $cell_node->v : -1;
+					$cell_val     = isset( $shared_strings[ $shared_index ] ) ? $shared_strings[ $shared_index ] : '';
+				} elseif ( 'inlineStr' === $cell_type ) {
+					$parts = $cell_node->xpath( './*[local-name()="is"]/*[local-name()="t"]' );
+					if ( is_array( $parts ) && ! empty( $parts ) ) {
+						$texts = array();
+						foreach ( $parts as $part ) {
+							$texts[] = (string) $part;
+						}
+						$cell_val = implode( '', $texts );
+					}
+				} elseif ( 'b' === $cell_type ) {
+					$cell_val = ( isset( $cell_node->v ) && '1' === (string) $cell_node->v ) ? '1' : '0';
+				} else {
+					$cell_val = isset( $cell_node->v ) ? (string) $cell_node->v : '';
+				}
+
+				$indexed_values[ $col_index ] = trim( $cell_val );
+				$fallback_col_index           = $col_index + 1;
+			}
+
+			if ( empty( $indexed_values ) ) {
+				$rows[] = array();
+				continue;
+			}
+
+			ksort( $indexed_values );
+			$max_col = max( array_keys( $indexed_values ) );
+			$dense   = array();
+			for ( $i = 0; $i <= $max_col; $i++ ) {
+				$dense[] = isset( $indexed_values[ $i ] ) ? $indexed_values[ $i ] : '';
+			}
+			$rows[] = $dense;
+		}
+
+		if ( empty( $rows ) ) {
+			return new WP_Error( 'ms365_xlsx_empty_rows', __( 'No rows could be read from the XLSX worksheet.', 'wp-ms365-graph' ) );
+		}
+
+		$header_row_index = null;
+		$headers          = array();
+		foreach ( $rows as $row_index => $row_values ) {
+			$candidate_headers = array_map( 'trim', (array) $row_values );
+			$non_empty_values  = array_filter(
+				$candidate_headers,
+				static function ( $value ) {
+					return '' !== $value;
+				}
+			);
+
+			if ( ! empty( $non_empty_values ) ) {
+				$header_row_index = (int) $row_index;
+				$headers          = $candidate_headers;
+				break;
+			}
+		}
+
+		if ( null === $header_row_index || empty( $headers ) ) {
+			return new WP_Error( 'ms365_xlsx_missing_headers', __( 'The XLSX file does not contain a header row.', 'wp-ms365-graph' ) );
+		}
+
+		foreach ( $headers as $idx => $header ) {
+			if ( '' === $header ) {
+				$headers[ $idx ] = 'Column ' . ( $idx + 1 );
+			}
+		}
+
+		$assoc_rows = array();
+		for ( $i = $header_row_index + 1; $i < count( $rows ); $i++ ) {
+			$source_row = isset( $rows[ $i ] ) ? (array) $rows[ $i ] : array();
+			$assoc_row  = array();
+			foreach ( $headers as $idx => $header ) {
+				$assoc_row[ $header ] = isset( $source_row[ $idx ] ) ? trim( (string) $source_row[ $idx ] ) : '';
+			}
+			$assoc_rows[] = $assoc_row;
+		}
+
+		return array(
+			'headers' => $headers,
+			'rows'    => $assoc_rows,
+		);
+	}
+
+	/**
+	 * Read shared string table from an XLSX archive.
+	 *
+	 * @param  ZipArchive $zip Opened ZIP archive.
+	 * @return array
+	 */
+	private function xlsx_get_shared_strings( ZipArchive $zip ) {
+		$shared_xml = $zip->getFromName( 'xl/sharedStrings.xml' );
+		if ( false === $shared_xml || '' === trim( (string) $shared_xml ) ) {
+			return array();
+		}
+
+		$shared_doc = simplexml_load_string( $shared_xml );
+		if ( false === $shared_doc ) {
+			return array();
+		}
+
+		$namespaces = $shared_doc->getNamespaces( true );
+		$has_default_namespace = isset( $namespaces[''] ) && '' !== (string) $namespaces[''];
+		if ( isset( $namespaces[''] ) ) {
+			$shared_doc->registerXPathNamespace( 'x', $namespaces[''] );
+		}
+
+		$shared = array();
+		$nodes  = $shared_doc->xpath( $has_default_namespace ? '//x:si' : '//si' );
+		if ( ! is_array( $nodes ) ) {
+			return $shared;
+		}
+
+		foreach ( $nodes as $si_node ) {
+			$text_parts = $si_node->xpath( './/*[local-name()="t"]' );
+			if ( ! is_array( $text_parts ) || empty( $text_parts ) ) {
+				$shared[] = '';
+				continue;
+			}
+
+			$value = '';
+			foreach ( $text_parts as $part ) {
+				$value .= (string) $part;
+			}
+			$shared[] = trim( $value );
+		}
+
+		return $shared;
+	}
+
+	/**
+	 * Resolve the first worksheet path from workbook metadata.
+	 *
+	 * @param  ZipArchive $zip Opened ZIP archive.
+	 * @return string|WP_Error
+	 */
+	private function xlsx_get_first_sheet_path( ZipArchive $zip ) {
+		$workbook_xml = $zip->getFromName( 'xl/workbook.xml' );
+		$rels_xml     = $zip->getFromName( 'xl/_rels/workbook.xml.rels' );
+
+		if ( false === $workbook_xml || false === $rels_xml ) {
+			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
+				return 'xl/worksheets/sheet1.xml';
+			}
+			return new WP_Error( 'ms365_xlsx_sheet_path_error', __( 'Unable to locate worksheet metadata in XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$workbook = simplexml_load_string( $workbook_xml );
+		$rels     = simplexml_load_string( $rels_xml );
+
+		if ( false === $workbook || false === $rels ) {
+			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
+				return 'xl/worksheets/sheet1.xml';
+			}
+			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Unable to parse worksheet metadata in XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$workbook->registerXPathNamespace( 'x', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main' );
+		$workbook->registerXPathNamespace( 'r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships' );
+
+		$sheet_nodes = $workbook->xpath( '//x:sheets/x:sheet' );
+		if ( ! is_array( $sheet_nodes ) || empty( $sheet_nodes ) ) {
+			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
+				return 'xl/worksheets/sheet1.xml';
+			}
+			return new WP_Error( 'ms365_xlsx_missing_sheet', __( 'No worksheet entries were found in the XLSX file.', 'wp-ms365-graph' ) );
+		}
+
+		$first_sheet = $sheet_nodes[0];
+		$rel_id      = isset( $first_sheet->attributes( 'r', true )['id'] ) ? (string) $first_sheet->attributes( 'r', true )['id'] : '';
+		if ( '' === $rel_id ) {
+			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
+				return 'xl/worksheets/sheet1.xml';
+			}
+			return new WP_Error( 'ms365_xlsx_missing_relationship', __( 'Worksheet relationship ID is missing in XLSX metadata.', 'wp-ms365-graph' ) );
+		}
+
+		$rels->registerXPathNamespace( 'r', 'http://schemas.openxmlformats.org/package/2006/relationships' );
+		$relationship_nodes = $rels->xpath( '/r:Relationships/r:Relationship[@Id="' . $rel_id . '"]' );
+		if ( ! is_array( $relationship_nodes ) || empty( $relationship_nodes ) ) {
+			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
+				return 'xl/worksheets/sheet1.xml';
+			}
+			return new WP_Error( 'ms365_xlsx_missing_relationship_target', __( 'Worksheet target path is missing in XLSX relationships.', 'wp-ms365-graph' ) );
+		}
+
+		$target = isset( $relationship_nodes[0]['Target'] ) ? (string) $relationship_nodes[0]['Target'] : '';
+		if ( '' === $target ) {
+			return new WP_Error( 'ms365_xlsx_invalid_relationship_target', __( 'Worksheet target is empty in XLSX relationships.', 'wp-ms365-graph' ) );
+		}
+
+		$target = ltrim( str_replace( '\\', '/', $target ), '/' );
+		if ( 0 !== strpos( $target, 'xl/' ) ) {
+			$target = 'xl/' . $target;
+		}
+
+		if ( false === $zip->getFromName( $target ) ) {
+			return new WP_Error( 'ms365_xlsx_missing_sheet_xml', __( 'Worksheet XML file was not found inside the XLSX archive.', 'wp-ms365-graph' ) );
+		}
+
+		return $target;
+	}
+
+	/**
+	 * Convert cell reference (for example B2) to zero-based column index.
+	 *
+	 * @param  string $cell_ref XLSX cell reference.
+	 * @return int|null
+	 */
+	private function xlsx_col_index_from_ref( $cell_ref ) {
+		if ( ! preg_match( '/^([A-Z]+)/i', (string) $cell_ref, $matches ) ) {
+			return null;
+		}
+
+		$letters = strtoupper( $matches[1] );
+		$index   = 0;
+		$len     = strlen( $letters );
+		for ( $i = 0; $i < $len; $i++ ) {
+			$index = ( $index * 26 ) + ( ord( $letters[ $i ] ) - 64 );
+		}
+
+		return $index - 1;
+	}
+
+	/**
+	 * Prepare team table data based on optional sorting and visible column options.
+	 *
+	 * @param  array $headers         Header list.
+	 * @param  array $rows            Parsed worksheet rows.
+	 * @param  array $sort_columns    Requested sorting columns.
+	 * @param  array $display_columns Requested visible columns.
+	 * @param  array $hide_columns    Requested hidden columns.
+	 * @return array
+	 */
+	private function prepare_team_table_data( array $headers, array $rows, array $sort_columns, array $display_columns, array $hide_columns ) {
+		$rows = $this->filter_team_rows_by_aktiv_value( $rows, $headers );
+
+		$visible_headers = $headers;
+		if ( ! empty( $display_columns ) ) {
+			$visible_headers = $this->resolve_team_column_names( $headers, $display_columns );
+		}
+
+		if ( ! empty( $hide_columns ) ) {
+			$hidden_map = array();
+			foreach ( $hide_columns as $hidden_column ) {
+				$hidden_map[ $this->normalize_team_header_key( $hidden_column ) ] = true;
+			}
+
+			$visible_headers = array_values(
+				array_filter(
+					$visible_headers,
+					function ( $header ) use ( $hidden_map ) {
+						return ! isset( $hidden_map[ $this->normalize_team_header_key( $header ) ] );
+					}
+				)
+			);
+		}
+
+		if ( empty( $visible_headers ) ) {
+			return array(
+				'headers' => array(),
+				'rows'    => array(),
+			);
+		}
+
+		$sorted_rows = $this->sort_team_rows_by_columns( $rows, $headers, $sort_columns );
+		$final_rows  = array();
+		foreach ( $sorted_rows as $row ) {
+			$filtered_row = array();
+			foreach ( $visible_headers as $header ) {
+				$filtered_row[ $header ] = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
+			}
+			$final_rows[] = $filtered_row;
+		}
+
+		return array(
+			'headers' => $visible_headers,
+			'rows'    => $final_rows,
+		);
+	}
+
+	/**
+	 * Exclude rows where column "Aktiv" has value "Aktiv" (case-insensitive).
+	 *
+	 * @param  array $rows    Parsed worksheet rows.
+	 * @param  array $headers Header list.
+	 * @return array
+	 */
+	private function filter_team_rows_by_aktiv_value( array $rows, array $headers ) {
+		$aktiv_column = '';
+		foreach ( $headers as $header ) {
+			if ( 'aktiv' === $this->normalize_team_header_key( $header ) ) {
+				$aktiv_column = $header;
+				break;
+			}
+		}
+
+		if ( '' === $aktiv_column ) {
+			return $rows;
+		}
+
+		$filtered_rows = array();
+		foreach ( $rows as $row ) {
+			$value = isset( $row[ $aktiv_column ] ) ? (string) $row[ $aktiv_column ] : '';
+			if ( 'aktiv' != $this->normalize_team_position_value( $value ) ) {
+				continue;
+			}
+
+			$filtered_rows[] = $row;
+		}
+
+		return $filtered_rows;
+	}
+
+	/**
+	 * Parse a comma-separated shortcode value into an ordered list.
+	 *
+	 * @param  string $value Raw attribute value.
+	 * @return array
+	 */
+	private function parse_shortcode_column_list( $value ) {
+		$parts = array_map( 'trim', explode( ',', (string) $value ) );
+		$parts = array_values(
+			array_filter(
+				$parts,
+				function ( $part ) {
+					return '' !== $part;
+				}
+			)
+		);
+
+		return $parts;
+	}
+
+	/**
+	 * Parse per-column numeric formatter rules.
+	 *
+	 * Rule syntax (semicolon-separated):
+	 *   Column Name:decimals[:decimal_point[:thousands_sep]]
+	 *   Column Name:locale[:decimals]
+	 * Example:
+	 *   Order:0; Price:2:,:.; Salary:de-DE:2
+	 *
+	 * @param  string $value   Raw formatter attribute.
+	 * @param  array  $headers Available headers.
+	 * @return array
+	 */
+	private function parse_team_number_formatters( $value, array $headers ) {
+		$raw_rules = preg_split( '/[;\n\r]+/', (string) $value );
+		if ( ! is_array( $raw_rules ) || empty( $raw_rules ) ) {
+			return array();
+		}
+
+		$header_map = array();
+		foreach ( $headers as $header ) {
+			$header_map[ $this->normalize_team_header_key( $header ) ] = $header;
+		}
+
+		$formatters = array();
+		foreach ( $raw_rules as $raw_rule ) {
+			$rule = trim( (string) $raw_rule );
+			if ( '' === $rule ) {
+				continue;
+			}
+
+			$parts = array_map( 'trim', explode( ':', $rule ) );
+			if ( count( $parts ) < 2 ) {
+				continue;
+			}
+
+			$column_name = (string) $parts[0];
+			$header_key  = $this->normalize_team_header_key( $column_name );
+			if ( '' === $header_key || ! isset( $header_map[ $header_key ] ) ) {
+				continue;
+			}
+
+			$decimals_raw = isset( $parts[1] ) ? (string) $parts[1] : '';
+			$decimals      = 0;
+			$decimal_point = '.';
+			$thousands_sep = '';
+
+			if ( preg_match( '/^\d+$/', $decimals_raw ) ) {
+				$decimals      = (int) $decimals_raw;
+				$decimal_point = isset( $parts[2] ) && '' !== $parts[2] ? substr( (string) $parts[2], 0, 1 ) : '.';
+				$thousands_sep = isset( $parts[3] ) ? substr( (string) $parts[3], 0, 1 ) : '';
+			} else {
+				$locale_format = $this->get_team_number_locale_format( $decimals_raw );
+				if ( ! is_array( $locale_format ) ) {
+					continue;
+				}
+
+				$decimals      = isset( $parts[2] ) && preg_match( '/^\d+$/', (string) $parts[2] ) ? (int) $parts[2] : 2;
+				$decimal_point = (string) $locale_format['decimal_point'];
+				$thousands_sep = (string) $locale_format['thousands_sep'];
+
+				if ( isset( $parts[3] ) && '' !== $parts[3] ) {
+					$decimal_point = substr( (string) $parts[3], 0, 1 );
+				}
+
+				if ( isset( $parts[4] ) ) {
+					$thousands_sep = substr( (string) $parts[4], 0, 1 );
+				}
+			}
+
+			$actual_header = $header_map[ $header_key ];
+			$formatters[ $actual_header ] = array(
+				'decimals'      => max( 0, min( 9, $decimals ) ),
+				'decimal_point' => $decimal_point,
+				'thousands_sep' => $thousands_sep,
+			);
+		}
+
+		return $formatters;
+	}
+
+	/**
+	 * Return decimal and thousand separators for supported locale aliases.
+	 *
+	 * @param  string $locale Locale alias.
+	 * @return array|null
+	 */
+	private function get_team_number_locale_format( $locale ) {
+		$normalized_locale = str_replace( '_', '-', strtolower( trim( (string) $locale ) ) );
+
+		$map = array(
+			'de'    => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+			'de-de' => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+			'en'    => array( 'decimal_point' => '.', 'thousands_sep' => ',' ),
+			'en-us' => array( 'decimal_point' => '.', 'thousands_sep' => ',' ),
+			'en-gb' => array( 'decimal_point' => '.', 'thousands_sep' => ',' ),
+			'fr'    => array( 'decimal_point' => ',', 'thousands_sep' => ' ' ),
+			'fr-fr' => array( 'decimal_point' => ',', 'thousands_sep' => ' ' ),
+			'it'    => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+			'it-it' => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+			'es'    => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+			'es-es' => array( 'decimal_point' => ',', 'thousands_sep' => '.' ),
+		);
+
+		return isset( $map[ $normalized_locale ] ) ? $map[ $normalized_locale ] : null;
+	}
+
+	/**
+	 * Format one table cell value with optional per-column numeric formatter.
+	 *
+	 * @param  string $header            Column header.
+	 * @param  string $raw_value         Raw row value.
+	 * @param  array  $number_formatters Formatter configuration map.
+	 * @return string
+	 */
+	private function format_team_cell_value( $header, $raw_value, array $number_formatters ) {
+		if ( ! isset( $number_formatters[ $header ] ) ) {
+			return (string) $raw_value;
+		}
+
+		$numeric = $this->parse_team_numeric_value( $raw_value );
+		if ( ! $numeric['has_number'] ) {
+			return (string) $raw_value;
+		}
+
+		$config = $number_formatters[ $header ];
+		return number_format(
+			(float) $numeric['value'],
+			(int) $config['decimals'],
+			(string) $config['decimal_point'],
+			(string) $config['thousands_sep']
+		);
+	}
+
+	/**
+	 * Resolve requested column names to actual worksheet headers.
+	 *
+	 * @param  array $headers   Available headers.
+	 * @param  array $requested Requested columns.
+	 * @return array
+	 */
+	private function resolve_team_column_names( array $headers, array $requested ) {
+		$header_map = array();
+		foreach ( $headers as $header ) {
+			$header_map[ $this->normalize_team_header_key( $header ) ] = $header;
+		}
+
+		$resolved = array();
+		$seen     = array();
+		foreach ( $requested as $requested_header ) {
+			$key = $this->normalize_team_header_key( $requested_header );
+			if ( '' === $key || ! isset( $header_map[ $key ] ) || isset( $seen[ $key ] ) ) {
+				continue;
+			}
+
+			$resolved[]   = $header_map[ $key ];
+			$seen[ $key ] = true;
+		}
+
+		return $resolved;
+	}
+
+	/**
+	 * Sort rows by a configurable list of column names.
+	 *
+	 * @param  array $rows         Parsed rows.
+	 * @param  array $headers      Header list.
+	 * @param  array $sort_columns Requested sort columns.
+	 * @return array
+	 */
+	private function sort_team_rows_by_columns( array $rows, array $headers, array $sort_columns ) {
+		if ( empty( $rows ) ) {
+			return array();
+		}
+
+		$resolved_sort_columns = $this->resolve_team_column_names( $headers, $sort_columns );
+		if ( empty( $resolved_sort_columns ) ) {
+			return $rows;
+		}
+
+		$position_rank_map = $this->get_team_position_rank_map();
+		$entries           = array();
+		foreach ( $rows as $index => $row ) {
+			$entries[] = array(
+				'index' => (int) $index,
+				'row'   => is_array( $row ) ? $row : array(),
+			);
+		}
+
+		usort(
+			$entries,
+			function ( $left, $right ) use ( $resolved_sort_columns, $position_rank_map ) {
+				foreach ( $resolved_sort_columns as $column_name ) {
+					$comparison = $this->compare_team_row_values( $left['row'], $right['row'], $column_name, $position_rank_map );
+					if ( 0 !== $comparison ) {
+						return $comparison;
+					}
+				}
+
+				return $left['index'] <=> $right['index'];
+			}
+		);
+
+		$sorted = array();
+		foreach ( $entries as $entry ) {
+			$sorted[] = $entry['row'];
+		}
+
+		return $sorted;
+	}
+
+	/**
+	 * Compare two row values for a specific column.
+	 *
+	 * @param  array  $left_row           Left row values.
+	 * @param  array  $right_row          Right row values.
+	 * @param  string $column_name        Column name to compare.
+	 * @param  array  $position_rank_map  Position rank map.
+	 * @return int
+	 */
+	private function compare_team_row_values( array $left_row, array $right_row, $column_name, array $position_rank_map ) {
+		$left_raw  = isset( $left_row[ $column_name ] ) ? trim( (string) $left_row[ $column_name ] ) : '';
+		$right_raw = isset( $right_row[ $column_name ] ) ? trim( (string) $right_row[ $column_name ] ) : '';
+		$column_key = $this->normalize_team_header_key( $column_name );
+
+		if ( 'position' === $column_key ) {
+			$left_pos_key  = $this->normalize_team_position_value( $left_raw );
+			$right_pos_key = $this->normalize_team_position_value( $right_raw );
+			$left_rank     = isset( $position_rank_map[ $left_pos_key ] ) ? $position_rank_map[ $left_pos_key ] : 999;
+			$right_rank    = isset( $position_rank_map[ $right_pos_key ] ) ? $position_rank_map[ $right_pos_key ] : 999;
+
+			if ( $left_rank !== $right_rank ) {
+				return $left_rank <=> $right_rank;
+			}
+		}
+
+		if ( 'order' === $column_key ) {
+			$left_number  = $this->parse_team_numeric_value( $left_raw );
+			$right_number = $this->parse_team_numeric_value( $right_raw );
+
+			if ( $left_number['has_number'] && $right_number['has_number'] && $left_number['value'] !== $right_number['value'] ) {
+				return $left_number['value'] <=> $right_number['value'];
+			}
+
+			if ( $left_number['has_number'] xor $right_number['has_number'] ) {
+				return $left_number['has_number'] ? -1 : 1;
+			}
+		}
+
+		return strnatcasecmp( $left_raw, $right_raw );
+	}
+
+	/**
+	 * Parse a numeric value from a cell string.
+	 *
+	 * @param  string $value Raw cell value.
+	 * @return array
+	 */
+	private function parse_team_numeric_value( $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return array(
+				'has_number' => false,
+				'value'      => 0.0,
+			);
+		}
+
+		if ( is_numeric( $value ) ) {
+			return array(
+				'has_number' => true,
+				'value'      => (float) $value,
+			);
+		}
+
+		if ( preg_match( '/-?\d+(?:[.,]\d+)?/', $value, $matches ) ) {
+			return array(
+				'has_number' => true,
+				'value'      => (float) str_replace( ',', '.', $matches[0] ),
+			);
+		}
+
+		return array(
+			'has_number' => false,
+			'value'      => 0.0,
+		);
+	}
+
+	/**
+	 * Return preferred ordering for known position values.
+	 *
+	 * @return array
+	 */
+	private function get_team_position_rank_map() {
+		$rank_map = array();
+		$rank_map[ $this->normalize_team_position_value( 'Goalie' ) ]               = 0;
+		$rank_map[ $this->normalize_team_position_value( 'Verteidiger' ) ]          = 1;
+		$rank_map[ $this->normalize_team_position_value( 'Stürmer' ) ]              = 2;
+		$rank_map[ $this->normalize_team_position_value( 'Stuermer' ) ]             = 2;
+		$rank_map[ $this->normalize_team_position_value( 'Stürmer/Verteidiger' ) ]  = 3;
+		$rank_map[ $this->normalize_team_position_value( 'Stuermer/Verteidiger' ) ] = 3;
+		$rank_map[ $this->normalize_team_position_value( 'Trainer' ) ]              = 4;
+		$rank_map[ $this->normalize_team_position_value( 'Co-Trainer' ) ]           = 5;
+		$rank_map[ $this->normalize_team_position_value( 'Co Trainer' ) ]           = 5;
+		$rank_map[ $this->normalize_team_position_value( 'Manager' ) ]              = 6;
+		$rank_map[ $this->normalize_team_position_value( 'betreuer' ) ]             = 7;
+		$rank_map[ $this->normalize_team_position_value( 'Mannschaftsarzt' ) ]      = 8;
+		$rank_map[ $this->normalize_team_position_value( 'Physio' ) ]               = 9;
+
+		return $rank_map;
+	}
+
+	/**
+	 * Normalize a header key for case-insensitive lookup.
+	 *
+	 * @param  string $value Raw header text.
+	 * @return string
+	 */
+	private function normalize_team_header_key( $value ) {
+		$normalized = remove_accents( (string) $value );
+		if ( function_exists( 'mb_strtolower' ) ) {
+			$normalized = mb_strtolower( $normalized, 'UTF-8' );
+		} else {
+			$normalized = strtolower( $normalized );
+		}
+
+		$normalized = preg_replace( '/[^a-z0-9]+/', '', $normalized );
+		return trim( (string) $normalized );
+	}
+
+	/**
+	 * Normalize team field values for case-insensitive matching.
+	 *
+	 * @param  string $value Raw field value.
+	 * @return string
+	 */
+	private function normalize_team_position_value( $value ) {
+		$normalized = remove_accents( (string) $value );
+		if ( function_exists( 'mb_strtolower' ) ) {
+			$normalized = mb_strtolower( $normalized, 'UTF-8' );
+		} else {
+			$normalized = strtolower( $normalized );
+		}
+
+		$normalized = preg_replace( '/[^a-z0-9]+/', ' ', $normalized );
+		$normalized = preg_replace( '/\s+/', ' ', (string) $normalized );
+
+		return trim( (string) $normalized );
+	}
+
+	// ------------------------------------------------------------------
 	// Shortcode: [msgraph_teams_message_form]
 	// ------------------------------------------------------------------
 
@@ -2061,6 +3031,7 @@ class WP_MS365_Shortcodes {
 			'msgraph_calendar'           => 0,
 			'msgraph_files'              => 0,
 			'msgraph_sharepoint_library' => 0,
+			'msgraph_sharepoint_team'    => 0,
 			'msgraph_teams_message_form' => 0,
 			'msgraph_login_button'       => 0,
 		);
