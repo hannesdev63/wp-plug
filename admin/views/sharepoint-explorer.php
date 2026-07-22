@@ -31,7 +31,7 @@ if ( $is_connected ) {
 <div class="wrap msgraph_sp-explorer">
 	<h1 class="msgraph_sp-explorer__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<p><?php esc_html_e( 'Use this page to look up the site_id and drive_id values for the [msgraph_sharepoint_library] shortcode.', 'wp-ms365-graph' ); ?></p>

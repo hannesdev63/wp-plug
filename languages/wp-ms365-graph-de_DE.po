@@ -13,8 +13,8 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: wp-ms365-graph\n"
 
-msgid "MS Graph Connect"
-msgstr "MS Graph Connect"
+msgid "ESC Connect"
+msgstr "ESC Connect"
 
 msgid "Dashboard"
 msgstr "Dashboard"
@@ -481,7 +481,7 @@ msgid "Sign-In Wording"
 msgstr "Texte für Anmeldung"
 
 # Section descriptions
-msgid "Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in MS Graph Connect settings to enable profile, calendar, and OneDrive queries."
+msgid "Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in ESC Connect settings to enable profile, calendar, and OneDrive queries."
 msgstr "Ein bestimmter Benutzer ist für den App-Only-Modus erforderlich. Geben Sie in den MS-Graph-Connect-Einstellungen eine UPN (benutzer@domain.com) oder Objekt-ID ein, um Profil, Kalender und OneDrive abzufragen."
 
 msgid "Enter your Entra ID application registration credentials. You can create an app registration at "
@@ -845,17 +845,17 @@ msgstr "Grund"
 msgid "No login attempts found."
 msgstr "Keine Anmeldeversuche gefunden."
 
-msgid "MS Graph Connect: Daily Trend"
-msgstr "MS Graph Connect: Taeglicher Trend"
+msgid "ESC Connect: Daily Trend"
+msgstr "ESC Connect: Taeglicher Trend"
 
-msgid "MS Graph Connect: Top Accessed Items"
-msgstr "MS Graph Connect: Meist aufgerufene Elemente"
+msgid "ESC Connect: Top Accessed Items"
+msgstr "ESC Connect: Meist aufgerufene Elemente"
 
 msgid "Open Access Statistics"
 msgstr "Zugriffsstatistik oeffnen"
 
-msgid "MS Graph Connect: Sign-In Activity"
-msgstr "MS Graph Connect: Anmeldeaktivitaet"
+msgid "ESC Connect: Sign-In Activity"
+msgstr "ESC Connect: Anmeldeaktivitaet"
 
 msgid "Open Login Access"
 msgstr "Anmeldezugriffe oeffnen"

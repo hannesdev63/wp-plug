@@ -23,7 +23,7 @@ if ( $is_connected ) {
 <div class="wrap msgraph_calendar-explorer">
 	<h1 class="msgraph_calendar-explorer__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Calendar Explorer', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Calendar Explorer', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<p><?php esc_html_e( 'Use this page to copy an [msgraph_calendar] shortcode for any calendar the configured user can access. The app needs Microsoft Graph application permission Calendars.Read with admin consent to list calendars.', 'wp-ms365-graph' ); ?></p>

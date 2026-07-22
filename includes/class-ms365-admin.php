@@ -60,23 +60,12 @@ class WP_MS365_Admin {
 	}
 
 	/**
-	 * Register top-level admin menu item.
+	 * Register admin menu item under Settings.
 	 */
 	public function register_menu() {
-		add_menu_page(
-			__( 'MS Graph Connect', 'wp-ms365-graph' ),
-			__( 'MS Graph Connect', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-graph',
-			array( $this, 'render_main_page' ),
-			self::get_menu_icon_uri(),
-			80
-		);
-
-		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Dashboard', 'wp-ms365-graph' ),
-			__( 'Dashboard', 'wp-ms365-graph' ),
+		add_options_page(
+			__( 'ESC Connect', 'wp-ms365-graph' ),
+			__( 'ESC Connect', 'wp-ms365-graph' ),
 			'manage_options',
 			'wp-ms365-graph',
 			array( $this, 'render_main_page' )
@@ -844,19 +833,19 @@ class WP_MS365_Admin {
 
 		wp_add_dashboard_widget(
 			'wp_ms365_access_daily_trend_widget',
-			__( 'MS Graph Connect: Daily Trend', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Daily Trend', 'wp-ms365-graph' ),
 			array( $this, 'render_wp_dashboard_daily_trend_widget' )
 		);
 
 		wp_add_dashboard_widget(
 			'wp_ms365_access_top_items_widget',
-			__( 'MS Graph Connect: Top Accessed Items', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Top Accessed Items', 'wp-ms365-graph' ),
 			array( $this, 'render_wp_dashboard_top_items_widget' )
 		);
 
 		wp_add_dashboard_widget(
 			'wp_ms365_signin_activity_widget',
-			__( 'MS Graph Connect: Sign-In Activity', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Sign-In Activity', 'wp-ms365-graph' ),
 			array( $this, 'render_wp_dashboard_signin_activity_widget' )
 		);
 	}
@@ -1189,7 +1178,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '<div class="notice notice-warning"><p>'
-			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in MS Graph Connect settings to enable profile, calendar, and OneDrive queries.', 'wp-ms365-graph' )
+			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in ESC Connect settings to enable profile, calendar, and OneDrive queries.', 'wp-ms365-graph' )
 			. '</p></div>';
 	}
 
@@ -1901,13 +1890,13 @@ class WP_MS365_Admin {
 
 		$subject = sprintf(
 			/* translators: %s: site name */
-			__( '[%s] MS Graph Connect test email', 'wp-ms365-graph' ),
+			__( '[%s] ESC Connect test email', 'wp-ms365-graph' ),
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
 		);
 
 		$message = sprintf(
 			/* translators: 1: site url, 2: datetime */
-			__( 'This is a diagnostics test email from MS Graph Connect.\n\nSite: %1$s\nTime (UTC): %2$s\n', 'wp-ms365-graph' ),
+			__( 'This is a diagnostics test email from ESC Connect.\n\nSite: %1$s\nTime (UTC): %2$s\n', 'wp-ms365-graph' ),
 			home_url( '/' ),
 			gmdate( 'Y-m-d H:i:s' )
 		);

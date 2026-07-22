@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="wrap msgraph_documentation">
 	<h1 class="msgraph_settings__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Documentation', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Documentation', 'wp-ms365-graph' ); ?>
 	</h1>
 
 	<p>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       MS Graph Connect
+ * Plugin Name:       ESC Connect
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
  * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
  * Version:           1.2.3

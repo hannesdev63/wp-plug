@@ -60,6 +60,22 @@ After assigning these rights, click **Grant admin consent** in Azure and then re
 2. Activate the plugin from **Plugins → Installed Plugins**.
 3. Navigate to **Microsoft 365 → Settings** in the WordPress admin menu.
 
+## Packaging
+
+Create a distributable ZIP for WordPress plugin upload:
+
+```bash
+./scripts/package-plugin.sh
+```
+
+Optional: pass an explicit version (otherwise it uses the version from `wp-ms365-graph.php`):
+
+```bash
+./scripts/package-plugin.sh 1.2.3
+```
+
+Output is written to `dist/wp-ms365-graph-<VERSION>.zip`.
+
 ---
 
 ## Configuration
