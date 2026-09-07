@@ -288,6 +288,7 @@ class WP_MS365_Graph {
 		$result = self::get(
 			self::get_user_endpoint_prefix( $user ) . '/calendars',
 			array(
+				'$top'    => 999,
 				'$select' => 'id,name,color,owner,isDefaultCalendar,canEdit,canShare,canViewPrivateItems',
 			)
 		);
@@ -299,6 +300,23 @@ class WP_MS365_Graph {
 		$calendars = array();
 		if ( ! empty( $result['value'] ) && is_array( $result['value'] ) ) {
 			$calendars = $result['value'];
+		}
+
+		$next_link = isset( $result['@odata.nextLink'] ) ? (string) $result['@odata.nextLink'] : '';
+		$page_guard = 0;
+
+		while ( '' !== $next_link && $page_guard < 20 ) {
+			$next_page = self::request( 'GET', $next_link );
+			if ( is_wp_error( $next_page ) ) {
+				return $next_page;
+			}
+
+			if ( ! empty( $next_page['value'] ) && is_array( $next_page['value'] ) ) {
+				$calendars = array_merge( $calendars, $next_page['value'] );
+			}
+
+			$next_link = isset( $next_page['@odata.nextLink'] ) ? (string) $next_page['@odata.nextLink'] : '';
+			$page_guard++;
 		}
 
 		if ( ! empty( $calendars ) ) {

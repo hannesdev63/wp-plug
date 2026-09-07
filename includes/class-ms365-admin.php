@@ -41,12 +41,12 @@ class WP_MS365_Admin {
 	 * @return string
 	 */
 	public static function get_menu_icon_uri() {
-		$svg_file = WP_MS365_PLUGIN_DIR . 'assets/images/icon.svg';
-		if ( ! file_exists( $svg_file ) ) {
-			return 'dashicons-microsoft';
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$svg = file_get_contents( $svg_file );
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="ESC River Rats hockey icon">
+			<rect width="20" height="20" rx="4" fill="#f7f7f7"/>
+			<rect x="4" y="7" width="12" height="6" rx="3" fill="#2d3748"/>
+			<path d="M6 5.5h8M6 14.5h8" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+			<circle cx="10" cy="10" r="2" fill="#ffffff"/>
+		</svg>';
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
 	}
 
@@ -60,15 +60,42 @@ class WP_MS365_Admin {
 	}
 
 	/**
-	 * Register admin menu item under Settings.
+	 * Register the plugin menu as a dedicated top-level admin section.
 	 */
 	public function register_menu() {
-		add_options_page(
+		$this->ensure_parent_menu();
+
+		add_submenu_page(
+			'esc-river-rats',
 			__( 'ESC Connect', 'wp-ms365-graph' ),
 			__( 'ESC Connect', 'wp-ms365-graph' ),
 			'manage_options',
 			'wp-ms365-graph',
 			array( $this, 'render_main_page' )
+		);
+
+		remove_submenu_page( 'esc-river-rats', 'esc-river-rats' );
+	}
+
+	private function ensure_parent_menu() {
+		global $menu;
+
+		if ( isset( $menu ) && is_array( $menu ) ) {
+			foreach ( $menu as $item ) {
+				if ( isset( $item[2] ) && 'esc-river-rats' === $item[2] ) {
+					return;
+				}
+			}
+		}
+
+		add_menu_page(
+			__( 'ESC River Rats', 'wp-ms365-graph' ),
+			__( 'ESC River Rats', 'wp-ms365-graph' ),
+			'manage_options',
+			'esc-river-rats',
+			'__return_null',
+			self::get_menu_icon_uri(),
+			26
 		);
 	}
 
@@ -100,6 +127,7 @@ class WP_MS365_Admin {
 			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
 			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
 			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
+			'sharepoint_image_basepath' => __( 'SharePoint Image Base Path', 'wp-ms365-graph' ),
 			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'wp-ms365-graph' ),
 		);
 
@@ -317,15 +345,20 @@ class WP_MS365_Admin {
 		);
 
 		$wording_calendar_files_fields = array(
-			'calendar_empty_text'     => __( 'Calendar: No items found', 'wp-ms365-graph' ),
-			'calendar_header_date'    => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
-			'calendar_header_event'   => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
-			'calendar_header_duration'=> __( 'Calendar: Header Duration', 'wp-ms365-graph' ),
-			'calendar_header_location'=> __( 'Calendar: Header Location', 'wp-ms365-graph' ),
-			'files_empty_text'        => __( 'Files: No items found', 'wp-ms365-graph' ),
-			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
-			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
-			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+			'calendar_empty_text'               => __( 'Calendar: No items found', 'wp-ms365-graph' ),
+			'calendar_header_date'              => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
+			'calendar_header_event'             => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
+			'calendar_header_duration'          => __( 'Calendar: Header Duration', 'wp-ms365-graph' ),
+			'calendar_all_day_text'             => __( 'Calendar: All Day Text', 'wp-ms365-graph' ),
+			'calendar_duration_hour_single'     => __( 'Calendar: Hour (singular)', 'wp-ms365-graph' ),
+			'calendar_duration_hour_plural'     => __( 'Calendar: Hour (plural)', 'wp-ms365-graph' ),
+			'calendar_duration_minute_single'   => __( 'Calendar: Minute (singular)', 'wp-ms365-graph' ),
+			'calendar_duration_minute_plural'   => __( 'Calendar: Minute (plural)', 'wp-ms365-graph' ),
+			'calendar_header_location'          => __( 'Calendar: Header Location', 'wp-ms365-graph' ),
+			'files_empty_text'                  => __( 'Files: No items found', 'wp-ms365-graph' ),
+			'files_header_file'                 => __( 'Files: Header File', 'wp-ms365-graph' ),
+			'files_header_size'                 => __( 'Files: Header Size', 'wp-ms365-graph' ),
+			'files_header_modified'             => __( 'Files: Header Modified', 'wp-ms365-graph' ),
 		);
 
 		foreach ( $wording_calendar_files_fields as $key => $label ) {
@@ -474,6 +507,10 @@ class WP_MS365_Admin {
 			$clean['custom_css'] = sanitize_textarea_field( $input['custom_css'] );
 		}
 
+		if ( isset( $input['sharepoint_image_basepath'] ) ) {
+			$clean['sharepoint_image_basepath'] = esc_url_raw( trim( (string) $input['sharepoint_image_basepath'] ) );
+		}
+
 		if ( isset( $input['calendar_empty_text'] ) ) {
 			$clean['calendar_empty_text'] = sanitize_text_field( $input['calendar_empty_text'] );
 		}
@@ -488,6 +525,26 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['calendar_header_duration'] ) ) {
 			$clean['calendar_header_duration'] = sanitize_text_field( $input['calendar_header_duration'] );
+		}
+
+		if ( isset( $input['calendar_all_day_text'] ) ) {
+			$clean['calendar_all_day_text'] = sanitize_text_field( $input['calendar_all_day_text'] );
+		}
+
+		if ( isset( $input['calendar_duration_hour_single'] ) ) {
+			$clean['calendar_duration_hour_single'] = sanitize_text_field( $input['calendar_duration_hour_single'] );
+		}
+
+		if ( isset( $input['calendar_duration_hour_plural'] ) ) {
+			$clean['calendar_duration_hour_plural'] = sanitize_text_field( $input['calendar_duration_hour_plural'] );
+		}
+
+		if ( isset( $input['calendar_duration_minute_single'] ) ) {
+			$clean['calendar_duration_minute_single'] = sanitize_text_field( $input['calendar_duration_minute_single'] );
+		}
+
+		if ( isset( $input['calendar_duration_minute_plural'] ) ) {
+			$clean['calendar_duration_minute_plural'] = sanitize_text_field( $input['calendar_duration_minute_plural'] );
 		}
 
 		if ( isset( $input['calendar_header_location'] ) ) {
@@ -1291,6 +1348,10 @@ class WP_MS365_Admin {
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
 				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
+				. '</p>';
+		} elseif ( 'sharepoint_image_basepath' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default base URL used by [msgraph_sharepoint_library] for image_columns when image_basepath is omitted. Leave empty to fall back to the WordPress uploads URL.', 'wp-ms365-graph' )
 				. '</p>';
 		} elseif ( 'mail_sender_user' === $key ) {
 			echo '<p class="description">'

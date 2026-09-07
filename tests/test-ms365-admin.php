@@ -92,7 +92,13 @@ update_option(
 		'calendar_empty_text'      => 'No appointments',
 		'calendar_header_date'     => 'When',
 		'calendar_header_event'    => 'What',
-		'calendar_header_location' => 'Where',
+		'calendar_header_duration'        => 'Length',
+		'calendar_all_day_text'           => 'All day',
+		'calendar_duration_hour_single'   => 'Hour',
+		'calendar_duration_hour_plural'   => 'Hours',
+		'calendar_duration_minute_single' => 'Minute',
+		'calendar_duration_minute_plural' => 'Minutes',
+		'calendar_header_location'        => 'Where',
 		'files_empty_text'         => 'No docs',
 		'files_header_file'        => 'Document',
 		'files_header_size'        => 'Bytes',
@@ -119,6 +125,12 @@ assert_equals( '.y{color:blue;}', $result['custom_css'], 'custom_css updated fro
 assert_equals( 'No appointments', $result['calendar_empty_text'], 'calendar_empty_text preserved when not submitted' );
 assert_equals( 'When', $result['calendar_header_date'], 'calendar_header_date preserved when not submitted' );
 assert_equals( 'What', $result['calendar_header_event'], 'calendar_header_event preserved when not submitted' );
+assert_equals( 'Length', $result['calendar_header_duration'], 'calendar_header_duration preserved when not submitted' );
+assert_equals( 'All day', $result['calendar_all_day_text'], 'calendar_all_day_text preserved when not submitted' );
+assert_equals( 'Hour', $result['calendar_duration_hour_single'], 'calendar_duration_hour_single preserved when not submitted' );
+assert_equals( 'Hours', $result['calendar_duration_hour_plural'], 'calendar_duration_hour_plural preserved when not submitted' );
+assert_equals( 'Minute', $result['calendar_duration_minute_single'], 'calendar_duration_minute_single preserved when not submitted' );
+assert_equals( 'Minutes', $result['calendar_duration_minute_plural'], 'calendar_duration_minute_plural preserved when not submitted' );
 assert_equals( 'Where', $result['calendar_header_location'], 'calendar_header_location preserved when not submitted' );
 assert_equals( 'No docs', $result['files_empty_text'], 'files_empty_text preserved when not submitted' );
 assert_equals( 'Document', $result['files_header_file'], 'files_header_file preserved when not submitted' );
@@ -137,7 +149,13 @@ update_option(
 		'calendar_empty_text'      => 'Old calendar empty',
 		'calendar_header_date'     => 'Old date',
 		'calendar_header_event'    => 'Old event',
-		'calendar_header_location' => 'Old location',
+		'calendar_header_duration'        => 'Old duration',
+		'calendar_all_day_text'           => 'Old all day',
+		'calendar_duration_hour_single'   => 'Old hour',
+		'calendar_duration_hour_plural'   => 'Old hours',
+		'calendar_duration_minute_single' => 'Old minute',
+		'calendar_duration_minute_plural' => 'Old minutes',
+		'calendar_header_location'        => 'Old location',
 		'files_empty_text'         => 'Old files empty',
 		'files_header_file'        => 'Old file',
 		'files_header_size'        => 'Old size',
@@ -150,7 +168,13 @@ $result = $admin->sanitize_settings(
 		'calendar_empty_text'      => 'New calendar empty',
 		'calendar_header_date'     => 'Date label',
 		'calendar_header_event'    => 'Event label',
-		'calendar_header_location' => 'Location label',
+		'calendar_header_duration'        => 'Duration label',
+		'calendar_all_day_text'           => 'All day label',
+		'calendar_duration_hour_single'   => 'Hour label',
+		'calendar_duration_hour_plural'   => 'Hours label',
+		'calendar_duration_minute_single' => 'Minute label',
+		'calendar_duration_minute_plural' => 'Minutes label',
+		'calendar_header_location'        => 'Location label',
 		'files_empty_text'         => 'New files empty',
 		'files_header_file'        => 'File label',
 		'files_header_size'        => 'Size label',
@@ -166,6 +190,12 @@ assert_equals( '.keep{display:block;}', $result['custom_css'], 'custom_css prese
 assert_equals( 'New calendar empty', $result['calendar_empty_text'], 'calendar_empty_text updated from wording submission' );
 assert_equals( 'Date label', $result['calendar_header_date'], 'calendar_header_date updated from wording submission' );
 assert_equals( 'Event label', $result['calendar_header_event'], 'calendar_header_event updated from wording submission' );
+assert_equals( 'Duration label', $result['calendar_header_duration'], 'calendar_header_duration updated from wording submission' );
+assert_equals( 'All day label', $result['calendar_all_day_text'], 'calendar_all_day_text updated from wording submission' );
+assert_equals( 'Hour label', $result['calendar_duration_hour_single'], 'calendar_duration_hour_single updated from wording submission' );
+assert_equals( 'Hours label', $result['calendar_duration_hour_plural'], 'calendar_duration_hour_plural updated from wording submission' );
+assert_equals( 'Minute label', $result['calendar_duration_minute_single'], 'calendar_duration_minute_single updated from wording submission' );
+assert_equals( 'Minutes label', $result['calendar_duration_minute_plural'], 'calendar_duration_minute_plural updated from wording submission' );
 assert_equals( 'Location label', $result['calendar_header_location'], 'calendar_header_location updated from wording submission' );
 assert_equals( 'New files empty', $result['files_empty_text'], 'files_empty_text updated from wording submission' );
 assert_equals( 'File label', $result['files_header_file'], 'files_header_file updated from wording submission' );

@@ -3,7 +3,7 @@
  * Plugin Name:       ESC Connect
  * Plugin URI:        https://github.com/hannesdev63/wp-plug
  * Description:       Integrates WordPress with the Microsoft 365 Graph API. Display calendar events, Sharepoint libraries and OneDrive files via shortcodes, with a full OAuth 2.0 authentication flow.
- * Version:           1.2.3
+ * Version:           1.2.8
  * Requires at least: 5.9
  * Requires PHP:      7.4
  * Author:            hannesdev63
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'WP_MS365_VERSION',     '1.2.3' );
+define( 'WP_MS365_VERSION',     '1.2.8' );
 define( 'WP_MS365_PLUGIN_FILE', __FILE__ );
 define( 'WP_MS365_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'WP_MS365_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
@@ -57,6 +57,7 @@ function wp_ms365_graph_init() {
 
 	// Front-end shortcodes (always registered so they work in widgets / REST).
 	new WP_MS365_Shortcodes();
+	wp_ms365_register_editor_blocks();
 
 	// Tenant sign-in (login-page button + SSO callback handler).
 	new WP_MS365_Login();
@@ -74,6 +75,131 @@ function wp_ms365_graph_init() {
 	WP_MS365_Auth::maybe_handle_callback();
 }
 add_action( 'plugins_loaded', 'wp_ms365_graph_init' );
+
+/**
+ * Register editor blocks for shortcode insertion in Gutenberg.
+ *
+ * @return void
+ */
+function wp_ms365_register_editor_blocks() {
+	if ( ! function_exists( 'register_block_type' ) ) {
+		return;
+	}
+
+	$block_definitions = array(
+		'wp-ms365-graph/calendar' => array(
+			'render_callback' => 'wp_ms365_render_calendar_block',
+			'attributes'      => array(
+				'limit'        => array( 'type' => 'number', 'default' => 10 ),
+				'days'         => array( 'type' => 'number', 'default' => 30 ),
+				'title'        => array( 'type' => 'string', 'default' => '' ),
+				'class'        => array( 'type' => 'string', 'default' => '' ),
+				'show_headers' => array( 'type' => 'boolean', 'default' => true ),
+			),
+		),
+		'wp-ms365-graph/files' => array(
+			'render_callback' => 'wp_ms365_render_files_block',
+			'attributes'      => array(
+				'folder'          => array( 'type' => 'string', 'default' => '' ),
+				'limit'           => array( 'type' => 'number', 'default' => 50 ),
+				'title'           => array( 'type' => 'string', 'default' => '' ),
+				'columns'         => array( 'type' => 'string', 'default' => '' ),
+				'column_order'    => array( 'type' => 'string', 'default' => '' ),
+				'hide_columns'    => array( 'type' => 'string', 'default' => '' ),
+				'download_columns' => array( 'type' => 'string', 'default' => 'file' ),
+				'class'           => array( 'type' => 'string', 'default' => '' ),
+				'table_class'     => array( 'type' => 'string', 'default' => '' ),
+				'item_class'      => array( 'type' => 'string', 'default' => '' ),
+				'show_headers'    => array( 'type' => 'boolean', 'default' => true ),
+			),
+		),
+		'wp-ms365-graph/sharepoint-library' => array(
+			'render_callback' => 'wp_ms365_render_sharepoint_library_block',
+			'attributes'      => array(
+				'site_id'         => array( 'type' => 'string', 'default' => '' ),
+				'drive_id'        => array( 'type' => 'string', 'default' => '' ),
+				'folder'          => array( 'type' => 'string', 'default' => '' ),
+				'limit'           => array( 'type' => 'number', 'default' => 50 ),
+				'title'           => array( 'type' => 'string', 'default' => '' ),
+				'columns'         => array( 'type' => 'string', 'default' => '' ),
+				'column_order'    => array( 'type' => 'string', 'default' => '' ),
+				'hide_columns'    => array( 'type' => 'string', 'default' => '' ),
+				'download_columns' => array( 'type' => 'string', 'default' => 'file' ),
+				'image_columns'   => array( 'type' => 'string', 'default' => '' ),
+				'image_basepath'  => array( 'type' => 'string', 'default' => '' ),
+				'class'           => array( 'type' => 'string', 'default' => '' ),
+				'table_class'     => array( 'type' => 'string', 'default' => '' ),
+				'item_class'      => array( 'type' => 'string', 'default' => '' ),
+				'show_headers'    => array( 'type' => 'boolean', 'default' => true ),
+			),
+		),
+		'wp-ms365-graph/login-button' => array(
+			'render_callback' => 'wp_ms365_render_login_button_block',
+			'attributes'      => array(
+				'label'       => array( 'type' => 'string', 'default' => '' ),
+				'redirect_to' => array( 'type' => 'string', 'default' => '' ),
+				'class'       => array( 'type' => 'string', 'default' => '' ),
+			),
+		),
+	);
+
+	foreach ( $block_definitions as $name => $definition ) {
+		register_block_type( $name, $definition );
+	}
+}
+
+function wp_ms365_render_shortcode_block( $tag, $attributes ) {
+	$parts = array();
+	foreach ( $attributes as $name => $value ) {
+		if ( ! is_scalar( $value ) ) {
+			continue;
+		}
+		if ( is_bool( $value ) ) {
+			$value = $value ? 'true' : 'false';
+		}
+		trim( (string) $value );
+		if ( '' === (string) $value ) {
+			continue;
+		}
+		$parts[] = $name . '="' . esc_attr( (string) $value ) . '"';
+	}
+
+	$shortcode = '[' . $tag;
+	if ( ! empty( $parts ) ) {
+		$shortcode .= ' ' . implode( ' ', $parts );
+	}
+	$shortcode .= ']';
+
+	return do_shortcode( $shortcode );
+}
+
+function wp_ms365_render_calendar_block( $attributes = array() ) {
+	return wp_ms365_render_shortcode_block( 'msgraph_calendar', $attributes );
+}
+
+function wp_ms365_render_files_block( $attributes = array() ) {
+	return wp_ms365_render_shortcode_block( 'msgraph_files', $attributes );
+}
+
+function wp_ms365_render_sharepoint_library_block( $attributes = array() ) {
+	return wp_ms365_render_shortcode_block( 'msgraph_sharepoint_library', $attributes );
+}
+
+function wp_ms365_render_login_button_block( $attributes = array() ) {
+	return wp_ms365_render_shortcode_block( 'msgraph_login_button', $attributes );
+}
+
+add_action( 'enqueue_block_editor_assets', 'wp_ms365_enqueue_block_editor_assets' );
+function wp_ms365_enqueue_block_editor_assets() {
+	wp_register_script(
+		'wp-ms365-block-editor',
+		WP_MS365_PLUGIN_URL . 'assets/js/editor-shortcodes.js',
+		array( 'wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n', 'wp-block-editor', 'wp-server-side-render' ),
+		WP_MS365_VERSION,
+		true
+	);
+	wp_enqueue_script( 'wp-ms365-block-editor' );
+}
 
 /**
  * Register activation hook – create DB option defaults.

@@ -201,10 +201,16 @@ class WP_MS365_Auth {
 			'teams_rate_limit_window' => 300,
 			'teams_min_submit_seconds' => 3,
 			'custom_css'    => '',
+			'sharepoint_image_basepath' => '',
 			'calendar_empty_text'      => '',
 			'calendar_header_date'     => '',
 			'calendar_header_event'    => '',
 			'calendar_header_duration' => '',
+			'calendar_all_day_text'    => '',
+			'calendar_duration_hour_single' => '',
+			'calendar_duration_hour_plural' => '',
+			'calendar_duration_minute_single' => '',
+			'calendar_duration_minute_plural' => '',
 			'calendar_header_location' => '',
 			'files_empty_text'         => '',
 			'files_header_file'        => '',
@@ -428,6 +434,7 @@ class WP_MS365_Auth {
 		// Mark account as Entra-linked so local password login can be restricted.
 		update_user_meta( $user->ID, self::USER_META_SSO_LINKED, 1 );
 		update_user_meta( $user->ID, self::USER_META_SSO_PROVIDER, 'entra' );
+		self::store_entra_claims( $user->ID, $claims );
 
 		// Redirect to post-login destination.
 		$redirect = ! empty( $state_data['redirect_after'] ) ? $state_data['redirect_after'] : home_url( '/' );
@@ -921,6 +928,59 @@ class WP_MS365_Auth {
 			return home_url( '/' );
 		}
 		return $url;
+	}
+
+	/**
+	 * Persist the Entra claims we can use for downstream authorization checks.
+	 *
+	 * @param int   $user_id WordPress user ID.
+	 * @param array  $claims  Validated ID token claims.
+	 * @return void
+	 */
+	private static function store_entra_claims( $user_id, array $claims ) {
+		$role_claims = self::normalize_claim_values( isset( $claims['roles'] ) ? $claims['roles'] : array() );
+		$group_claims = self::normalize_claim_values( isset( $claims['groups'] ) ? $claims['groups'] : array() );
+
+		update_user_meta( $user_id, 'wp_ms365_entra_roles', $role_claims );
+		update_user_meta( $user_id, 'wp_ms365_entra_groups', $group_claims );
+		update_user_meta(
+			$user_id,
+			'wp_ms365_entra_claims_snapshot',
+			array(
+				'roles'  => $role_claims,
+				'groups' => $group_claims,
+			)
+		);
+	}
+
+	/**
+	 * Normalize a claim value to a flat array of trimmed strings.
+	 *
+	 * @param mixed $value Raw claim payload.
+	 * @return array
+	 */
+	private static function normalize_claim_values( $value ) {
+		if ( is_array( $value ) ) {
+			$values = array();
+			array_walk_recursive(
+				$value,
+				function ( $item ) use ( &$values ) {
+					$item = trim( sanitize_text_field( (string) $item ) );
+					if ( '' !== $item ) {
+						$values[] = $item;
+					}
+				}
+			);
+
+			return array_values( array_unique( $values ) );
+		}
+
+		$value = trim( sanitize_text_field( (string) $value ) );
+		if ( '' === $value ) {
+			return array();
+		}
+
+		return array( $value );
 	}
 
 	/**

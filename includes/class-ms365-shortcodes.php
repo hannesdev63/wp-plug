@@ -546,7 +546,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		$duration_display_mode = strtolower( trim( (string) $atts['duration_display'] ) );
-		if ( ! in_array( $duration_display_mode, array( 'hours_minutes', 'start_end' ), true ) ) {
+		if ( ! in_array( $duration_display_mode, array( 'hours_minutes', 'hours', 'minutes', 'compact', 'start_end' ), true ) ) {
 			$duration_display_mode = 'hours_minutes';
 		}
 
@@ -719,7 +719,7 @@ class WP_MS365_Shortcodes {
 										: '';
 									$duration_display = 'start_end' === $duration_display_mode
 										? $this->format_event_time_range_for_display( $start, $end, $event_timezone, $all_day, $all_day_label )
-										: $this->format_event_duration_for_display( $start, $end, $all_day, $event_timezone );
+										: $this->format_event_duration_for_display( $start, $end, $all_day, $event_timezone, $duration_display_mode, $duration_display_mode );
 									?>
 									<tr class="<?php echo esc_attr( $calendar_item_class ); ?>">
 										<?php foreach ( $active_columns as $column_key ) : ?>
@@ -844,7 +844,7 @@ class WP_MS365_Shortcodes {
 	 * @param  string $source_timezone Graph timezone (IANA or common Windows value).
 	 * @return string
 	 */
-	private function format_event_duration_for_display( $start_date_time, $end_date_time, $all_day = false, $source_timezone = '' ) {
+	private function format_event_duration_for_display( $start_date_time, $end_date_time, $all_day = false, $source_timezone = '', $display_mode = 'hours_minutes' ) {
 		$start_ts = $this->parse_graph_datetime_to_timestamp( $start_date_time, $source_timezone );
 		$end_ts   = $this->parse_graph_datetime_to_timestamp( $end_date_time, $source_timezone );
 
@@ -853,6 +853,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		$seconds = (int) ( $end_ts - $start_ts );
+		$wording = $this->get_shortcode_wording();
 
 		if ( $all_day ) {
 			$days = max( 1, (int) round( $seconds / DAY_IN_SECONDS ) );
@@ -865,36 +866,53 @@ class WP_MS365_Shortcodes {
 
 		$hours   = (int) floor( $seconds / HOUR_IN_SECONDS );
 		$minutes = (int) floor( ( $seconds % HOUR_IN_SECONDS ) / MINUTE_IN_SECONDS );
+		$total_minutes = (int) round( $seconds / MINUTE_IN_SECONDS );
+		$display_mode   = strtolower( trim( (string) $display_mode ) );
+		$hour_single = isset( $wording['calendar_duration_hour_single'] ) && '' !== trim( (string) $wording['calendar_duration_hour_single'] ) ? trim( (string) $wording['calendar_duration_hour_single'] ) : __( 'hour', 'wp-ms365-graph' );
+		$hour_plural = isset( $wording['calendar_duration_hour_plural'] ) && '' !== trim( (string) $wording['calendar_duration_hour_plural'] ) ? trim( (string) $wording['calendar_duration_hour_plural'] ) : __( 'hours', 'wp-ms365-graph' );
+		$minute_single = isset( $wording['calendar_duration_minute_single'] ) && '' !== trim( (string) $wording['calendar_duration_minute_single'] ) ? trim( (string) $wording['calendar_duration_minute_single'] ) : __( 'minute', 'wp-ms365-graph' );
+		$minute_plural = isset( $wording['calendar_duration_minute_plural'] ) && '' !== trim( (string) $wording['calendar_duration_minute_plural'] ) ? trim( (string) $wording['calendar_duration_minute_plural'] ) : __( 'minutes', 'wp-ms365-graph' );
+
+		$format_duration_label = function( $count, $single, $plural ) {
+			return 1 === (int) $count ? $single : $plural;
+		};
+
+		if ( 'hours' === $display_mode ) {
+			if ( $hours > 0 ) {
+				return sprintf( '%d %s', $hours, $format_duration_label( $hours, $hour_single, $hour_plural ) );
+			}
+			$minutes = max( 1, $minutes );
+			return sprintf( '%d %s', $minutes, $format_duration_label( $minutes, $minute_single, $minute_plural ) );
+		}
+
+		if ( 'minutes' === $display_mode ) {
+			$total_minutes = max( 1, $total_minutes );
+			return sprintf( '%d %s', $total_minutes, $format_duration_label( $total_minutes, $minute_single, $minute_plural ) );
+		}
+
+		if ( 'compact' === $display_mode ) {
+			if ( $hours > 0 && $minutes > 0 ) {
+				return $hours . 'h ' . $minutes . 'm';
+			}
+			if ( $hours > 0 ) {
+				return $hours . 'h';
+			}
+			$total_minutes = max( 1, $total_minutes );
+			return $total_minutes . 'm';
+		}
 
 		if ( $hours > 0 && $minutes > 0 ) {
-			$hours_part = sprintf(
-				/* translators: %d: number of hours */
-				_n( '%d hour', '%d hours', $hours, 'wp-ms365-graph' ),
-				$hours
-			);
-			$minutes_part = sprintf(
-				/* translators: %d: number of minutes */
-				_n( '%d minute', '%d minutes', $minutes, 'wp-ms365-graph' ),
-				$minutes
-			);
-
+			$hours_part = sprintf( '%d %s', $hours, $format_duration_label( $hours, $hour_single, $hour_plural ) );
+			$minutes_part = sprintf( '%d %s', $minutes, $format_duration_label( $minutes, $minute_single, $minute_plural ) );
 			return $hours_part . ' ' . $minutes_part;
 		}
 
 		if ( $hours > 0 ) {
-			return sprintf(
-				/* translators: %d: number of hours */
-				_n( '%d hour', '%d hours', $hours, 'wp-ms365-graph' ),
-				$hours
-			);
+			return sprintf( '%d %s', $hours, $format_duration_label( $hours, $hour_single, $hour_plural ) );
 		}
 
 		$minutes = max( 1, $minutes );
-		return sprintf(
-			/* translators: %d: number of minutes */
-			_n( '%d minute', '%d minutes', $minutes, 'wp-ms365-graph' ),
-			$minutes
-		);
+		return sprintf( '%d %s', $minutes, $format_duration_label( $minutes, $minute_single, $minute_plural ) );
 	}
 
 	/**
@@ -1045,10 +1063,14 @@ class WP_MS365_Shortcodes {
 	 * Render a OneDrive file listing.
 	 *
 	 * Attributes:
-	 *   limit  – max number of items (default 50)
-	 *   folder – OneDrive folder path (default: root)
-	 *   title  – heading text (default "My Files")
-	 *   show_headers – whether to render table headers (default true)
+	 *   limit           – max number of items (default 50)
+	 *   folder          – OneDrive folder path (default: root)
+	 *   title           – heading text (default "My Files")
+	 *   columns         – comma-separated columns to show (default: all)
+	 *   column_order    – default column order used when columns is omitted
+	 *   hide_columns    – comma-separated columns to hide (default: none)
+	 *   download_columns – comma-separated columns rendered as file links (default: file)
+	 *   show_headers    – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -1060,13 +1082,17 @@ class WP_MS365_Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'limit'  => 50,
-				'folder' => '',
-				'title'  => '',
-				'class'  => '',
-				'table_class' => '',
-				'item_class'  => '',
-				'show_headers' => 'true',
+				'limit'           => 50,
+				'folder'          => '',
+				'title'           => '',
+				'columns'         => '',
+				'column_order'    => '',
+				'hide_columns'    => '',
+				'download_columns' => 'file',
+				'class'           => '',
+				'table_class'     => '',
+				'item_class'      => '',
+				'show_headers'    => 'true',
 			),
 			$atts,
 			'msgraph_files'
@@ -1076,6 +1102,65 @@ class WP_MS365_Shortcodes {
 		$files_wrap_class  = $this->merge_css_classes( 'msgraph_files', $atts['class'] );
 		$files_table_class = $this->merge_css_classes( 'msgraph_table msgraph_files__table', $atts['table_class'] );
 		$files_item_class  = $this->merge_css_classes( 'msgraph_files__item', $atts['item_class'] );
+		$available_columns = array(
+			'file'     => $wording['files_header_file'],
+			'size'     => $wording['files_header_size'],
+			'modified' => $wording['files_header_modified'],
+		);
+		$requested_columns = $this->parse_shortcode_column_list( $atts['columns'] );
+		$hidden_columns    = $this->parse_shortcode_column_list( $atts['hide_columns'] );
+		$download_columns  = $this->parse_shortcode_column_list( $atts['download_columns'] );
+		$active_columns    = array();
+		if ( empty( $requested_columns ) ) {
+			$active_columns = array_keys( $available_columns );
+		} else {
+			foreach ( $requested_columns as $requested_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $requested_column );
+				if ( '' === $normalized || ! isset( $available_columns[ $normalized ] ) ) {
+					continue;
+				}
+				if ( ! in_array( $normalized, $active_columns, true ) ) {
+					$active_columns[] = $normalized;
+				}
+			}
+			if ( empty( $active_columns ) ) {
+				$active_columns = array_keys( $available_columns );
+			}
+		}
+		$download_map = array();
+		if ( empty( $download_columns ) ) {
+			$download_map['file'] = true;
+		} else {
+			foreach ( $download_columns as $download_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $download_column );
+				if ( '' === $normalized || 'none' === $normalized ) {
+					continue;
+				}
+				if ( isset( $available_columns[ $normalized ] ) ) {
+					$download_map[ $normalized ] = true;
+				}
+			}
+			if ( empty( $download_map ) ) {
+				$download_map['file'] = false;
+			}
+		}
+		if ( ! empty( $hidden_columns ) ) {
+			$hidden_map = array();
+			foreach ( $hidden_columns as $hidden_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $hidden_column );
+				if ( '' !== $normalized ) {
+					$hidden_map[ $normalized ] = true;
+				}
+			}
+			$active_columns = array_values(
+				array_filter(
+					$active_columns,
+					function ( $column_key ) use ( $hidden_map ) {
+						return ! isset( $hidden_map[ $column_key ] );
+					}
+				)
+			);
+		}
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
 			return $this->not_connected_notice();
@@ -1132,9 +1217,9 @@ class WP_MS365_Shortcodes {
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
-								<th scope="col"><?php echo esc_html( $wording['files_header_file'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_size'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_modified'] ); ?></th>
+								<?php foreach ( $active_columns as $column_key ) : ?>
+									<th scope="col"><?php echo esc_html( $available_columns[ $column_key ] ); ?></th>
+								<?php endforeach; ?>
 							</tr>
 						</thead>
 					<?php endif; ?>
@@ -1151,17 +1236,30 @@ class WP_MS365_Shortcodes {
 								: '';
 							?>
 							<tr class="<?php echo esc_attr( $files_item_class ); ?>">
-								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
-									<?php if ( $download_link ) : ?>
-										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
-											<?php echo esc_html( $name ); ?>
-										</a>
-									<?php else : ?>
-										<?php echo esc_html( $name ); ?>
-									<?php endif; ?>
-								</td>
-								<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $wording['files_header_size'] ); ?>"><?php echo esc_html( $size ); ?></td>
-								<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $wording['files_header_modified'] ); ?>"><?php echo esc_html( $modified ); ?></td>
+								<?php foreach ( $active_columns as $column_key ) : ?>
+									<?php
+									$cell_value = '';
+									if ( 'file' === $column_key ) {
+										$cell_value = $name;
+									} elseif ( 'size' === $column_key ) {
+										$cell_value = $size;
+									} elseif ( 'modified' === $column_key ) {
+										$cell_value = $modified;
+									}
+									?>
+									<td class="msgraph_files__meta" data-label="<?php echo esc_attr( $available_columns[ $column_key ] ); ?>">
+										<?php
+										$is_download_cell = ( 'file' === $column_key && isset( $download_map['file'] ) && true === $download_map['file'] );
+										if ( $is_download_cell && $download_link ) :
+											?>
+											<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
+												<?php echo esc_html( $cell_value ); ?>
+											</a>
+										<?php else : ?>
+											<?php echo esc_html( $cell_value ); ?>
+										<?php endif; ?>
+									</td>
+								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -1184,8 +1282,14 @@ class WP_MS365_Shortcodes {
 	 *   drive_id     – SharePoint document library drive ID (required)
 	 *   limit        – max number of items (default 10)
 	 *   folder       – folder path inside the library (default: root)
-	 *   title        – heading text (default empty)
-	 *   show_headers – whether to render table headers (default true)
+	 *   title            – heading text (default empty)
+	 *   columns          – comma-separated columns to show (default: all)
+	 *   column_order     – default column order used when columns is omitted
+	 *   hide_columns     – comma-separated columns to hide (default: none)
+	 *   download_columns – comma-separated columns rendered as file links (default: file)
+	 *   image_columns    – comma-separated columns rendered as images using image_basepath
+	 *   image_basepath   – base URL for image columns (default: WordPress uploads base URL)
+	 *   show_headers     – whether to render table headers (default true)
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -1197,15 +1301,21 @@ class WP_MS365_Shortcodes {
 
 		$atts = shortcode_atts(
 			array(
-				'site_id'      => '',
-				'drive_id'     => '',
-				'limit'        => 50,
-				'folder'       => '',
-				'title'        => '',
-				'class'        => '',
-				'table_class'  => '',
-				'item_class'   => '',
-				'show_headers' => 'true',
+				'site_id'         => '',
+				'drive_id'        => '',
+				'limit'           => 50,
+				'folder'          => '',
+				'title'           => '',
+				'columns'         => '',
+				'column_order'    => '',
+				'hide_columns'    => '',
+				'download_columns' => 'file',
+				'image_columns'   => '',
+				'image_basepath'  => '',
+				'class'           => '',
+				'table_class'     => '',
+				'item_class'      => '',
+				'show_headers'    => 'true',
 			),
 			$atts,
 			'msgraph_sharepoint_library'
@@ -1218,6 +1328,105 @@ class WP_MS365_Shortcodes {
 		$site_id      = trim( (string) $atts['site_id'] );
 		$drive_id     = trim( (string) $atts['drive_id'] );
 		$folder       = trim( (string) $atts['folder'] );
+		$available_columns = array(
+			'file'     => $wording['files_header_file'],
+			'size'     => $wording['files_header_size'],
+			'modified' => $wording['files_header_modified'],
+		);
+		$requested_columns = $this->parse_shortcode_column_list( $atts['columns'] );
+		$default_order     = $this->parse_shortcode_column_list( $atts['column_order'] );
+		$hidden_columns    = $this->parse_shortcode_column_list( $atts['hide_columns'] );
+		$download_columns  = $this->parse_shortcode_column_list( $atts['download_columns'] );
+		$image_columns     = $this->parse_shortcode_column_list( $atts['image_columns'] );
+		$settings          = WP_MS365_Auth::get_settings();
+		$upload_dir        = wp_get_upload_dir();
+		$default_image_basepath = isset( $upload_dir['baseurl'] ) ? (string) $upload_dir['baseurl'] : content_url( 'uploads' );
+		$settings_image_basepath = isset( $settings['sharepoint_image_basepath'] ) ? trim( (string) $settings['sharepoint_image_basepath'] ) : '';
+		$image_basepath = trim( (string) $atts['image_basepath'] );
+		if ( '' === $image_basepath ) {
+			$image_basepath = $settings_image_basepath;
+		}
+		$image_basepath = '' === $image_basepath ? $default_image_basepath : esc_url_raw( $image_basepath );
+		$image_basepath = untrailingslashit( $image_basepath );
+		$active_columns    = array();
+		if ( empty( $requested_columns ) ) {
+			if ( empty( $default_order ) ) {
+				$active_columns = array_keys( $available_columns );
+			} else {
+				foreach ( $default_order as $default_column ) {
+					$normalized = $this->normalize_sharepoint_library_column_key( $default_column );
+					if ( '' === $normalized || ! isset( $available_columns[ $normalized ] ) ) {
+						continue;
+					}
+					if ( ! in_array( $normalized, $active_columns, true ) ) {
+						$active_columns[] = $normalized;
+					}
+				}
+				if ( empty( $active_columns ) ) {
+					$active_columns = array_keys( $available_columns );
+				}
+			}
+		} else {
+			foreach ( $requested_columns as $requested_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $requested_column );
+				if ( '' === $normalized || ! isset( $available_columns[ $normalized ] ) ) {
+					continue;
+				}
+				if ( ! in_array( $normalized, $active_columns, true ) ) {
+					$active_columns[] = $normalized;
+				}
+			}
+			if ( empty( $active_columns ) ) {
+				$active_columns = array_keys( $available_columns );
+			}
+		}
+
+		$download_map = array();
+		$image_map    = array();
+		if ( empty( $download_columns ) ) {
+			$download_map['file'] = true;
+		} else {
+			foreach ( $download_columns as $download_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $download_column );
+				if ( '' === $normalized || 'none' === $normalized ) {
+					continue;
+				}
+				if ( isset( $available_columns[ $normalized ] ) ) {
+					$download_map[ $normalized ] = true;
+				}
+			}
+			if ( empty( $download_map ) ) {
+				$download_map['file'] = false;
+			}
+		}
+
+		if ( ! empty( $image_columns ) ) {
+			foreach ( $image_columns as $image_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $image_column );
+				if ( '' === $normalized || ! isset( $available_columns[ $normalized ] ) ) {
+					continue;
+				}
+				$image_map[ $normalized ] = true;
+			}
+		}
+
+		if ( ! empty( $hidden_columns ) ) {
+			$hidden_map = array();
+			foreach ( $hidden_columns as $hidden_column ) {
+				$normalized = $this->normalize_sharepoint_library_column_key( $hidden_column );
+				if ( '' !== $normalized ) {
+					$hidden_map[ $normalized ] = true;
+				}
+			}
+			$active_columns = array_values(
+				array_filter(
+					$active_columns,
+					function ( $column_key ) use ( $hidden_map ) {
+						return ! isset( $hidden_map[ $column_key ] );
+					}
+				)
+			);
+		}
 
 		if ( '' === $site_id || '' === $drive_id ) {
 			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
@@ -1277,9 +1486,9 @@ class WP_MS365_Shortcodes {
 					<?php if ( $show_headers ) : ?>
 						<thead>
 							<tr>
-								<th scope="col"><?php echo esc_html( $wording['files_header_file'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_size'] ); ?></th>
-								<th scope="col"><?php echo esc_html( $wording['files_header_modified'] ); ?></th>
+								<?php foreach ( $active_columns as $column_key ) : ?>
+									<th scope="col"><?php echo esc_html( $available_columns[ $column_key ] ); ?></th>
+								<?php endforeach; ?>
 							</tr>
 						</thead>
 					<?php endif; ?>
@@ -1309,17 +1518,53 @@ class WP_MS365_Shortcodes {
 							}
 							?>
 							<tr class="<?php echo esc_attr( $sp_item_class ); ?>">
-								<td class="msgraph_files__name" data-label="<?php echo esc_attr( $wording['files_header_file'] ); ?>">
-									<?php if ( $download_link ) : ?>
-										<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
-											<?php echo esc_html( $name ); ?>
-										</a>
-									<?php else : ?>
-										<?php echo esc_html( $name ); ?>
-									<?php endif; ?>
-								</td>
-								<td class="msgraph_files__meta msgraph_files__meta--size" data-label="<?php echo esc_attr( $wording['files_header_size'] ); ?>"><?php echo esc_html( $size ); ?></td>
-								<td class="msgraph_files__meta msgraph_files__meta--modified" data-label="<?php echo esc_attr( $wording['files_header_modified'] ); ?>"><?php echo esc_html( $modified ); ?></td>
+								<?php foreach ( $active_columns as $column_key ) : ?>
+									<?php
+									$cell_value = '';
+									if ( 'file' === $column_key ) {
+										$cell_value = $name;
+									} elseif ( 'size' === $column_key ) {
+										$cell_value = $size;
+									} elseif ( 'modified' === $column_key ) {
+										$cell_value = $modified;
+									}
+
+									$is_image_cell = ( isset( $image_map[ $column_key ] ) && '' !== trim( (string) $cell_value ) );
+									$image_src     = '';
+									if ( $is_image_cell ) {
+										$raw_image_value = str_replace( '\\', '/', trim( (string) $cell_value ) );
+										if ( preg_match( '#^https?://#i', $raw_image_value ) ) {
+											$image_src = esc_url_raw( $raw_image_value );
+										} elseif ( '' !== $image_basepath ) {
+											$path_segments = array_values(
+												array_filter(
+													explode( '/', ltrim( $raw_image_value, '/' ) ),
+													function ( $path_segment ) {
+														return '' !== (string) $path_segment;
+													}
+												)
+											);
+											$encoded_segments = array_map( 'rawurlencode', $path_segments );
+											$image_src = $image_basepath . '/' . implode( '/', $encoded_segments );
+										}
+									}
+									?>
+									<td class="msgraph_files__meta" data-label="<?php echo esc_attr( $available_columns[ $column_key ] ); ?>">
+										<?php
+										$is_download_cell = ( 'file' === $column_key && isset( $download_map['file'] ) && true === $download_map['file'] );
+										if ( '' !== $image_src ) :
+											?>
+											<img src="<?php echo esc_url( $image_src ); ?>" alt="<?php echo esc_attr( $cell_value ); ?>" loading="lazy" decoding="async" class="msgraph_files__image" />
+										<?php elseif ( $is_download_cell && $download_link ) :
+											?>
+											<a href="<?php echo esc_url( $download_link ); ?>" rel="nofollow">
+												<?php echo esc_html( $cell_value ); ?>
+											</a>
+										<?php else : ?>
+											<?php echo esc_html( $cell_value ); ?>
+										<?php endif; ?>
+									</td>
+								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -1348,6 +1593,9 @@ class WP_MS365_Shortcodes {
 	 *   display_columns – comma-separated columns to render (default: all columns)
 	 *   hide_columns – comma-separated columns to hide (default: none)
 	 *   formatter – per-column numeric formatter rules (default: none)
+	 *   displaymode – list (default) or card
+	 *   card_title_column – column name used as card title in card mode (default: name)
+	 *   urls – comma-separated columns rendered as links using the column name as text and the cell value as href
 	 *
 	 * @param  array $atts Shortcode attributes.
 	 * @return string HTML output.
@@ -1370,6 +1618,11 @@ class WP_MS365_Shortcodes {
 				'display_columns' => '',
 				'hide_columns' => '',
 				'formatter'    => '',
+				'image_columns' => '',
+				'urls'         => '',
+				'image_basepath' => '',
+				'displaymode' => 'list',
+				'card_title_column' => 'name',
 			),
 			$atts,
 			'msgraph_sharepoint_team'
@@ -1383,6 +1636,30 @@ class WP_MS365_Shortcodes {
 		$sort_columns = $this->parse_shortcode_column_list( $atts['sort_columns'] );
 		$display_columns = $this->parse_shortcode_column_list( $atts['display_columns'] );
 		$hide_columns = $this->parse_shortcode_column_list( $atts['hide_columns'] );
+		$image_columns = $this->parse_shortcode_column_list( $atts['image_columns'] );
+		$url_columns = $this->parse_shortcode_column_list( $atts['urls'] );
+		$settings = WP_MS365_Auth::get_settings();
+		$upload_dir = wp_get_upload_dir();
+		$default_image_basepath = isset( $upload_dir['baseurl'] ) ? (string) $upload_dir['baseurl'] : content_url( 'uploads' );
+		$settings_image_basepath = isset( $settings['sharepoint_image_basepath'] ) ? trim( (string) $settings['sharepoint_image_basepath'] ) : '';
+		$image_basepath = trim( (string) $atts['image_basepath'] );
+		if ( '' === $image_basepath ) {
+			$image_basepath = $settings_image_basepath;
+		}
+		$image_basepath = '' === $image_basepath ? $default_image_basepath : esc_url_raw( $image_basepath );
+		$image_basepath = untrailingslashit( $image_basepath );
+		$display_mode = strtolower( trim( (string) $atts['displaymode'] ) );
+		if ( '' === $display_mode ) {
+			$display_mode = 'list';
+		}
+		if ( ! in_array( $display_mode, array( 'list', 'card' ), true ) ) {
+			$display_mode = 'list';
+		}
+		$card_title_column = trim( (string) $atts['card_title_column'] );
+		if ( '' === $card_title_column ) {
+			$card_title_column = 'name';
+		}
+		$card_title_column = $this->normalize_team_header_key( $card_title_column );
 
 		if ( '' === $site_id || '' === $drive_id ) {
 			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
@@ -1495,6 +1772,9 @@ class WP_MS365_Shortcodes {
 		$rows           = $prepared_table['rows'];
 		$number_formatters = $this->parse_team_number_formatters( $atts['formatter'], $headers );
 
+		// Normalize the card_title_column for consistent matching with header keys.
+		$card_title_column_normalized = $this->normalize_team_header_key( $card_title_column );
+
 		ob_start();
 		?>
 		<div class="<?php echo esc_attr( $team_wrap_class ); ?>">
@@ -1504,6 +1784,73 @@ class WP_MS365_Shortcodes {
 
 			<?php if ( empty( $rows ) || empty( $headers ) ) : ?>
 				<p class="msgraph_team__empty"><?php echo esc_html__( 'No matching team rows found.', 'wp-ms365-graph' ); ?></p>
+			<?php elseif ( 'card' === $display_mode ) : ?>
+				<div class="msgraph_team__cards">
+					<?php foreach ( $rows as $row ) : ?>
+						<?php
+						$card_name = '';
+						$card_image = '';
+						$card_details = array();
+						foreach ( $headers as $header ) {
+							$raw_value = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
+							$display_value = $this->format_team_cell_value( $header, $raw_value, $number_formatters );
+							$image_header_key = $this->normalize_team_header_key( $header );
+							$title_header_key = $this->normalize_team_header_key( $header );
+							if ( ! empty( $image_columns ) ) {
+								$image_matches = array_map( array( $this, 'normalize_team_header_key' ), $image_columns );
+								if ( in_array( $image_header_key, $image_matches, true ) ) {
+									$card_image = $this->build_image_src_from_value( $raw_value, $image_basepath );
+									continue;
+								}
+							}
+							if ( '' === $card_name && $title_header_key === $card_title_column_normalized ) {
+								$card_name = $display_value;
+								continue;
+							}
+							$is_url_cell = ! empty( $url_columns ) && in_array( $this->normalize_team_header_key( $header ), array_map( array( $this, 'normalize_team_header_key' ), $url_columns ), true );
+							$card_details[] = array(
+								'label' => $header,
+								'value' => $display_value,
+								'raw_value' => $raw_value,
+								'is_url' => $is_url_cell,
+							);
+						}
+						// If no title found from specified column, use first non-empty value as fallback.
+						if ( '' === $card_name ) {
+							foreach ( $card_details as $detail ) {
+								if ( '' !== trim( (string) $detail['value'] ) ) {
+									$card_name = $detail['value'];
+									break;
+								}
+							}
+						}
+						$filtered_details = array();
+						foreach ( $card_details as $detail ) {
+							if ( '' !== trim( (string) $detail['value'] ) && $this->normalize_team_header_key( $detail['label'] ) !== $card_title_column_normalized ) {
+								$filtered_details[] = $detail;
+							}
+						}
+						?>
+						<div class="msgraph_team__card">
+							<?php if ( '' !== $card_name ) : ?>
+								<h4 class="msgraph_team__card-name"><?php echo esc_html( $card_name ); ?></h4>
+							<?php endif; ?>
+							<?php if ( '' !== $card_image ) : ?>
+								<div class="msgraph_team__card-image-wrap">
+									<img src="<?php echo esc_url( $card_image ); ?>" alt="<?php echo esc_attr( $card_name ); ?>" loading="lazy" decoding="async" class="msgraph_team__card-image" />
+								</div>
+							<?php endif; ?>
+							<div class="msgraph_team__card-details">
+								<?php foreach ( $filtered_details as $detail ) : ?>
+									<div class="msgraph_team__card-row">
+										<span class="msgraph_team__card-label"><?php echo esc_html( $detail['label'] ); ?></span>
+										<span class="msgraph_team__card-value"><?php echo ! empty( $detail['is_url'] ) ? $this->build_team_url_link_markup( $detail['label'], (string) $detail['raw_value'] ) : esc_html( $detail['value'] ); ?></span>
+									</div>
+								<?php endforeach; ?>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
 			<?php else : ?>
 				<table class="<?php echo esc_attr( $team_table_class ); ?>">
 					<?php if ( $show_headers ) : ?>
@@ -1520,10 +1867,27 @@ class WP_MS365_Shortcodes {
 							<tr class="<?php echo esc_attr( $team_item_class ); ?>">
 								<?php foreach ( $headers as $header ) : ?>
 									<?php
-									$raw_value       = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
-									$display_value   = $this->format_team_cell_value( $header, $raw_value, $number_formatters );
+									$raw_value = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
+									$display_value = $this->format_team_cell_value( $header, $raw_value, $number_formatters );
+									$image_src = '';
+									$is_url_cell = ! empty( $url_columns ) && in_array( $this->normalize_team_header_key( $header ), array_map( array( $this, 'normalize_team_header_key' ), $url_columns ), true );
+									if ( ! empty( $image_columns ) ) {
+										$image_header_key = $this->normalize_team_header_key( $header );
+										$image_matches = array_map( array( $this, 'normalize_team_header_key' ), $image_columns );
+										if ( in_array( $image_header_key, $image_matches, true ) ) {
+											$image_src = $this->build_image_src_from_value( $raw_value, $image_basepath );
+										}
+									}
 									?>
-									<td data-label="<?php echo esc_attr( $header ); ?>"><?php echo esc_html( $display_value ); ?></td>
+									<td data-label="<?php echo esc_attr( $header ); ?>">
+										<?php if ( '' !== $image_src ) : ?>
+											<img src="<?php echo esc_url( $image_src ); ?>" alt="<?php echo esc_attr( $display_value ); ?>" loading="lazy" decoding="async" class="msgraph_team__image" />
+										<?php elseif ( $is_url_cell ) : ?>
+											<?php echo $this->build_team_url_link_markup( $header, $raw_value ); ?>
+										<?php else : ?>
+											<?php echo esc_html( $display_value ); ?>
+										<?php endif; ?>
+									</td>
 								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
@@ -1950,6 +2314,33 @@ class WP_MS365_Shortcodes {
 	}
 
 	/**
+	 * Normalize SharePoint library column names from shortcode input.
+	 *
+	 * @param string $column Raw column label.
+	 * @return string
+	 */
+	private function normalize_sharepoint_library_column_key( $column ) {
+		$normalized = strtolower( trim( (string) $column ) );
+		$aliases = array(
+			'name'         => 'file',
+			'file'         => 'file',
+			'filename'     => 'file',
+			'size'         => 'size',
+			'modified'     => 'modified',
+			'lastmodified' => 'modified',
+			'modifieddate' => 'modified',
+			'date'         => 'modified',
+			'none'         => 'none',
+		);
+
+		if ( isset( $aliases[ $normalized ] ) ) {
+			return $aliases[ $normalized ];
+		}
+
+		return $normalized;
+	}
+
+	/**
 	 * Parse per-column numeric formatter rules.
 	 *
 	 * Rule syntax (semicolon-separated):
@@ -2276,6 +2667,67 @@ class WP_MS365_Shortcodes {
 
 		$normalized = preg_replace( '/[^a-z0-9]+/', '', $normalized );
 		return trim( (string) $normalized );
+	}
+
+	/**
+	 * Build markup for a URL-based team cell.
+	 *
+	 * @param string $column_name Column label used as visible text.
+	 * @param string $raw_url Raw URL value.
+	 * @return string
+	 */
+	public function build_team_url_link_markup( $column_name, $raw_url ) {
+		$column_name = trim( (string) $column_name );
+		$raw_url     = trim( (string) $raw_url );
+		if ( '' === $column_name || '' === $raw_url ) {
+			return '';
+		}
+
+		return sprintf(
+			'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+			esc_url( $raw_url ),
+			esc_html( $column_name )
+		);
+	}
+
+	/**
+	 * Build the final image source for a SharePoint team cell.
+	 *
+	 * @param string $raw_value Raw cell value.
+	 * @param string $base_path Base URL prefix.
+	 * @return string
+	 */
+	public function build_image_src_from_value( $raw_value, $base_path ) {
+		$raw_value = trim( (string) $raw_value );
+		if ( '' === $raw_value ) {
+			return '';
+		}
+
+		$normalized = str_replace( '\\', '/', $raw_value );
+		if ( preg_match( '#^https?://#i', $normalized ) ) {
+			return esc_url_raw( $normalized );
+		}
+
+		$base_path = trim( (string) $base_path );
+		if ( '' === $base_path ) {
+			return '';
+		}
+
+		$base_path = rtrim( (string) esc_url_raw( $base_path ), '/\\' );
+		$path_segments = array_values(
+			array_filter(
+				explode( '/', ltrim( $normalized, '/' ) ),
+				static function ( $segment ) {
+					return '' !== trim( (string) $segment );
+				}
+			)
+		);
+		if ( empty( $path_segments ) ) {
+			return '';
+		}
+
+		$encoded_segments = array_map( 'rawurlencode', $path_segments );
+		return $base_path . '/' . implode( '/', $encoded_segments );
 	}
 
 	/**
@@ -2873,6 +3325,70 @@ class WP_MS365_Shortcodes {
 				border-collapse: collapse;
 				border: 0;
 			}
+			.msgraph_files__image {
+				display: block;
+				max-width: 120px;
+				max-height: 120px;
+				width: auto;
+				height: auto;
+				object-fit: contain;
+			}
+			.msgraph_team__cards {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+				gap: 1.5rem;
+			}
+			.msgraph_team__card {
+				background: linear-gradient(180deg, rgba(20, 42, 61, 0.9), rgba(31, 52, 75, 0.9));
+				border-radius: 18px;
+				overflow: hidden;
+				box-shadow: 0 16px 28px rgba(9, 18, 28, 0.2);
+				color: #f3f6f9;
+			}
+			.msgraph_team__card-image-wrap {
+				background: transparent;
+				padding: 0;
+				margin: 0;
+				overflow: hidden;
+			}
+			.msgraph_team__card-image {
+				display: block;
+				width: 100%;
+				height: 420px;
+				object-fit: cover;
+				background: transparent;
+			}
+			.msgraph_team__card-name {
+				margin: 0;
+				padding: 1.3rem 1.3rem 0;
+				font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+				line-height: 0.96;
+				font-weight: 700;
+				color: #f4f4f6;
+				overflow-wrap: anywhere;
+				word-break: break-word;
+			}
+			.msgraph_team__card-details {
+				padding: 0 1.3rem 1.25rem;
+			}
+			.msgraph_team__card-row {
+				display: flex;
+				justify-content: space-between;
+				align-items: baseline;
+				gap: 1rem;
+				padding: 0.35rem 0;
+				border-top: 1px solid rgba(255,255,255,0.08);
+				font-size: 1.05rem;
+			}
+			.msgraph_team__card-label {
+				font-weight: 700;
+				color: #edf2f8;
+			}
+			.msgraph_team__card-value {
+				font-weight: 500;
+				color: #ffffff;
+				text-align: right;
+			}
 			.msgraph_calendar__table th:first-child,
 			.msgraph_calendar__table td:first-child,
 			.msgraph_files__table th:nth-child(2),
@@ -3126,13 +3642,17 @@ class WP_MS365_Shortcodes {
 	private function get_shortcode_wording() {
 		$settings = WP_MS365_Auth::get_settings();
 		$defaults = array(
-			'calendar_empty_text'      => __( 'No upcoming events found.', 'wp-ms365-graph' ),
-			'calendar_header_date'     => __( 'Date', 'wp-ms365-graph' ),
-			'calendar_header_event'    => __( 'Event', 'wp-ms365-graph' ),
-			'calendar_header_duration' => __( 'Duration', 'wp-ms365-graph' ),
-			'calendar_all_day_text'    => __( 'All day', 'wp-ms365-graph' ),
-			'calendar_header_location' => __( 'Location', 'wp-ms365-graph' ),
-			'files_empty_text'         => __( 'No files found.', 'wp-ms365-graph' ),
+			'calendar_empty_text'                => __( 'No upcoming events found.', 'wp-ms365-graph' ),
+			'calendar_header_date'               => __( 'Date', 'wp-ms365-graph' ),
+			'calendar_header_event'              => __( 'Event', 'wp-ms365-graph' ),
+			'calendar_header_duration'           => __( 'Duration', 'wp-ms365-graph' ),
+			'calendar_all_day_text'              => __( 'All day', 'wp-ms365-graph' ),
+			'calendar_duration_hour_single'      => __( 'hour', 'wp-ms365-graph' ),
+			'calendar_duration_hour_plural'      => __( 'hours', 'wp-ms365-graph' ),
+			'calendar_duration_minute_single'    => __( 'minute', 'wp-ms365-graph' ),
+			'calendar_duration_minute_plural'    => __( 'minutes', 'wp-ms365-graph' ),
+			'calendar_header_location'           => __( 'Location', 'wp-ms365-graph' ),
+			'files_empty_text'                   => __( 'No files found.', 'wp-ms365-graph' ),
 			'files_header_file'        => __( 'File', 'wp-ms365-graph' ),
 			'files_header_size'        => __( 'Size', 'wp-ms365-graph' ),
 			'files_header_modified'    => __( 'Modified', 'wp-ms365-graph' ),

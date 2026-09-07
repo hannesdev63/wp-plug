@@ -63,7 +63,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tr><td><code>calendar</code></td><td><code>default calendar</code></td><td><?php esc_html_e( 'Optional calendar ID. Use the Calendar Explorer tab to copy the shortcode for a specific calendar you can access.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>past_days</code></td><td><code>0</code></td><td><?php esc_html_e( 'Include events that ended in the last N days.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>columns</code></td><td><code>all</code></td><td><?php esc_html_e( 'Comma-separated list from: date,event,duration,location.', 'wp-ms365-graph' ); ?></td></tr>
-			<tr><td><code>duration_display</code></td><td><code>hours_minutes</code></td><td><?php esc_html_e( 'Duration mode: hours_minutes or start_end.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>duration_display</code></td><td><code>hours_minutes</code></td><td><?php esc_html_e( 'Duration mode: hours_minutes, hours, minutes, compact or start_end. Examples: 1 hour 30 minutes, 1h 30m, 90 minutes, 09:00 - 10:30.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>group_by_date</code></td><td><code>false</code></td><td><?php esc_html_e( 'Group events by start date so multiple events are listed under one date. In grouped mode, event times are shown as HH:MM ranges.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>categories</code></td><td><code>""</code></td><td><?php esc_html_e( 'Comma-separated category filter. Empty means all categories.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>show_headers</code></td><td><code>true</code></td><td><?php esc_html_e( 'Show or hide table header row.', 'wp-ms365-graph' ); ?></td></tr>
@@ -77,6 +77,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><code>[msgraph_calendar calendar="AAMkAGI2..."]</code></p>
 	<p><code>[msgraph_calendar limit="8" timezone="Europe/Berlin" past_days="2" title="Upcoming Events"]</code></p>
 	<p><code>[msgraph_calendar columns="date,event,duration" duration_display="start_end" categories="Townhall,Leadership"]</code></p>
+	<p><code>[msgraph_calendar columns="date,event,duration" duration_display="minutes" title="Meeting Lengths"]</code></p>
+	<p><code>[msgraph_calendar columns="date,event,duration" duration_display="compact" title="Compact Schedule"]</code></p>
 	<p><code>[msgraph_calendar group_by_date="true" columns="date,event,duration,location" title="Team Calendar"]</code></p>
 	<p><code>[msgraph_calendar class="my-calendar" table_class="my-calendar-table" item_class="my-calendar-row"]</code></p>
 	<p class="description">
@@ -98,6 +100,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tr><td><code>limit</code></td><td><code>50</code></td><td><?php esc_html_e( 'Maximum number of file rows to render.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>folder</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional relative folder path inside OneDrive root.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>title</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional heading above the table.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>columns</code></td><td><code>all</code></td><td><?php esc_html_e( 'Comma-separated list of columns to display: file,size,modified. Unknown values are ignored.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>column_order</code></td><td><code>file,size,modified</code></td><td><?php esc_html_e( 'Optional default column order used when columns is not supplied. This overrides the built-in order but still respects hide_columns.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>hide_columns</code></td><td><code>none</code></td><td><?php esc_html_e( 'Comma-separated list of columns to hide after the include list is applied. If a column appears in both columns and hide_columns, hide_columns wins.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>download_columns</code></td><td><code>file</code></td><td><?php esc_html_e( 'Comma-separated list of columns that render as download links. Use none to disable download links. Currently only the file column is downloadable.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>show_headers</code></td><td><code>true</code></td><td><?php esc_html_e( 'Show or hide table header row.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>class</code></td><td><code>msgraph_files</code></td><td><?php esc_html_e( 'Additional wrapper classes merged with default files wrapper class.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>table_class</code></td><td><code>msgraph_table msgraph_files__table</code></td><td><?php esc_html_e( 'Additional classes merged with default files table classes.', 'wp-ms365-graph' ); ?></td></tr>
@@ -107,7 +113,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><strong><?php esc_html_e( 'Samples', 'wp-ms365-graph' ); ?>:</strong></p>
 	<p><code>[msgraph_files]</code></p>
 	<p><code>[msgraph_files limit="20" folder="Documents/Policies" title="Policy Files"]</code></p>
-	<p><code>[msgraph_files limit="15" show_headers="false"]</code></p>
+	<p><code>[msgraph_files columns="file,size" hide_columns="size" download_columns="file" show_headers="true"]</code></p>
+	<p><code>[msgraph_files column_order="modified,file" download_columns="file" show_headers="true"]</code></p>
+	<p><code>[msgraph_files limit="15" download_columns="none" show_headers="false"]</code></p>
 	<p><code>[msgraph_files class="my-files" table_class="my-files-table" item_class="my-files-row"]</code></p>
 
 	<hr />
@@ -127,6 +135,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<tr><td><code>limit</code></td><td><code>50</code></td><td><?php esc_html_e( 'Maximum number of file rows to render.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>folder</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional relative folder path inside the library.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>title</code></td><td><code>""</code></td><td><?php esc_html_e( 'Optional heading above the table.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>columns</code></td><td><code>all</code></td><td><?php esc_html_e( 'Comma-separated list of columns to display: file,size,modified. Unknown values are ignored.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>column_order</code></td><td><code>file,size,modified</code></td><td><?php esc_html_e( 'Optional default column order used when columns is not supplied. This overrides the built-in order but still respects hide_columns.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>hide_columns</code></td><td><code>none</code></td><td><?php esc_html_e( 'Comma-separated list of columns to hide after the include list is applied. If a column appears in both columns and hide_columns, hide_columns wins.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>download_columns</code></td><td><code>file</code></td><td><?php esc_html_e( 'Comma-separated list of columns that render as download links. Use none to disable download links. Currently only the file column is downloadable.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>image_columns</code></td><td><code>none</code></td><td><?php esc_html_e( 'Comma-separated list of columns whose values are treated as image file names and rendered as images.', 'wp-ms365-graph' ); ?></td></tr>
+			<tr><td><code>image_basepath</code></td><td><code>settings value (fallback: WordPress uploads URL)</code></td><td><?php esc_html_e( 'Base URL prepended to image file names for image_columns. If omitted, the plugin setting SharePoint Image Base Path is used; if that is empty, the WordPress uploads URL is used.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>show_headers</code></td><td><code>true</code></td><td><?php esc_html_e( 'Show or hide table header row.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>class</code></td><td><code>msgraph_files msgraph_files--sharepoint</code></td><td><?php esc_html_e( 'Additional wrapper classes merged with default SharePoint wrapper classes.', 'wp-ms365-graph' ); ?></td></tr>
 			<tr><td><code>table_class</code></td><td><code>msgraph_table msgraph_files__table</code></td><td><?php esc_html_e( 'Additional classes merged with default SharePoint table classes.', 'wp-ms365-graph' ); ?></td></tr>
@@ -136,8 +150,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<p><strong><?php esc_html_e( 'Samples', 'wp-ms365-graph' ); ?>:</strong></p>
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123"]</code></p>
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" folder="Shared Documents/HR" limit="30" title="HR Library"]</code></p>
-	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" show_headers="false"]</code></p>
+	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" columns="file,size" hide_columns="size" download_columns="file" show_headers="true"]</code></p>
+	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" column_order="modified,file" download_columns="file" show_headers="true"]</code></p>
+	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" download_columns="none" show_headers="false"]</code></p>
+	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" columns="file" image_columns="file"]</code></p>
+	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" columns="file" image_columns="file" image_basepath="https://example.com/wp-content/uploads/team"]</code></p>
 	<p><code>[msgraph_sharepoint_library site_id="contoso.sharepoint.com,abc123,def456" drive_id="b!XYZ123" class="my-sp-files" table_class="my-sp-table" item_class="my-sp-row"]</code></p>
+	<p><?php esc_html_e( 'Default image base path can be configured in Microsoft 365 -> Settings -> SharePoint Image Base Path.', 'wp-ms365-graph' ); ?></p>
 
 	<hr />
 	<h2><code>[msgraph_sharepoint_team]</code></h2>

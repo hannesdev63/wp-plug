@@ -100,6 +100,14 @@ function esc_url_raw( $url ) {
 	return (string) $url;
 }
 
+function esc_url( $url ) {
+	return (string) $url;
+}
+
+function esc_html( $text ) {
+	return (string) $text;
+}
+
 function wp_validate_redirect( $url, $default = '' ) {
 	$parts = parse_url( (string) $url );
 	if ( ! is_array( $parts ) ) {
@@ -117,11 +125,20 @@ function wp_create_nonce( $action ) {
 	return md5( $action . time() );
 }
 
+function add_shortcode( $tag, $callback ) {
+	return true;
+}
+
+function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
+	return true;
+}
+
 // ---------------------------------------------------------------------------
 // Load class under test
 // ---------------------------------------------------------------------------
 
 require_once __DIR__ . '/../includes/class-ms365-auth.php';
+require_once __DIR__ . '/../includes/class-ms365-shortcodes.php';
 
 // ---------------------------------------------------------------------------
 // Simple assertion helpers
@@ -167,7 +184,14 @@ function assert_contains( $needle, $haystack, $message ) {
 // Tests
 // ---------------------------------------------------------------------------
 
-echo "=== Test: get_settings() returns defaults when no option is stored ===\n";
+echo "=== Test: SharePoint image URL builder resolves relative, absolute, and empty values ===\n";
+$shortcodes = new WP_MS365_Shortcodes();
+assert_equals( 'https://cdn.example.com/team/player.png', $shortcodes->build_image_src_from_value( 'https://cdn.example.com/team/player.png', 'https://uploads.example.com' ), 'absolute image URLs are preserved' );
+assert_equals( 'https://uploads.example.com/player.png', $shortcodes->build_image_src_from_value( 'player.png', 'https://uploads.example.com' ), 'relative file names are joined with the base path' );
+assert_equals( '', $shortcodes->build_image_src_from_value( '', 'https://uploads.example.com' ), 'empty values return no image source' );
+assert_equals( '', $shortcodes->build_image_src_from_value( '   ', 'https://uploads.example.com' ), 'blank values return no image source' );
+
+echo "\n=== Test: get_settings() returns defaults when no option is stored ===\n";
 $settings = WP_MS365_Auth::get_settings();
 assert_equals( '', $settings['tenant_id'],     'tenant_id defaults to empty string' );
 assert_equals( '', $settings['client_id'],     'client_id defaults to empty string' );
@@ -214,6 +238,12 @@ WP_MS365_Auth::disconnect();
 assert_false( get_transient( 'wp_ms365_access_token' ),     'access token cleared after disconnect' );
 assert_false( get_option( 'wp_ms365_refresh_token', false ), 'refresh token cleared after disconnect' );
 assert_false( get_option( 'wp_ms365_connected_user', false ), 'connected user cleared after disconnect' );
+
+echo "\n=== Test: team URL link markup opens a new tab and uses the column name as text ===\n";
+$link = $shortcodes->build_team_url_link_markup( 'Website', 'https://example.com' );
+assert_contains( 'href="https://example.com"', $link, 'link href uses the cell value' );
+assert_contains( '>Website<', $link, 'link text uses the column name' );
+assert_contains( 'target="_blank"', $link, 'link opens in a new tab' );
 
 // ---------------------------------------------------------------------------
 // Summary
