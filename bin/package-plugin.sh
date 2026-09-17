@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # =============================================================================
 # package-plugin.sh
-# Packages wp-ms365-graph into a distributable .zip suitable for:
+# Packages esc-connect into a distributable .zip suitable for:
 #   - Manual WordPress "Upload Plugin" install
 #   - WordPress.org SVN submission
 #
 # Usage:
 #   ./bin/package-plugin.sh [VERSION]
 #
-#   VERSION defaults to the value found in wp-ms365-graph.php (Version: x.y.z).
+#   VERSION defaults to the value found in esc-connect.php (Version: x.y.z).
 #
 # Output:
-#   dist/wp-ms365-graph-<VERSION>.zip
+#   dist/esc-connect-<VERSION>.zip
 # =============================================================================
 
 set -euo pipefail
@@ -21,7 +21,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PLUGIN_SLUG="wp-ms365-graph"
+PLUGIN_SLUG="esc-connect"
 
 # ---------------------------------------------------------------------------
 # Determine version
@@ -29,7 +29,7 @@ PLUGIN_SLUG="wp-ms365-graph"
 if [[ "${1:-}" != "" ]]; then
     VERSION="$1"
 else
-    VERSION="$(grep -m1 '^ \* Version:' "$PLUGIN_DIR/wp-ms365-graph.php" | sed 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')"
+    VERSION="$(grep -m1 '^ \* Version:' "$PLUGIN_DIR/esc-connect.php" | sed 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')"
 fi
 
 if [[ -z "$VERSION" ]]; then

@@ -97,7 +97,7 @@ class WP_MS365_Login {
 		}
 
 		$notice = '<p class="message">'
-			. esc_html__( 'Local login bypass is active. Remove ?ms365_local_login=1 from the URL to return to automatic Microsoft Entra sign-in.', 'wp-ms365-graph' )
+			. esc_html__( 'Local login bypass is active. Remove ?ms365_local_login=1 from the URL to return to automatic Microsoft Entra sign-in.', 'esc-connect' )
 			. '</p>';
 
 		return $notice . $message;
@@ -180,7 +180,7 @@ class WP_MS365_Login {
 
 		return new WP_Error(
 			'ms365_entra_local_login_blocked',
-			__( 'This account is managed via Microsoft Entra sign-in. Please use the Microsoft sign-in button.', 'wp-ms365-graph' )
+			__( 'This account is managed via Microsoft Entra sign-in. Please use the Microsoft sign-in button.', 'esc-connect' )
 		);
 	}
 
@@ -200,7 +200,7 @@ class WP_MS365_Login {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$after = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : '';
 		$login_url = WP_MS365_Auth::get_sso_login_url( $after );
-		$button_label = ! empty( $settings['sso_signin_button_text'] ) ? (string) $settings['sso_signin_button_text'] : __( 'Sign in with Microsoft', 'wp-ms365-graph' );
+		$button_label = ! empty( $settings['sso_signin_button_text'] ) ? (string) $settings['sso_signin_button_text'] : __( 'Sign in with Microsoft', 'esc-connect' );
 
 		if ( ! $login_url ) {
 			return;
@@ -211,7 +211,7 @@ class WP_MS365_Login {
 			<input type="hidden" name="ms365_local_login" value="1" />
 		<?php endif; ?>
 		<div class="ms365-login-separator">
-			<span><?php esc_html_e( 'or', 'wp-ms365-graph' ); ?></span>
+			<span><?php esc_html_e( 'or', 'esc-connect' ); ?></span>
 		</div>
 		<div class="ms365-login-button-wrap">
 			<a href="<?php echo esc_url( $login_url ); ?>" class="ms365-login-button">

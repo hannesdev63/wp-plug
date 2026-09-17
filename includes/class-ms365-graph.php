@@ -60,11 +60,11 @@ class WP_MS365_Graph {
 		$message    = trim( (string) $message );
 
 		if ( '' === $team_id || '' === $channel_id ) {
-			return new WP_Error( 'ms365_invalid_teams_target', __( 'Teams team ID and channel ID are required.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_teams_target', __( 'Teams team ID and channel ID are required.', 'esc-connect' ) );
 		}
 
 		if ( '' === $message ) {
-			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'esc-connect' ) );
 		}
 
 		return self::post(
@@ -89,7 +89,7 @@ class WP_MS365_Graph {
 		$endpoint_url = trim( (string) $endpoint_url );
 
 		if ( '' === $endpoint_url || ! wp_http_validate_url( $endpoint_url ) ) {
-			return new WP_Error( 'ms365_invalid_teams_endpoint', __( 'Teams workflow endpoint URL is invalid.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_teams_endpoint', __( 'Teams workflow endpoint URL is invalid.', 'esc-connect' ) );
 		}
 
 		$response = wp_remote_post(
@@ -113,7 +113,7 @@ class WP_MS365_Graph {
 		if ( $status < 200 || $status >= 300 ) {
 			return new WP_Error(
 				'ms365_teams_workflow_failed',
-				sprintf( __( 'Teams workflow endpoint request failed (%d).', 'wp-ms365-graph' ), (int) $status ),
+				sprintf( __( 'Teams workflow endpoint request failed (%d).', 'esc-connect' ), (int) $status ),
 				array( 'status' => $status, 'body' => $body )
 			);
 		}
@@ -136,11 +136,11 @@ class WP_MS365_Graph {
 		$message     = trim( (string) $message );
 
 		if ( '' === $webhook_url || ! wp_http_validate_url( $webhook_url ) ) {
-			return new WP_Error( 'ms365_invalid_teams_webhook', __( 'Teams webhook URL is invalid.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_teams_webhook', __( 'Teams webhook URL is invalid.', 'esc-connect' ) );
 		}
 
 		if ( '' === $message ) {
-			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_teams_message', __( 'Message cannot be empty.', 'esc-connect' ) );
 		}
 
 		$response = wp_remote_post(
@@ -168,7 +168,7 @@ class WP_MS365_Graph {
 		if ( $status < 200 || $status >= 300 ) {
 			return new WP_Error(
 				'ms365_teams_webhook_failed',
-				sprintf( __( 'Teams webhook request failed (%d).', 'wp-ms365-graph' ), (int) $status ),
+				sprintf( __( 'Teams webhook request failed (%d).', 'esc-connect' ), (int) $status ),
 				array( 'status' => $status, 'body' => $body )
 			);
 		}
@@ -213,7 +213,7 @@ class WP_MS365_Graph {
 		if ( '' === $effective_user ) {
 			return new WP_Error(
 				'ms365_missing_specific_user',
-				__( 'Specific User is required for app-only mode. Set a user principal name (user@domain.com) or object ID in plugin settings.', 'wp-ms365-graph' )
+				__( 'Specific User is required for app-only mode. Set a user principal name (user@domain.com) or object ID in plugin settings.', 'esc-connect' )
 			);
 		}
 
@@ -268,7 +268,7 @@ class WP_MS365_Graph {
 	public static function get_calendar_event( $event_id, $user = '', $calendar_id = '' ) {
 		$event_id = trim( (string) $event_id );
 		if ( '' === $event_id ) {
-			return new WP_Error( 'ms365_invalid_event_id', __( 'Invalid calendar event ID.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_event_id', __( 'Invalid calendar event ID.', 'esc-connect' ) );
 		}
 
 		$user_prefix = self::get_calendar_endpoint_prefix( $user, $calendar_id );
@@ -288,6 +288,7 @@ class WP_MS365_Graph {
 		$result = self::get(
 			self::get_user_endpoint_prefix( $user ) . '/calendars',
 			array(
+				'$top'    => 999,
 				'$select' => 'id,name,color,owner,isDefaultCalendar,canEdit,canShare,canViewPrivateItems',
 			)
 		);
@@ -299,6 +300,23 @@ class WP_MS365_Graph {
 		$calendars = array();
 		if ( ! empty( $result['value'] ) && is_array( $result['value'] ) ) {
 			$calendars = $result['value'];
+		}
+
+		$next_link = isset( $result['@odata.nextLink'] ) ? (string) $result['@odata.nextLink'] : '';
+		$page_guard = 0;
+
+		while ( '' !== $next_link && $page_guard < 20 ) {
+			$next_page = self::request( 'GET', $next_link );
+			if ( is_wp_error( $next_page ) ) {
+				return $next_page;
+			}
+
+			if ( ! empty( $next_page['value'] ) && is_array( $next_page['value'] ) ) {
+				$calendars = array_merge( $calendars, $next_page['value'] );
+			}
+
+			$next_link = isset( $next_page['@odata.nextLink'] ) ? (string) $next_page['@odata.nextLink'] : '';
+			$page_guard++;
 		}
 
 		if ( ! empty( $calendars ) ) {
@@ -445,7 +463,7 @@ class WP_MS365_Graph {
 	public static function get_sharepoint_site_drives( $site_id ) {
 		$site_id = trim( (string) $site_id );
 		if ( '' === $site_id ) {
-			return new WP_Error( 'ms365_invalid_site_id', __( 'SharePoint site ID is required.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_site_id', __( 'SharePoint site ID is required.', 'esc-connect' ) );
 		}
 
 		$result = self::get(
@@ -506,7 +524,7 @@ class WP_MS365_Graph {
 		$limit       = max( 1, (int) $limit );
 
 		if ( '' === $site_id || '' === $drive_id ) {
-			return new WP_Error( 'ms365_invalid_sharepoint_context', __( 'SharePoint site ID and drive ID are required.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_sharepoint_context', __( 'SharePoint site ID and drive ID are required.', 'esc-connect' ) );
 		}
 
 		$site_path = '/sites/' . rawurlencode( $site_id ) . '/drives/' . rawurlencode( $drive_id );
@@ -574,7 +592,7 @@ class WP_MS365_Graph {
 	public static function get_drive_item_info( $item_id, $user = '' ) {
 		$item_id = trim( (string) $item_id );
 		if ( '' === $item_id ) {
-			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'esc-connect' ) );
 		}
 
 		$user_prefix = self::get_user_endpoint_prefix( $user );
@@ -598,7 +616,7 @@ class WP_MS365_Graph {
 		$item_id  = trim( (string) $item_id );
 
 		if ( '' === $site_id || '' === $drive_id || '' === $item_id ) {
-			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'esc-connect' ) );
 		}
 
 		return self::get(
@@ -650,12 +668,12 @@ class WP_MS365_Graph {
 	public static function get_drive_item_download_url( $item_id, $user = '' ) {
 		$item_id = trim( (string) $item_id );
 		if ( '' === $item_id ) {
-			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid OneDrive item ID.', 'esc-connect' ) );
 		}
 
 		$token = WP_MS365_Auth::get_access_token();
 		if ( ! $token ) {
-			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'esc-connect' ) );
 		}
 
 		$user_prefix = self::get_user_endpoint_prefix( $user );
@@ -685,7 +703,7 @@ class WP_MS365_Graph {
 
 		return new WP_Error(
 			'ms365_download_unavailable',
-			__( 'Unable to create download link for this file.', 'wp-ms365-graph' ),
+			__( 'Unable to create download link for this file.', 'esc-connect' ),
 			array( 'status' => $code )
 		);
 	}
@@ -704,12 +722,12 @@ class WP_MS365_Graph {
 		$item_id  = trim( (string) $item_id );
 
 		if ( '' === $site_id || '' === $drive_id || '' === $item_id ) {
-			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_item', __( 'Invalid SharePoint library item identifier.', 'esc-connect' ) );
 		}
 
 		$token = WP_MS365_Auth::get_access_token();
 		if ( ! $token ) {
-			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_not_authenticated', __( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'esc-connect' ) );
 		}
 
 		$url = self::build_url(
@@ -740,7 +758,7 @@ class WP_MS365_Graph {
 
 		return new WP_Error(
 			'ms365_download_unavailable',
-			__( 'Unable to create download link for this file.', 'wp-ms365-graph' ),
+			__( 'Unable to create download link for this file.', 'esc-connect' ),
 			array( 'status' => $code )
 		);
 	}
@@ -839,8 +857,8 @@ class WP_MS365_Graph {
 		foreach ( $rows as $row ) {
 			$normalized[] = array(
 				'date'              => isset( $row['report refresh date'] ) ? (string) $row['report refresh date'] : '',
-				'label'             => __( 'SharePoint Documents', 'wp-ms365-graph' ),
-				'sub_label'         => __( 'Tenant aggregate', 'wp-ms365-graph' ),
+				'label'             => __( 'SharePoint Documents', 'esc-connect' ),
+				'sub_label'         => __( 'Tenant aggregate', 'esc-connect' ),
 				'files_viewed'      => isset( $row['viewed or edited file count'] ) ? (int) $row['viewed or edited file count'] : 0,
 				'files_synced'      => isset( $row['synced file count'] ) ? (int) $row['synced file count'] : 0,
 				'files_shared'      => isset( $row['shared internally file count'] ) ? (int) $row['shared internally file count'] : 0,
@@ -862,7 +880,7 @@ class WP_MS365_Graph {
 		foreach ( $rows as $row ) {
 			$display_name   = isset( $row['owner display name'] ) ? trim( (string) $row['owner display name'] ) : '';
 			$principal_name = isset( $row['owner principal name'] ) ? trim( (string) $row['owner principal name'] ) : '';
-			$label          = '' !== $display_name ? $display_name : ( '' !== $principal_name ? $principal_name : __( 'Unknown account', 'wp-ms365-graph' ) );
+			$label          = '' !== $display_name ? $display_name : ( '' !== $principal_name ? $principal_name : __( 'Unknown account', 'esc-connect' ) );
 			$url            = isset( $row['site url'] ) ? trim( (string) $row['site url'] ) : '';
 
 			// Fallback: construct OneDrive URL from UPN when the report omits or obfuscates the site URL.
@@ -992,7 +1010,7 @@ class WP_MS365_Graph {
 		if ( ! $token ) {
 			return new WP_Error(
 				'ms365_not_authenticated',
-				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' )
+				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'esc-connect' )
 			);
 		}
 
@@ -1031,14 +1049,14 @@ class WP_MS365_Graph {
 
 			$csv_status = wp_remote_retrieve_response_code( $csv_response );
 			if ( $csv_status < 200 || $csv_status >= 300 ) {
-				return self::build_report_error( $csv_response, __( 'Could not download report payload.', 'wp-ms365-graph' ) );
+				return self::build_report_error( $csv_response, __( 'Could not download report payload.', 'esc-connect' ) );
 			}
 
 			$csv_body = (string) wp_remote_retrieve_body( $csv_response );
 		} elseif ( $status >= 200 && $status < 300 ) {
 			$csv_body = (string) wp_remote_retrieve_body( $response );
 		} else {
-			return self::build_report_error( $response, __( 'Could not fetch report endpoint.', 'wp-ms365-graph' ) );
+			return self::build_report_error( $response, __( 'Could not fetch report endpoint.', 'esc-connect' ) );
 		}
 
 		if ( '' === trim( $csv_body ) ) {
@@ -1108,7 +1126,7 @@ class WP_MS365_Graph {
 		}
 
 		if ( 403 === $status && false !== stripos( strtolower( $message ), 'insufficient' ) ) {
-			$message = __( 'Insufficient privileges for Microsoft 365 Reports API. Add Reports.Read.All application permission and grant admin consent.', 'wp-ms365-graph' );
+			$message = __( 'Insufficient privileges for Microsoft 365 Reports API. Add Reports.Read.All application permission and grant admin consent.', 'esc-connect' );
 		}
 
 		return new WP_Error(
@@ -1163,14 +1181,14 @@ class WP_MS365_Graph {
 	public static function get_user_photo_data( $user_id_or_email ) {
 		$user_id_or_email = trim( (string) $user_id_or_email );
 		if ( '' === $user_id_or_email ) {
-			return new WP_Error( 'ms365_invalid_user', __( 'User identifier is required.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_invalid_user', __( 'User identifier is required.', 'esc-connect' ) );
 		}
 
 		$token = WP_MS365_Auth::get_access_token();
 		if ( ! $token ) {
 			return new WP_Error(
 				'ms365_not_authenticated',
-				__( 'Not connected to Microsoft 365.', 'wp-ms365-graph' )
+				__( 'Not connected to Microsoft 365.', 'esc-connect' )
 			);
 		}
 
@@ -1193,7 +1211,7 @@ class WP_MS365_Graph {
 		$status = wp_remote_retrieve_response_code( $response );
 
 		if ( 404 === $status ) {
-			return new WP_Error( 'ms365_no_photo', __( 'User has no profile photo.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_no_photo', __( 'User has no profile photo.', 'esc-connect' ) );
 		}
 
 		if ( $status < 200 || $status >= 300 ) {
@@ -1201,7 +1219,7 @@ class WP_MS365_Graph {
 				'ms365_photo_fetch_failed',
 				sprintf(
 					/* translators: %d = HTTP status code */
-					__( 'Could not fetch profile photo (HTTP %d).', 'wp-ms365-graph' ),
+					__( 'Could not fetch profile photo (HTTP %d).', 'esc-connect' ),
 					(int) $status
 				)
 			);
@@ -1209,7 +1227,7 @@ class WP_MS365_Graph {
 
 		$body = wp_remote_retrieve_body( $response );
 		if ( '' === $body ) {
-			return new WP_Error( 'ms365_no_photo', __( 'Profile photo response was empty.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_no_photo', __( 'Profile photo response was empty.', 'esc-connect' ) );
 		}
 
 		return $body;
@@ -1229,7 +1247,7 @@ class WP_MS365_Graph {
 		if ( ! $token ) {
 			return new WP_Error(
 				'ms365_not_authenticated',
-				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'wp-ms365-graph' )
+				__( 'Not connected to Microsoft 365. Save valid tenant/client credentials to enable app-only access.', 'esc-connect' )
 			);
 		}
 
@@ -1299,7 +1317,7 @@ class WP_MS365_Graph {
 			? (string) $data['error']['message']
 			: sprintf(
 				/* translators: %d = HTTP status code */
-				__( 'Graph API error (HTTP %d).', 'wp-ms365-graph' ),
+				__( 'Graph API error (HTTP %d).', 'esc-connect' ),
 				$code
 			);
 
@@ -1327,7 +1345,7 @@ class WP_MS365_Graph {
 			&& ( 404 === $code || strpos( $error_code_lc, 'itemnotfound' ) !== false || strpos( $error_code_lc, 'erroritemnotfound' ) !== false );
 
 		if ( $drive_folder_not_found ) {
-			$error_message = __( 'The requested OneDrive folder was not found for the selected user. Verify the folder path used in the shortcode (for example folder="Documents").', 'wp-ms365-graph' );
+			$error_message = __( 'The requested OneDrive folder was not found for the selected user. Verify the folder path used in the shortcode (for example folder="Documents").', 'esc-connect' );
 		}
 
 		$calendar_not_provisioned =
@@ -1338,11 +1356,11 @@ class WP_MS365_Graph {
 			|| ( $is_calendar_endpoint && strpos( $raw_message_lc, 'object was not found in the store' ) !== false );
 
 		if ( $is_drive_endpoint && $drive_not_provisioned ) {
-			$error_message = __( 'OneDrive for the selected user is not provisioned yet. The license may be assigned but OneDrive has not been initialized. Have the user sign into OneDrive (onedrive.live.com or the SharePoint app) once — this triggers drive creation. It may also take up to 24 hours after license assignment.', 'wp-ms365-graph' );
+			$error_message = __( 'OneDrive for the selected user is not provisioned yet. The license may be assigned but OneDrive has not been initialized. Have the user sign into OneDrive (onedrive.live.com or the SharePoint app) once — this triggers drive creation. It may also take up to 24 hours after license assignment.', 'esc-connect' );
 		}
 
 		if ( $is_calendar_endpoint && $calendar_not_provisioned ) {
-			$error_message = __( 'Mailbox/calendar for the selected user is not provisioned yet. The license is assigned but Exchange has not initialized the mailbox. Have the user sign into Outlook on the web (outlook.office.com) once — this triggers mailbox creation. It may also take up to 24 hours after license assignment.', 'wp-ms365-graph' );
+			$error_message = __( 'Mailbox/calendar for the selected user is not provisioned yet. The license is assigned but Exchange has not initialized the mailbox. Have the user sign into Outlook on the web (outlook.office.com) once — this triggers mailbox creation. It may also take up to 24 hours after license assignment.', 'esc-connect' );
 		}
 
 		$insufficient_privileges =
@@ -1354,16 +1372,16 @@ class WP_MS365_Graph {
 			);
 
 		if ( $is_users_endpoint && $insufficient_privileges ) {
-			$error_message = __( 'Insufficient privileges to read the selected user profile. Add Microsoft Graph application permission User.Read.All and grant admin consent.', 'wp-ms365-graph' );
+			$error_message = __( 'Insufficient privileges to read the selected user profile. Add Microsoft Graph application permission User.Read.All and grant admin consent.', 'esc-connect' );
 		}
 
 		if ( ! $drive_not_provisioned && ! $calendar_not_provisioned && ! $drive_folder_not_found && ( $code === 404 || stripos( $raw_message, 'object was not found in the store' ) !== false || stripos( $error_code, 'itemnotfound' ) !== false ) ) {
 			if ( $is_drive_endpoint ) {
-				$error_message = __( 'OneDrive for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has OneDrive provisioned.', 'wp-ms365-graph' );
+				$error_message = __( 'OneDrive for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has OneDrive provisioned.', 'esc-connect' );
 			} elseif ( $is_calendar_endpoint ) {
-				$error_message = __( 'Calendar for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has a mailbox/calendar in Microsoft 365.', 'wp-ms365-graph' );
+				$error_message = __( 'Calendar for the selected user could not be found. Verify the Specific User value (UPN or ID) and ensure the user has a mailbox/calendar in Microsoft 365.', 'esc-connect' );
 			} elseif ( $is_users_endpoint ) {
-				$error_message = __( 'The configured Specific User could not be found. Use a valid user principal name (user@domain.com) or Entra object ID.', 'wp-ms365-graph' );
+				$error_message = __( 'The configured Specific User could not be found. Use a valid user principal name (user@domain.com) or Entra object ID.', 'esc-connect' );
 			}
 		}
 

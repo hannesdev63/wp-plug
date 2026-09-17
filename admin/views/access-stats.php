@@ -97,9 +97,9 @@ if ( $show_wp ) {
 		}
 
 		$top_rows[] = array(
-			'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'wp-ms365-graph' ),
+			'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'esc-connect' ),
 			'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
-			'source' => __( 'WordPress Content', 'wp-ms365-graph' ),
+			'source' => __( 'WordPress Content', 'esc-connect' ),
 			'url'    => $wp_url,
 		);
 	}
@@ -108,17 +108,17 @@ if ( $show_wp ) {
 if ( $show_shortcodes ) {
 	foreach ( $external_top as $row ) {
 		$type = isset( $row['post_type'] ) ? sanitize_key( (string) $row['post_type'] ) : '';
-		$source_label = __( 'WP Shortcode -> Microsoft 365', 'wp-ms365-graph' );
+		$source_label = __( 'WP Shortcode -> Microsoft 365', 'esc-connect' );
 		if ( 'sharepoint' === $type ) {
-			$source_label = __( 'WP Shortcode -> SharePoint', 'wp-ms365-graph' );
+			$source_label = __( 'WP Shortcode -> SharePoint', 'esc-connect' );
 		} elseif ( 'onedrive' === $type ) {
-			$source_label = __( 'WP Shortcode -> OneDrive', 'wp-ms365-graph' );
+			$source_label = __( 'WP Shortcode -> OneDrive', 'esc-connect' );
 		} elseif ( 'outlook' === $type ) {
-			$source_label = __( 'WP Shortcode -> Outlook', 'wp-ms365-graph' );
+			$source_label = __( 'WP Shortcode -> Outlook', 'esc-connect' );
 		}
 
 		$top_rows[] = array(
-			'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'wp-ms365-graph' ),
+			'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'esc-connect' ),
 			'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
 			'source' => $source_label,
 			'url'    => isset( $row['url'] ) ? (string) $row['url'] : '',
@@ -166,91 +166,91 @@ ksort( $trend_map );
 <div class="wrap msgraph_access-stats">
 	<h1 class="msgraph_dashboard__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Access Statistics', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'Access Statistics', 'esc-connect' ); ?>
 	</h1>
 
 	<p class="description">
-		<?php esc_html_e( 'WordPress-origin access only: frontend page/blog/document views and shortcode-driven access to Microsoft 365 items.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'WordPress-origin access only: frontend page/blog/document views and shortcode-driven access to Microsoft 365 items.', 'esc-connect' ); ?>
 	</p>
 
 	<form method="get" action="" style="margin:16px 0;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-		<input type="hidden" name="page" value="wp-ms365-graph" />
+		<input type="hidden" name="page" value="esc-connect" />
 		<input type="hidden" name="tab" value="access-stats" />
 		<div>
-			<label for="ms365_source"><strong><?php esc_html_e( 'Source', 'wp-ms365-graph' ); ?></strong></label><br />
+			<label for="ms365_source"><strong><?php esc_html_e( 'Source', 'esc-connect' ); ?></strong></label><br />
 			<select id="ms365_source" name="ms365_source">
-				<option value="all" <?php selected( $source, 'all' ); ?>><?php esc_html_e( 'All WordPress-origin', 'wp-ms365-graph' ); ?></option>
-				<option value="wordpress" <?php selected( $source, 'wordpress' ); ?>><?php esc_html_e( 'WordPress content', 'wp-ms365-graph' ); ?></option>
-				<option value="shortcodes" <?php selected( $source, 'shortcodes' ); ?>><?php esc_html_e( 'WordPress shortcode to M365', 'wp-ms365-graph' ); ?></option>
+				<option value="all" <?php selected( $source, 'all' ); ?>><?php esc_html_e( 'All WordPress-origin', 'esc-connect' ); ?></option>
+				<option value="wordpress" <?php selected( $source, 'wordpress' ); ?>><?php esc_html_e( 'WordPress content', 'esc-connect' ); ?></option>
+				<option value="shortcodes" <?php selected( $source, 'shortcodes' ); ?>><?php esc_html_e( 'WordPress shortcode to M365', 'esc-connect' ); ?></option>
 			</select>
 		</div>
 		<div>
-			<label for="ms365_window"><strong><?php esc_html_e( 'Window', 'wp-ms365-graph' ); ?></strong></label><br />
+			<label for="ms365_window"><strong><?php esc_html_e( 'Window', 'esc-connect' ); ?></strong></label><br />
 			<select id="ms365_window" name="ms365_window">
-				<option value="7" <?php selected( $window, 7 ); ?>><?php esc_html_e( 'Last 7 days', 'wp-ms365-graph' ); ?></option>
-				<option value="30" <?php selected( $window, 30 ); ?>><?php esc_html_e( 'Last 30 days', 'wp-ms365-graph' ); ?></option>
-				<option value="90" <?php selected( $window, 90 ); ?>><?php esc_html_e( 'Last 90 days', 'wp-ms365-graph' ); ?></option>
-				<option value="180" <?php selected( $window, 180 ); ?>><?php esc_html_e( 'Last 180 days', 'wp-ms365-graph' ); ?></option>
+				<option value="7" <?php selected( $window, 7 ); ?>><?php esc_html_e( 'Last 7 days', 'esc-connect' ); ?></option>
+				<option value="30" <?php selected( $window, 30 ); ?>><?php esc_html_e( 'Last 30 days', 'esc-connect' ); ?></option>
+				<option value="90" <?php selected( $window, 90 ); ?>><?php esc_html_e( 'Last 90 days', 'esc-connect' ); ?></option>
+				<option value="180" <?php selected( $window, 180 ); ?>><?php esc_html_e( 'Last 180 days', 'esc-connect' ); ?></option>
 			</select>
 		</div>
 		<div>
-			<label for="ms365_wp_group"><strong><?php esc_html_e( 'WordPress type', 'wp-ms365-graph' ); ?></strong></label><br />
+			<label for="ms365_wp_group"><strong><?php esc_html_e( 'WordPress type', 'esc-connect' ); ?></strong></label><br />
 			<select id="ms365_wp_group" name="ms365_wp_group">
-				<option value="all" <?php selected( $wp_group, 'all' ); ?>><?php esc_html_e( 'All types', 'wp-ms365-graph' ); ?></option>
-				<option value="page" <?php selected( $wp_group, 'page' ); ?>><?php esc_html_e( 'Pages', 'wp-ms365-graph' ); ?></option>
-				<option value="blog" <?php selected( $wp_group, 'blog' ); ?>><?php esc_html_e( 'Blogs', 'wp-ms365-graph' ); ?></option>
-				<option value="document" <?php selected( $wp_group, 'document' ); ?>><?php esc_html_e( 'Documents', 'wp-ms365-graph' ); ?></option>
+				<option value="all" <?php selected( $wp_group, 'all' ); ?>><?php esc_html_e( 'All types', 'esc-connect' ); ?></option>
+				<option value="page" <?php selected( $wp_group, 'page' ); ?>><?php esc_html_e( 'Pages', 'esc-connect' ); ?></option>
+				<option value="blog" <?php selected( $wp_group, 'blog' ); ?>><?php esc_html_e( 'Blogs', 'esc-connect' ); ?></option>
+				<option value="document" <?php selected( $wp_group, 'document' ); ?>><?php esc_html_e( 'Documents', 'esc-connect' ); ?></option>
 			</select>
 		</div>
 		<div>
-			<label for="ms365_shortcode_target"><strong><?php esc_html_e( 'Shortcode target', 'wp-ms365-graph' ); ?></strong></label><br />
+			<label for="ms365_shortcode_target"><strong><?php esc_html_e( 'Shortcode target', 'esc-connect' ); ?></strong></label><br />
 			<select id="ms365_shortcode_target" name="ms365_shortcode_target">
-				<option value="all" <?php selected( $shortcode_target, 'all' ); ?>><?php esc_html_e( 'All Microsoft 365 targets', 'wp-ms365-graph' ); ?></option>
-				<option value="sharepoint" <?php selected( $shortcode_target, 'sharepoint' ); ?>><?php esc_html_e( 'SharePoint', 'wp-ms365-graph' ); ?></option>
-				<option value="onedrive" <?php selected( $shortcode_target, 'onedrive' ); ?>><?php esc_html_e( 'OneDrive', 'wp-ms365-graph' ); ?></option>
-				<option value="outlook" <?php selected( $shortcode_target, 'outlook' ); ?>><?php esc_html_e( 'Outlook', 'wp-ms365-graph' ); ?></option>
+				<option value="all" <?php selected( $shortcode_target, 'all' ); ?>><?php esc_html_e( 'All Microsoft 365 targets', 'esc-connect' ); ?></option>
+				<option value="sharepoint" <?php selected( $shortcode_target, 'sharepoint' ); ?>><?php esc_html_e( 'SharePoint', 'esc-connect' ); ?></option>
+				<option value="onedrive" <?php selected( $shortcode_target, 'onedrive' ); ?>><?php esc_html_e( 'OneDrive', 'esc-connect' ); ?></option>
+				<option value="outlook" <?php selected( $shortcode_target, 'outlook' ); ?>><?php esc_html_e( 'Outlook', 'esc-connect' ); ?></option>
 			</select>
 		</div>
 		<div>
-			<?php submit_button( __( 'Apply', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+			<?php submit_button( __( 'Apply', 'esc-connect' ), 'secondary', 'submit', false ); ?>
 		</div>
 	</form>
 
 	<div class="msgraph_card">
-		<h2 class="msgraph_card__title"><?php esc_html_e( 'Summary', 'wp-ms365-graph' ); ?></h2>
+		<h2 class="msgraph_card__title"><?php esc_html_e( 'Summary', 'esc-connect' ); ?></h2>
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Metric', 'wp-ms365-graph' ); ?></th>
-					<th><?php esc_html_e( 'Value', 'wp-ms365-graph' ); ?></th>
+					<th><?php esc_html_e( 'Metric', 'esc-connect' ); ?></th>
+					<th><?php esc_html_e( 'Value', 'esc-connect' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php if ( $show_wp ) : ?>
-				<tr><td><?php esc_html_e( 'WordPress page views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['page'] ) ); ?></td></tr>
-				<tr><td><?php esc_html_e( 'WordPress blog views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['blog'] ) ); ?></td></tr>
-				<tr><td><?php esc_html_e( 'WordPress document views', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['document'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'WordPress page views', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['page'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'WordPress blog views', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['blog'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'WordPress document views', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $wp_totals['document'] ) ); ?></td></tr>
 				<?php endif; ?>
 				<?php if ( $show_shortcodes ) : ?>
-				<tr><td><?php esc_html_e( 'Shortcode to SharePoint item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['sharepoint'] ) ); ?></td></tr>
-				<tr><td><?php esc_html_e( 'Shortcode to OneDrive item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['onedrive'] ) ); ?></td></tr>
-				<tr><td><?php esc_html_e( 'Shortcode to Outlook item accesses', 'wp-ms365-graph' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['outlook'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'Shortcode to SharePoint item accesses', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['sharepoint'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'Shortcode to OneDrive item accesses', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['onedrive'] ) ); ?></td></tr>
+				<tr><td><?php esc_html_e( 'Shortcode to Outlook item accesses', 'esc-connect' ); ?></td><td><?php echo esc_html( number_format_i18n( (int) $external_totals['outlook'] ) ); ?></td></tr>
 				<?php endif; ?>
 			</tbody>
 		</table>
 	</div>
 
 	<div class="msgraph_card">
-		<h2 class="msgraph_card__title"><?php esc_html_e( 'Top Accessed Items', 'wp-ms365-graph' ); ?></h2>
+		<h2 class="msgraph_card__title"><?php esc_html_e( 'Top Accessed Items', 'esc-connect' ); ?></h2>
 		<?php if ( empty( $top_rows ) ) : ?>
-			<p><?php esc_html_e( 'No access data available for the current filters yet.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'No access data available for the current filters yet.', 'esc-connect' ); ?></p>
 		<?php else : ?>
 			<table class="widefat striped">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Item', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Source', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Access count', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Item', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Source', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Access count', 'esc-connect' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -273,15 +273,15 @@ ksort( $trend_map );
 	</div>
 
 	<div class="msgraph_card">
-		<h2 class="msgraph_card__title"><?php esc_html_e( 'Daily Trend', 'wp-ms365-graph' ); ?></h2>
+		<h2 class="msgraph_card__title"><?php esc_html_e( 'Daily Trend', 'esc-connect' ); ?></h2>
 		<?php if ( empty( $trend_map ) ) : ?>
-			<p><?php esc_html_e( 'No trend data available for the selected period yet.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'No trend data available for the selected period yet.', 'esc-connect' ); ?></p>
 		<?php else : ?>
 			<table class="widefat striped">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Date', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Total accesses', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Date', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Total accesses', 'esc-connect' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>

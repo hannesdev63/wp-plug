@@ -16,12 +16,12 @@ $is_specific_user = '' !== $configured_user;
 <div class="wrap msgraph_dashboard">
 	<h1 class="msgraph_dashboard__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'Dashboard', 'esc-connect' ); ?>
 	</h1>
 	<p class="description">
 		<?php
 		printf(
-			esc_html__( 'Version %s', 'wp-ms365-graph' ),
+			esc_html__( 'Version %s', 'esc-connect' ),
 			esc_html( WP_MS365_VERSION )
 		);
 		?>
@@ -33,9 +33,9 @@ $is_specific_user = '' !== $configured_user;
 				<?php
 				printf(
 					/* translators: %s: settings page link */
-					esc_html__( 'Microsoft 365 is not connected. Please %s first.', 'wp-ms365-graph' ),
+					esc_html__( 'Microsoft 365 is not connected. Please %s first.', 'esc-connect' ),
 					'<a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-settings' ) ) . '">'
-						. esc_html__( 'configure credentials and a specific user', 'wp-ms365-graph' )
+						. esc_html__( 'configure credentials and a specific user', 'esc-connect' )
 					. '</a>'
 				);
 				?>
@@ -45,7 +45,7 @@ $is_specific_user = '' !== $configured_user;
 
 		<?php if ( isset( $_GET['counts_reset'] ) && '1' === (string) $_GET['counts_reset'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 			<div class="notice notice-success is-dismissible">
-				<p><?php esc_html_e( 'Shortcode render counters were reset.', 'wp-ms365-graph' ); ?></p>
+				<p><?php esc_html_e( 'Shortcode render counters were reset.', 'esc-connect' ); ?></p>
 			</div>
 		<?php endif; ?>
 
@@ -53,7 +53,7 @@ $is_specific_user = '' !== $configured_user;
 		<?php $selected_user = WP_MS365_Graph::get_target_user_profile(); ?>
 		<?php if ( ! is_wp_error( $selected_user ) ) : ?>
 		<div class="msgraph_card msgraph_card--profile">
-			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'esc-connect' ); ?></h2>
 			<p>
 				<strong><?php echo esc_html( isset( $selected_user['displayName'] ) ? $selected_user['displayName'] : '' ); ?></strong><br />
 				<?php echo esc_html( isset( $selected_user['mail'] ) ? $selected_user['mail'] : ( isset( $selected_user['userPrincipalName'] ) ? $selected_user['userPrincipalName'] : '' ) ); ?><br />
@@ -62,20 +62,20 @@ $is_specific_user = '' !== $configured_user;
 				<?php endif; ?>
 				<!-- <?php if ( $is_specific_user ) : ?>
 					<?php /* translators: %s: configured user value */ ?>
-					<span><?php printf( esc_html__( 'Configured user: %s', 'wp-ms365-graph' ), esc_html( $configured_user ) ); ?></span>
+					<span><?php printf( esc_html__( 'Configured user: %s', 'esc-connect' ), esc_html( $configured_user ) ); ?></span>
 				<?php else : ?>
-					<span><?php esc_html_e( 'Set Specific User in plugin settings to query Microsoft Graph.', 'wp-ms365-graph' ); ?></span>
+					<span><?php esc_html_e( 'Set Specific User in plugin settings to query Microsoft Graph.', 'esc-connect' ); ?></span>
 				<?php endif; ?> -->
 			</p>
 		</div>
 		<?php else : ?>
 		<div class="msgraph_card msgraph_card--profile">
-			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User', 'esc-connect' ); ?></h2>
 			<p class="msgraph_notice msgraph_notice--error">
 				<?php echo esc_html( $selected_user->get_error_message() ); ?>
 				<?php if ( $is_specific_user ) : ?>
 					<br /><br />
-					<small><?php esc_html_e( 'Ensure Microsoft Graph application permission User.Read.All is configured and admin consent is granted.', 'wp-ms365-graph' ); ?></small>
+					<small><?php esc_html_e( 'Ensure Microsoft Graph application permission User.Read.All is configured and admin consent is granted.', 'esc-connect' ); ?></small>
 				<?php endif; ?>
 			</p>
 		</div>
@@ -83,7 +83,7 @@ $is_specific_user = '' !== $configured_user;
 
 		<!-- Calendar events -->
 		<div class="msgraph_card msgraph_card--calendar">
-			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User Calendar (next 30 days)', 'esc-connect' ); ?></h2>
 			<?php
 			$events = WP_MS365_Graph::get_calendar_events( 5 );
 			if ( is_wp_error( $events ) ) :
@@ -94,18 +94,18 @@ $is_specific_user = '' !== $configured_user;
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
-						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Calendars.Read and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Calendars.Read and admin consent has been granted.', 'esc-connect' ); ?></small>
 					<?php endif; ?>
 				</p>
 			<?php elseif ( empty( $events['value'] ) ) : ?>
-				<p><?php esc_html_e( 'No upcoming events.', 'wp-ms365-graph' ); ?></p>
+				<p><?php esc_html_e( 'No upcoming events.', 'esc-connect' ); ?></p>
 			<?php else : ?>
 				<table class="widefat striped">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Date', 'wp-ms365-graph' ); ?></th>
-							<th><?php esc_html_e( 'Subject', 'wp-ms365-graph' ); ?></th>
-							<th><?php esc_html_e( 'Location', 'wp-ms365-graph' ); ?></th>
+							<th><?php esc_html_e( 'Date', 'esc-connect' ); ?></th>
+							<th><?php esc_html_e( 'Subject', 'esc-connect' ); ?></th>
+							<th><?php esc_html_e( 'Location', 'esc-connect' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -119,7 +119,7 @@ $is_specific_user = '' !== $configured_user;
 							</td>
 							<td>
 								<?php
-								$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'wp-ms365-graph' );
+								$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'esc-connect' );
 								$web_link = isset( $event['webLink'] ) ? $event['webLink'] : '';
 								if ( $web_link ) :
 								?>
@@ -138,7 +138,7 @@ $is_specific_user = '' !== $configured_user;
 
 		<!-- OneDrive files -->
 		<div class="msgraph_card msgraph_card--files">
-			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Selected User OneDrive Root Files', 'esc-connect' ); ?></h2>
 			<?php
 			$drive = WP_MS365_Graph::get_drive_items( '', 10 );
 			if ( is_wp_error( $drive ) ) :
@@ -149,18 +149,18 @@ $is_specific_user = '' !== $configured_user;
 					<?php echo esc_html( $error_msg ); ?>
 					<?php if ( $is_access_denied && $is_specific_user ) : ?>
 						<br /><br />
-						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Files.Read.All and admin consent has been granted.', 'wp-ms365-graph' ); ?></small>
+						<small><?php esc_html_e( 'Ensure your Azure app has Microsoft Graph application permission Files.Read.All and admin consent has been granted.', 'esc-connect' ); ?></small>
 					<?php endif; ?>
 				</p>
 			<?php elseif ( empty( $drive['value'] ) ) : ?>
-				<p><?php esc_html_e( 'No files found.', 'wp-ms365-graph' ); ?></p>
+				<p><?php esc_html_e( 'No files found.', 'esc-connect' ); ?></p>
 			<?php else : ?>
 				<table class="widefat striped">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Name', 'wp-ms365-graph' ); ?></th>
-							<th><?php esc_html_e( 'Size', 'wp-ms365-graph' ); ?></th>
-							<th><?php esc_html_e( 'Modified', 'wp-ms365-graph' ); ?></th>
+							<th><?php esc_html_e( 'Name', 'esc-connect' ); ?></th>
+							<th><?php esc_html_e( 'Size', 'esc-connect' ); ?></th>
+							<th><?php esc_html_e( 'Modified', 'esc-connect' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -184,7 +184,7 @@ $is_specific_user = '' !== $configured_user;
 								if ( ! $is_dir && isset( $item['size'] ) ) {
 									echo esc_html( WP_MS365_Shortcodes::format_bytes_public( $item['size'] ) );
 								} else {
-									esc_html_e( '—', 'wp-ms365-graph' );
+									esc_html_e( '—', 'esc-connect' );
 								}
 								?>
 							</td>
@@ -203,12 +203,12 @@ $is_specific_user = '' !== $configured_user;
 
 		<!-- Shortcode render usage -->
 		<div class="msgraph_card msgraph_card--usage">
-			<h2 class="msgraph_card__title"><?php esc_html_e( 'Shortcode Render Totals', 'wp-ms365-graph' ); ?></h2>
+			<h2 class="msgraph_card__title"><?php esc_html_e( 'Shortcode Render Totals', 'esc-connect' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:12px;">
 				<input type="hidden" name="action" value="wp_ms365_reset_shortcode_counts" />
 				<?php wp_nonce_field( 'wp_ms365_reset_shortcode_counts' ); ?>
-				<button type="submit" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Reset all shortcode render counters?', 'wp-ms365-graph' ) ); ?>');">
-					<?php esc_html_e( 'Reset Counters', 'wp-ms365-graph' ); ?>
+				<button type="submit" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Reset all shortcode render counters?', 'esc-connect' ) ); ?>');">
+					<?php esc_html_e( 'Reset Counters', 'esc-connect' ); ?>
 				</button>
 			</form>
 			<?php
@@ -225,8 +225,8 @@ $is_specific_user = '' !== $configured_user;
 			<table class="widefat striped">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Shortcode', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Total renders', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Shortcode', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Total renders', 'esc-connect' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>

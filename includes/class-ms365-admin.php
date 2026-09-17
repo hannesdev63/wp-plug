@@ -41,12 +41,12 @@ class WP_MS365_Admin {
 	 * @return string
 	 */
 	public static function get_menu_icon_uri() {
-		$svg_file = WP_MS365_PLUGIN_DIR . 'assets/images/icon.svg';
-		if ( ! file_exists( $svg_file ) ) {
-			return 'dashicons-microsoft';
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		$svg = file_get_contents( $svg_file );
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="ESC River Rats hockey icon">
+			<rect width="20" height="20" rx="4" fill="#f7f7f7"/>
+			<rect x="4" y="7" width="12" height="6" rx="3" fill="#2d3748"/>
+			<path d="M6 5.5h8M6 14.5h8" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+			<circle cx="10" cy="10" r="2" fill="#ffffff"/>
+		</svg>';
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
 	}
 
@@ -60,26 +60,42 @@ class WP_MS365_Admin {
 	}
 
 	/**
-	 * Register top-level admin menu item.
+	 * Register the plugin menu as a dedicated top-level admin section.
 	 */
 	public function register_menu() {
-		add_menu_page(
-			__( 'MS Graph Connect', 'wp-ms365-graph' ),
-			__( 'MS Graph Connect', 'wp-ms365-graph' ),
-			'manage_options',
-			'wp-ms365-graph',
-			array( $this, 'render_main_page' ),
-			self::get_menu_icon_uri(),
-			80
-		);
+		$this->ensure_parent_menu();
 
 		add_submenu_page(
-			'wp-ms365-graph',
-			__( 'Dashboard', 'wp-ms365-graph' ),
-			__( 'Dashboard', 'wp-ms365-graph' ),
+			'esc-river-rats',
+			__( 'ESC Connect', 'esc-connect' ),
+			__( 'ESC Connect', 'esc-connect' ),
 			'manage_options',
-			'wp-ms365-graph',
+			'esc-connect',
 			array( $this, 'render_main_page' )
+		);
+
+		remove_submenu_page( 'esc-river-rats', 'esc-river-rats' );
+	}
+
+	private function ensure_parent_menu() {
+		global $menu;
+
+		if ( isset( $menu ) && is_array( $menu ) ) {
+			foreach ( $menu as $item ) {
+				if ( isset( $item[2] ) && 'esc-river-rats' === $item[2] ) {
+					return;
+				}
+			}
+		}
+
+		add_menu_page(
+			__( 'ESC River Rats', 'esc-connect' ),
+			__( 'ESC River Rats', 'esc-connect' ),
+			'manage_options',
+			'esc-river-rats',
+			'__return_null',
+			self::get_menu_icon_uri(),
+			26
 		);
 	}
 
@@ -101,17 +117,18 @@ class WP_MS365_Admin {
 
 		add_settings_section(
 			'wp_ms365_azure_app',
-			__( 'Azure App Registration', 'wp-ms365-graph' ),
+			__( 'Azure App Registration', 'esc-connect' ),
 			array( $this, 'section_azure_intro' ),
-			'wp-ms365-graph'
+			'esc-connect'
 		);
 
 		$fields = array(
-			'tenant_id'     => __( 'Directory (Tenant) ID', 'wp-ms365-graph' ),
-			'client_id'     => __( 'Application (Client) ID', 'wp-ms365-graph' ),
-			'client_secret' => __( 'Client Secret', 'wp-ms365-graph' ),
-			'specific_user' => __( 'Specific User (UPN or ID)', 'wp-ms365-graph' ),
-			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'wp-ms365-graph' ),
+			'tenant_id'     => __( 'Directory (Tenant) ID', 'esc-connect' ),
+			'client_id'     => __( 'Application (Client) ID', 'esc-connect' ),
+			'client_secret' => __( 'Client Secret', 'esc-connect' ),
+			'specific_user' => __( 'Specific User (UPN or ID)', 'esc-connect' ),
+			'sharepoint_image_basepath' => __( 'SharePoint Image Base Path', 'esc-connect' ),
+			'custom_css'    => __( 'Custom CSS (Calendar/OneDrive)', 'esc-connect' ),
 		);
 
 		foreach ( $fields as $key => $label ) {
@@ -119,7 +136,7 @@ class WP_MS365_Admin {
 				'wp_ms365_' . $key,
 				$label,
 				array( $this, 'render_text_field' ),
-				'wp-ms365-graph',
+				'esc-connect',
 				'wp_ms365_azure_app',
 				array( 'key' => $key, 'label' => $label )
 			);
@@ -127,52 +144,52 @@ class WP_MS365_Admin {
 
 		add_settings_section(
 			'wp_ms365_teams',
-			__( 'Teams Settings', 'wp-ms365-graph' ),
+			__( 'Teams Settings', 'esc-connect' ),
 			array( $this, 'section_teams_intro' ),
-			'wp-ms365-graph'
+			'esc-connect'
 		);
 
 		add_settings_section(
 			'wp_ms365_mail',
-			__( 'WordPress Mail via Microsoft Graph', 'wp-ms365-graph' ),
+			__( 'WordPress Mail via Microsoft Graph', 'esc-connect' ),
 			array( $this, 'section_mail_intro' ),
-			'wp-ms365-graph'
+			'esc-connect'
 		);
 
 		add_settings_field(
 			'wp_ms365_mail_enabled',
-			__( 'Enable Graph Mail Transport', 'wp-ms365-graph' ),
+			__( 'Enable Graph Mail Transport', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_mail',
-			array( 'key' => 'mail_enabled', 'label' => __( 'Replace WordPress internal mail transport (`wp_mail`) with Microsoft Graph `sendMail`.', 'wp-ms365-graph' ) )
+			array( 'key' => 'mail_enabled', 'label' => __( 'Replace WordPress internal mail transport (`wp_mail`) with Microsoft Graph `sendMail`.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_mail_sender_user',
-			__( 'Mail Sender Mailbox (UPN or ID)', 'wp-ms365-graph' ),
+			__( 'Mail Sender Mailbox (UPN or ID)', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_mail',
-			array( 'key' => 'mail_sender_user', 'label' => __( 'Mailbox identity used for Graph sendMail requests.', 'wp-ms365-graph' ) )
+			array( 'key' => 'mail_sender_user', 'label' => __( 'Mailbox identity used for Graph sendMail requests.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_mail_save_to_sent_items',
-			__( 'Save Messages in Sent Items', 'wp-ms365-graph' ),
+			__( 'Save Messages in Sent Items', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_mail',
-			array( 'key' => 'mail_save_to_sent_items', 'label' => __( 'Store sent emails in the sender mailbox Sent Items folder.', 'wp-ms365-graph' ) )
+			array( 'key' => 'mail_save_to_sent_items', 'label' => __( 'Store sent emails in the sender mailbox Sent Items folder.', 'esc-connect' ) )
 		);
 
 		$teams_fields = array(
-			'teams_team_id' => __( 'Default Teams Team ID', 'wp-ms365-graph' ),
-			'teams_channel_id' => __( 'Default Teams Channel ID', 'wp-ms365-graph' ),
-			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'wp-ms365-graph' ),
-			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'wp-ms365-graph' ),
-			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'wp-ms365-graph' ),
-			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'wp-ms365-graph' ),
+			'teams_team_id' => __( 'Default Teams Team ID', 'esc-connect' ),
+			'teams_channel_id' => __( 'Default Teams Channel ID', 'esc-connect' ),
+			'teams_workflow_url' => __( 'Teams Workflow Endpoint URL', 'esc-connect' ),
+			'teams_rate_limit_max' => __( 'Teams Form Rate Limit: Max Requests', 'esc-connect' ),
+			'teams_rate_limit_window' => __( 'Teams Form Rate Limit: Window (seconds)', 'esc-connect' ),
+			'teams_min_submit_seconds' => __( 'Teams Form: Minimum Submit Time (seconds)', 'esc-connect' ),
 		);
 
 		foreach ( $teams_fields as $key => $label ) {
@@ -180,7 +197,7 @@ class WP_MS365_Admin {
 				'wp_ms365_' . $key,
 				$label,
 				array( $this, 'render_text_field' ),
-				'wp-ms365-graph',
+				'esc-connect',
 				'wp_ms365_teams',
 				array( 'key' => $key, 'label' => $label )
 			);
@@ -189,52 +206,52 @@ class WP_MS365_Admin {
 		// ---- WordPress sign-in (SSO) section ----
 		add_settings_section(
 			'wp_ms365_sso',
-			__( 'WordPress Sign-In (Microsoft Tenant)', 'wp-ms365-graph' ),
+			__( 'WordPress Sign-In (Microsoft Tenant)', 'esc-connect' ),
 			array( $this, 'section_sso_intro' ),
-			'wp-ms365-graph'
+			'esc-connect'
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_enabled',
-			__( 'Enable Tenant Sign-In', 'wp-ms365-graph' ),
+			__( 'Enable Tenant Sign-In', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_enabled', 'label' => __( 'Show a "Sign in with Microsoft" button on wp-login.php and enable the shortcode.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_enabled', 'label' => __( 'Show a "Sign in with Microsoft" button on wp-login.php and enable the shortcode.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_force_redirect',
-			__( 'Force Entra Sign-In on wp-login.php', 'wp-ms365-graph' ),
+			__( 'Force Entra Sign-In on wp-login.php', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_force_redirect', 'label' => __( 'Skip the default WordPress login form and redirect directly to Microsoft Entra ID. Append ?ms365_local_login=1 to wp-login.php to bypass when needed.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_force_redirect', 'label' => __( 'Skip the default WordPress login form and redirect directly to Microsoft Entra ID. Append ?ms365_local_login=1 to wp-login.php to bypass when needed.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_auto_create',
-			__( 'Auto-Create Users', 'wp-ms365-graph' ),
+			__( 'Auto-Create Users', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_auto_create', 'label' => __( 'Automatically create a WordPress account for new Microsoft users.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_auto_create', 'label' => __( 'Automatically create a WordPress account for new Microsoft users.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_use_ms_avatar',
-			__( 'Use Microsoft Profile Picture', 'wp-ms365-graph' ),
+			__( 'Use Microsoft Profile Picture', 'esc-connect' ),
 			array( $this, 'render_checkbox_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_use_ms_avatar', 'label' => __( 'Use the Microsoft Entra profile picture as the WordPress avatar for linked users.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_use_ms_avatar', 'label' => __( 'Use the Microsoft Entra profile picture as the WordPress avatar for linked users.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_default_role',
-			__( 'Default Role for New Users', 'wp-ms365-graph' ),
+			__( 'Default Role for New Users', 'esc-connect' ),
 			array( $this, 'render_select_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
 			array(
 				'key'     => 'sso_default_role',
@@ -244,32 +261,32 @@ class WP_MS365_Admin {
 
 		add_settings_field(
 			'wp_ms365_sso_allowed_domains',
-			__( 'Allowed Email Domains', 'wp-ms365-graph' ),
+			__( 'Allowed Email Domains', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_allowed_domains', 'label' => __( 'Allowed Email Domains', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_allowed_domains', 'label' => __( 'Allowed Email Domains', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_redirect_url',
-			__( 'Post-Login Redirect URL', 'wp-ms365-graph' ),
+			__( 'Post-Login Redirect URL', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_redirect_url', 'label' => __( 'Post-Login Redirect URL', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_redirect_url', 'label' => __( 'Post-Login Redirect URL', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_prompt',
-			__( 'OAuth Prompt Behavior', 'wp-ms365-graph' ),
+			__( 'OAuth Prompt Behavior', 'esc-connect' ),
 			array( $this, 'render_select_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
 			array(
 				'key'     => 'sso_prompt',
 				'options' => array(
-					''               => __( 'Default', 'wp-ms365-graph' ),
+					''               => __( 'Default', 'esc-connect' ),
 					'select_account' => 'select_account',
 					'login'          => 'login',
 					'consent'        => 'consent',
@@ -280,40 +297,40 @@ class WP_MS365_Admin {
 
 		add_settings_field(
 			'wp_ms365_sso_domain_hint',
-			__( 'Domain Hint', 'wp-ms365-graph' ),
+			__( 'Domain Hint', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_domain_hint', 'label' => __( 'Optional Entra domain hint (for example: contoso.com or organizations).', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_domain_hint', 'label' => __( 'Optional Entra domain hint (for example: contoso.com or organizations).', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_login_hint',
-			__( 'Login Hint', 'wp-ms365-graph' ),
+			__( 'Login Hint', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_login_hint', 'label' => __( 'Optional login hint (usually user email/UPN) to prefill the account.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_login_hint', 'label' => __( 'Optional login hint (usually user email/UPN) to prefill the account.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_extra_scopes',
-			__( 'Additional OAuth Scopes', 'wp-ms365-graph' ),
+			__( 'Additional OAuth Scopes', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
-			array( 'key' => 'sso_extra_scopes', 'label' => __( 'Optional space- or comma-separated delegated scopes to request in addition to openid email profile.', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_extra_scopes', 'label' => __( 'Optional space- or comma-separated delegated scopes to request in addition to openid email profile.', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_login_log_retention_days',
-			__( 'Login Log Retention (days)', 'wp-ms365-graph' ),
+			__( 'Login Log Retention (days)', 'esc-connect' ),
 			array( $this, 'render_number_field' ),
-			'wp-ms365-graph',
+			'esc-connect',
 			'wp_ms365_sso',
 			array(
 				'key'   => 'login_log_retention_days',
-				'label' => __( 'Number of days to keep login log entries (1–365). Default: 30.', 'wp-ms365-graph' ),
+				'label' => __( 'Number of days to keep login log entries (1–365). Default: 30.', 'esc-connect' ),
 				'min'   => 1,
 				'max'   => 365,
 				'step'  => 1,
@@ -322,21 +339,26 @@ class WP_MS365_Admin {
 
 		add_settings_section(
 			'wp_ms365_wording_calendar_files',
-			__( 'Calendar & Files Wording', 'wp-ms365-graph' ),
+			__( 'Calendar & Files Wording', 'esc-connect' ),
 			array( $this, 'section_wording_calendar_files_intro' ),
 			'wp-ms365-wording'
 		);
 
 		$wording_calendar_files_fields = array(
-			'calendar_empty_text'     => __( 'Calendar: No items found', 'wp-ms365-graph' ),
-			'calendar_header_date'    => __( 'Calendar: Header Date', 'wp-ms365-graph' ),
-			'calendar_header_event'   => __( 'Calendar: Header Event', 'wp-ms365-graph' ),
-			'calendar_header_duration'=> __( 'Calendar: Header Duration', 'wp-ms365-graph' ),
-			'calendar_header_location'=> __( 'Calendar: Header Location', 'wp-ms365-graph' ),
-			'files_empty_text'        => __( 'Files: No items found', 'wp-ms365-graph' ),
-			'files_header_file'       => __( 'Files: Header File', 'wp-ms365-graph' ),
-			'files_header_size'       => __( 'Files: Header Size', 'wp-ms365-graph' ),
-			'files_header_modified'   => __( 'Files: Header Modified', 'wp-ms365-graph' ),
+			'calendar_empty_text'               => __( 'Calendar: No items found', 'esc-connect' ),
+			'calendar_header_date'              => __( 'Calendar: Header Date', 'esc-connect' ),
+			'calendar_header_event'             => __( 'Calendar: Header Event', 'esc-connect' ),
+			'calendar_header_duration'          => __( 'Calendar: Header Duration', 'esc-connect' ),
+			'calendar_all_day_text'             => __( 'Calendar: All Day Text', 'esc-connect' ),
+			'calendar_duration_hour_single'     => __( 'Calendar: Hour (singular)', 'esc-connect' ),
+			'calendar_duration_hour_plural'     => __( 'Calendar: Hour (plural)', 'esc-connect' ),
+			'calendar_duration_minute_single'   => __( 'Calendar: Minute (singular)', 'esc-connect' ),
+			'calendar_duration_minute_plural'   => __( 'Calendar: Minute (plural)', 'esc-connect' ),
+			'calendar_header_location'          => __( 'Calendar: Header Location', 'esc-connect' ),
+			'files_empty_text'                  => __( 'Files: No items found', 'esc-connect' ),
+			'files_header_file'                 => __( 'Files: Header File', 'esc-connect' ),
+			'files_header_size'                 => __( 'Files: Header Size', 'esc-connect' ),
+			'files_header_modified'             => __( 'Files: Header Modified', 'esc-connect' ),
 		);
 
 		foreach ( $wording_calendar_files_fields as $key => $label ) {
@@ -352,27 +374,27 @@ class WP_MS365_Admin {
 
 		add_settings_section(
 			'wp_ms365_wording_teams',
-			__( 'Teams Form Wording', 'wp-ms365-graph' ),
+			__( 'Teams Form Wording', 'esc-connect' ),
 			array( $this, 'section_wording_teams_intro' ),
 			'wp-ms365-wording'
 		);
 
 		$wording_teams_fields = array(
-			'teams_form_placeholder'  => __( 'Teams Form: Placeholder', 'wp-ms365-graph' ),
-			'teams_form_button_text'  => __( 'Teams Form: Button Text', 'wp-ms365-graph' ),
-			'teams_form_label_name'   => __( 'Teams Form: Label Name', 'wp-ms365-graph' ),
-			'teams_form_label_email'  => __( 'Teams Form: Label Email', 'wp-ms365-graph' ),
-			'teams_form_label_message'=> __( 'Teams Form: Label Message', 'wp-ms365-graph' ),
-			'teams_form_success'      => __( 'Teams Form: Success Message', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_nonce' => __( 'Teams Form: Error Invalid Nonce', 'wp-ms365-graph' ),
-			'teams_form_error_missing_fields' => __( 'Teams Form: Error Missing Fields', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_email' => __( 'Teams Form: Error Invalid Email', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_form' => __( 'Teams Form: Error Invalid Form', 'wp-ms365-graph' ),
-			'teams_form_error_submitted_too_fast' => __( 'Teams Form: Error Submitted Too Fast', 'wp-ms365-graph' ),
-			'teams_form_error_rate_limited' => __( 'Teams Form: Error Rate Limited', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_endpoint' => __( 'Teams Form: Error Invalid Endpoint', 'wp-ms365-graph' ),
-			'teams_form_error_post_fail' => __( 'Teams Form: Error Delivery Failed', 'wp-ms365-graph' ),
-			'teams_form_error_unknown' => __( 'Teams Form: Error Unknown', 'wp-ms365-graph' ),
+			'teams_form_placeholder'  => __( 'Teams Form: Placeholder', 'esc-connect' ),
+			'teams_form_button_text'  => __( 'Teams Form: Button Text', 'esc-connect' ),
+			'teams_form_label_name'   => __( 'Teams Form: Label Name', 'esc-connect' ),
+			'teams_form_label_email'  => __( 'Teams Form: Label Email', 'esc-connect' ),
+			'teams_form_label_message'=> __( 'Teams Form: Label Message', 'esc-connect' ),
+			'teams_form_success'      => __( 'Teams Form: Success Message', 'esc-connect' ),
+			'teams_form_error_invalid_nonce' => __( 'Teams Form: Error Invalid Nonce', 'esc-connect' ),
+			'teams_form_error_missing_fields' => __( 'Teams Form: Error Missing Fields', 'esc-connect' ),
+			'teams_form_error_invalid_email' => __( 'Teams Form: Error Invalid Email', 'esc-connect' ),
+			'teams_form_error_invalid_form' => __( 'Teams Form: Error Invalid Form', 'esc-connect' ),
+			'teams_form_error_submitted_too_fast' => __( 'Teams Form: Error Submitted Too Fast', 'esc-connect' ),
+			'teams_form_error_rate_limited' => __( 'Teams Form: Error Rate Limited', 'esc-connect' ),
+			'teams_form_error_invalid_endpoint' => __( 'Teams Form: Error Invalid Endpoint', 'esc-connect' ),
+			'teams_form_error_post_fail' => __( 'Teams Form: Error Delivery Failed', 'esc-connect' ),
+			'teams_form_error_unknown' => __( 'Teams Form: Error Unknown', 'esc-connect' ),
 		);
 
 		foreach ( $wording_teams_fields as $key => $label ) {
@@ -388,27 +410,27 @@ class WP_MS365_Admin {
 
 		add_settings_section(
 			'wp_ms365_wording_signin',
-			__( 'Sign-In Wording', 'wp-ms365-graph' ),
+			__( 'Sign-In Wording', 'esc-connect' ),
 			array( $this, 'section_wording_signin_intro' ),
 			'wp-ms365-wording'
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_signin_button_text',
-			__( 'Entra Sign-In Button Text', 'wp-ms365-graph' ),
+			__( 'Entra Sign-In Button Text', 'esc-connect' ),
 			array( $this, 'render_text_field' ),
 			'wp-ms365-wording',
 			'wp_ms365_wording_signin',
-			array( 'key' => 'sso_signin_button_text', 'label' => __( 'Entra Sign-In Button Text', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_signin_button_text', 'label' => __( 'Entra Sign-In Button Text', 'esc-connect' ) )
 		);
 
 		add_settings_field(
 			'wp_ms365_sso_signin_button_image',
-			__( 'Entra Sign-In Button Image', 'wp-ms365-graph' ),
+			__( 'Entra Sign-In Button Image', 'esc-connect' ),
 			array( $this, 'render_image_field' ),
 			'wp-ms365-wording',
 			'wp_ms365_wording_signin',
-			array( 'key' => 'sso_signin_button_image', 'label' => __( 'Entra Sign-In Button Image', 'wp-ms365-graph' ) )
+			array( 'key' => 'sso_signin_button_image', 'label' => __( 'Entra Sign-In Button Image', 'esc-connect' ) )
 		);
 	}
 
@@ -485,6 +507,10 @@ class WP_MS365_Admin {
 			$clean['custom_css'] = sanitize_textarea_field( $input['custom_css'] );
 		}
 
+		if ( isset( $input['sharepoint_image_basepath'] ) ) {
+			$clean['sharepoint_image_basepath'] = esc_url_raw( trim( (string) $input['sharepoint_image_basepath'] ) );
+		}
+
 		if ( isset( $input['calendar_empty_text'] ) ) {
 			$clean['calendar_empty_text'] = sanitize_text_field( $input['calendar_empty_text'] );
 		}
@@ -499,6 +525,26 @@ class WP_MS365_Admin {
 
 		if ( isset( $input['calendar_header_duration'] ) ) {
 			$clean['calendar_header_duration'] = sanitize_text_field( $input['calendar_header_duration'] );
+		}
+
+		if ( isset( $input['calendar_all_day_text'] ) ) {
+			$clean['calendar_all_day_text'] = sanitize_text_field( $input['calendar_all_day_text'] );
+		}
+
+		if ( isset( $input['calendar_duration_hour_single'] ) ) {
+			$clean['calendar_duration_hour_single'] = sanitize_text_field( $input['calendar_duration_hour_single'] );
+		}
+
+		if ( isset( $input['calendar_duration_hour_plural'] ) ) {
+			$clean['calendar_duration_hour_plural'] = sanitize_text_field( $input['calendar_duration_hour_plural'] );
+		}
+
+		if ( isset( $input['calendar_duration_minute_single'] ) ) {
+			$clean['calendar_duration_minute_single'] = sanitize_text_field( $input['calendar_duration_minute_single'] );
+		}
+
+		if ( isset( $input['calendar_duration_minute_plural'] ) ) {
+			$clean['calendar_duration_minute_plural'] = sanitize_text_field( $input['calendar_duration_minute_plural'] );
 		}
 
 		if ( isset( $input['calendar_header_location'] ) ) {
@@ -595,7 +641,7 @@ class WP_MS365_Admin {
 			add_settings_error(
 				'wp_ms365_settings',
 				'invalid_tenant_id',
-				__( 'Tenant ID does not look like a valid GUID.', 'wp-ms365-graph' )
+				__( 'Tenant ID does not look like a valid GUID.', 'esc-connect' )
 			);
 		}
 
@@ -603,7 +649,7 @@ class WP_MS365_Admin {
 			add_settings_error(
 				'wp_ms365_settings',
 				'invalid_client_id',
-				__( 'Client ID does not look like a valid GUID.', 'wp-ms365-graph' )
+				__( 'Client ID does not look like a valid GUID.', 'esc-connect' )
 			);
 		}
 
@@ -695,20 +741,20 @@ class WP_MS365_Admin {
 	 */
 	public function render_main_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'dashboard';
 		$tabs = array(
-			'dashboard'    => __( 'Dashboard', 'wp-ms365-graph' ),
-			'settings'     => __( 'Settings', 'wp-ms365-graph' ),
-			'access-stats' => __( 'Access Statistics', 'wp-ms365-graph' ),
-			'login-access' => __( 'Login Access', 'wp-ms365-graph' ),
-			'wording'      => __( 'Translations', 'wp-ms365-graph' ),
-			'diagnostics'  => __( 'Diagnostics', 'wp-ms365-graph' ),
-			'documentation'=> __( 'Documentation', 'wp-ms365-graph' ),
-			'sp-explorer'  => __( 'SP Explorer', 'wp-ms365-graph' ),
-			'calendar-explorer' => __( 'Calendar Explorer', 'wp-ms365-graph' ),
+			'dashboard'    => __( 'Dashboard', 'esc-connect' ),
+			'settings'     => __( 'Settings', 'esc-connect' ),
+			'access-stats' => __( 'Access Statistics', 'esc-connect' ),
+			'login-access' => __( 'Login Access', 'esc-connect' ),
+			'wording'      => __( 'Translations', 'esc-connect' ),
+			'diagnostics'  => __( 'Diagnostics', 'esc-connect' ),
+			'documentation'=> __( 'Documentation', 'esc-connect' ),
+			'sp-explorer'  => __( 'SP Explorer', 'esc-connect' ),
+			'calendar-explorer' => __( 'Calendar Explorer', 'esc-connect' ),
 		);
 
 		if ( ! isset( $tabs[ $tab ] ) ) {
@@ -720,7 +766,7 @@ class WP_MS365_Admin {
 		foreach ( $tabs as $tab_key => $tab_label ) {
 			$tab_url = add_query_arg(
 				array(
-					'page' => 'wp-ms365-graph',
+					'page' => 'esc-connect',
 					'tab'  => $tab_key,
 				),
 				admin_url( 'admin.php' )
@@ -774,7 +820,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/settings.php';
@@ -785,7 +831,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_wording_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/wording.php';
 	}
@@ -795,7 +841,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_dashboard() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/dashboard.php';
@@ -806,7 +852,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_diagnostics() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/diagnostics.php';
@@ -817,7 +863,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_access_stats() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/access-stats.php';
 	}
@@ -827,7 +873,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_login_access() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		WP_MS365_Login_Logs::render_page( array( 'as_tab' => true ) );
 	}
@@ -844,19 +890,19 @@ class WP_MS365_Admin {
 
 		wp_add_dashboard_widget(
 			'wp_ms365_access_daily_trend_widget',
-			__( 'MS Graph Connect: Daily Trend', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Daily Trend', 'esc-connect' ),
 			array( $this, 'render_wp_dashboard_daily_trend_widget' )
 		);
 
 		wp_add_dashboard_widget(
 			'wp_ms365_access_top_items_widget',
-			__( 'MS Graph Connect: Top Accessed Items', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Top Accessed Items', 'esc-connect' ),
 			array( $this, 'render_wp_dashboard_top_items_widget' )
 		);
 
 		wp_add_dashboard_widget(
 			'wp_ms365_signin_activity_widget',
-			__( 'MS Graph Connect: Sign-In Activity', 'wp-ms365-graph' ),
+			__( 'ESC Connect: Sign-In Activity', 'esc-connect' ),
 			array( $this, 'render_wp_dashboard_signin_activity_widget' )
 		);
 	}
@@ -941,26 +987,26 @@ class WP_MS365_Admin {
 			}
 
 			$top_rows[] = array(
-				'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'wp-ms365-graph' ),
+				'label'  => '' !== $wp_label ? $wp_label : __( '(Untitled)', 'esc-connect' ),
 				'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
-				'source' => __( 'WordPress Content', 'wp-ms365-graph' ),
+				'source' => __( 'WordPress Content', 'esc-connect' ),
 				'url'    => $wp_url,
 			);
 		}
 
 		foreach ( $external_top as $row ) {
 			$type         = isset( $row['post_type'] ) ? sanitize_key( (string) $row['post_type'] ) : '';
-			$source_label = __( 'WP Shortcode -> Microsoft 365', 'wp-ms365-graph' );
+			$source_label = __( 'WP Shortcode -> Microsoft 365', 'esc-connect' );
 			if ( 'sharepoint' === $type ) {
-				$source_label = __( 'WP Shortcode -> SharePoint', 'wp-ms365-graph' );
+				$source_label = __( 'WP Shortcode -> SharePoint', 'esc-connect' );
 			} elseif ( 'onedrive' === $type ) {
-				$source_label = __( 'WP Shortcode -> OneDrive', 'wp-ms365-graph' );
+				$source_label = __( 'WP Shortcode -> OneDrive', 'esc-connect' );
 			} elseif ( 'outlook' === $type ) {
-				$source_label = __( 'WP Shortcode -> Outlook', 'wp-ms365-graph' );
+				$source_label = __( 'WP Shortcode -> Outlook', 'esc-connect' );
 			}
 
 			$top_rows[] = array(
-				'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'wp-ms365-graph' ),
+				'label'  => isset( $row['post_title'] ) ? (string) $row['post_title'] : __( '(Untitled)', 'esc-connect' ),
 				'value'  => isset( $row['total_hits'] ) ? (int) $row['total_hits'] : 0,
 				'source' => $source_label,
 				'url'    => isset( $row['url'] ) ? (string) $row['url'] : '',
@@ -1017,14 +1063,14 @@ class WP_MS365_Admin {
 		$max_value = 0;
 
 		if ( empty( $trend_map ) ) {
-			echo '<p>' . esc_html__( 'No trend data available for the selected period yet.', 'wp-ms365-graph' ) . '</p>';
+			echo '<p>' . esc_html__( 'No trend data available for the selected period yet.', 'esc-connect' ) . '</p>';
 			return;
 		}
 
 		echo '<table class="widefat striped">';
 		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Date', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Total accesses', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Date', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Total accesses', 'esc-connect' ) . '</th>';
 		echo '</tr></thead><tbody>';
 
 		foreach ( $trend_map as $value ) {
@@ -1048,7 +1094,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '</tbody></table>';
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'wp-ms365-graph' ) . '</a></p>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=esc-connect&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'esc-connect' ) . '</a></p>';
 	}
 
 	/**
@@ -1061,15 +1107,15 @@ class WP_MS365_Admin {
 		$top_rows = $data['top_rows'];
 
 		if ( empty( $top_rows ) ) {
-			echo '<p>' . esc_html__( 'No access data available for the current filters yet.', 'wp-ms365-graph' ) . '</p>';
+			echo '<p>' . esc_html__( 'No access data available for the current filters yet.', 'esc-connect' ) . '</p>';
 			return;
 		}
 
 		echo '<table class="widefat striped">';
 		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Item', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Source', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Access count', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Item', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Source', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Access count', 'esc-connect' ) . '</th>';
 		echo '</tr></thead><tbody>';
 
 		foreach ( $top_rows as $row ) {
@@ -1087,7 +1133,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '</tbody></table>';
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'wp-ms365-graph' ) . '</a></p>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=esc-connect&tab=access-stats' ) ) . '">' . esc_html__( 'Open Access Statistics', 'esc-connect' ) . '</a></p>';
 	}
 
 	/**
@@ -1102,32 +1148,32 @@ class WP_MS365_Admin {
 		$recent_logs   = $data['recent_logs'];
 
 		echo '<p>';
-		echo esc_html__( 'Last 7 days', 'wp-ms365-graph' ) . ': ';
-		echo '<strong>' . esc_html__( 'Success', 'wp-ms365-graph' ) . '</strong> ' . esc_html( number_format_i18n( $success_count ) );
+		echo esc_html__( 'Last 7 days', 'esc-connect' ) . ': ';
+		echo '<strong>' . esc_html__( 'Success', 'esc-connect' ) . '</strong> ' . esc_html( number_format_i18n( $success_count ) );
 		echo ' | ';
-		echo '<strong>' . esc_html__( 'Failed', 'wp-ms365-graph' ) . '</strong> ' . esc_html( number_format_i18n( $failed_count ) );
+		echo '<strong>' . esc_html__( 'Failed', 'esc-connect' ) . '</strong> ' . esc_html( number_format_i18n( $failed_count ) );
 		echo '</p>';
 
 		if ( empty( $recent_logs ) ) {
-			echo '<p>' . esc_html__( 'No login attempts found.', 'wp-ms365-graph' ) . '</p>';
-			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'wp-ms365-graph' ) . '</a></p>';
+			echo '<p>' . esc_html__( 'No login attempts found.', 'esc-connect' ) . '</p>';
+			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=esc-connect&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'esc-connect' ) . '</a></p>';
 			return;
 		}
 
 		echo '<table class="widefat striped">';
 		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Date', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Status', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Username', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'IP', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Date', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Status', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Username', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'IP', 'esc-connect' ) . '</th>';
 		echo '</tr></thead><tbody>';
 
 		foreach ( $recent_logs as $row ) {
 			$status = isset( $row['status'] ) ? sanitize_key( (string) $row['status'] ) : '';
 			if ( 'success' === $status ) {
-				$status_label = __( 'Success', 'wp-ms365-graph' );
+				$status_label = __( 'Success', 'esc-connect' );
 			} elseif ( 'failed' === $status ) {
-				$status_label = __( 'Failed', 'wp-ms365-graph' );
+				$status_label = __( 'Failed', 'esc-connect' );
 			} else {
 				$status_label = $status;
 			}
@@ -1141,7 +1187,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '</tbody></table>';
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'wp-ms365-graph' ) . '</a></p>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=esc-connect&tab=login-access' ) ) . '">' . esc_html__( 'Open Login Access', 'esc-connect' ) . '</a></p>';
 	}
 
 	/**
@@ -1149,7 +1195,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_sharepoint_explorer() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/sharepoint-explorer.php';
 	}
@@ -1159,7 +1205,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_calendar_explorer() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		include WP_MS365_PLUGIN_DIR . 'admin/views/calendar-explorer.php';
 	}
@@ -1169,7 +1215,7 @@ class WP_MS365_Admin {
 	 */
 	public function render_documentation() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 		$this->render_specific_user_required_notice();
 		include WP_MS365_PLUGIN_DIR . 'admin/views/documentation.php';
@@ -1189,7 +1235,7 @@ class WP_MS365_Admin {
 		}
 
 		echo '<div class="notice notice-warning"><p>'
-			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in MS Graph Connect settings to enable profile, calendar, and OneDrive queries.', 'wp-ms365-graph' )
+			. esc_html__( 'Specific User is required for app-only mode. Set a UPN (user@domain.com) or object ID in ESC Connect settings to enable profile, calendar, and OneDrive queries.', 'esc-connect' )
 			. '</p></div>';
 	}
 
@@ -1198,9 +1244,9 @@ class WP_MS365_Admin {
 	 */
 	public function section_azure_intro() {
 		echo '<p>'
-			. esc_html__( 'Enter your Entra ID application registration credentials. You can create an app registration at ', 'wp-ms365-graph' )
+			. esc_html__( 'Enter your Entra ID application registration credentials. You can create an app registration at ', 'esc-connect' )
 			. '<a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer">'
-			. esc_html__( 'portal.azure.com', 'wp-ms365-graph' )
+			. esc_html__( 'portal.azure.com', 'esc-connect' )
 			. '</a>.'
 			. '</p>';
 	}
@@ -1210,7 +1256,7 @@ class WP_MS365_Admin {
 	 */
 	public function section_teams_intro() {
 		echo '<p>'
-			. esc_html__( 'Configure defaults and anti-spam controls for the Teams message form shortcode.', 'wp-ms365-graph' )
+			. esc_html__( 'Configure defaults and anti-spam controls for the Teams message form shortcode.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -1219,11 +1265,11 @@ class WP_MS365_Admin {
 	 */
 	public function section_mail_intro() {
 		echo '<p>'
-			. esc_html__( 'Enable this to route WordPress emails sent via wp_mail() through Microsoft Graph sendMail.', 'wp-ms365-graph' )
+			. esc_html__( 'Enable this to route WordPress emails sent via wp_mail() through Microsoft Graph sendMail.', 'esc-connect' )
 			. '</p><p>'
-			. esc_html__( 'Required application permission: Mail.Send (grant admin consent in Azure). The sender mailbox must exist and be allowed for app-only sendMail calls.', 'wp-ms365-graph' )
+			. esc_html__( 'Required application permission: Mail.Send (grant admin consent in Azure). The sender mailbox must exist and be allowed for app-only sendMail calls.', 'esc-connect' )
 			. '</p><p>'
-			. esc_html__( 'After changing these mail transport settings, deactivate and reactivate the plugin once.', 'wp-ms365-graph' )
+			. esc_html__( 'After changing these mail transport settings, deactivate and reactivate the plugin once.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -1232,7 +1278,7 @@ class WP_MS365_Admin {
 	 */
 	public function section_wording_calendar_files_intro() {
 		echo '<p>'
-			. esc_html__( 'Override table headings and empty-state text for calendar and file shortcodes. Leave any field blank to use translated defaults.', 'wp-ms365-graph' )
+			. esc_html__( 'Override table headings and empty-state text for calendar and file shortcodes. Leave any field blank to use translated defaults.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -1241,7 +1287,7 @@ class WP_MS365_Admin {
 	 */
 	public function section_wording_teams_intro() {
 		echo '<p>'
-			. esc_html__( 'Customize labels, button text, success, and error messages shown in the Teams message form shortcode.', 'wp-ms365-graph' )
+			. esc_html__( 'Customize labels, button text, success, and error messages shown in the Teams message form shortcode.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -1250,7 +1296,7 @@ class WP_MS365_Admin {
 	 */
 	public function section_wording_signin_intro() {
 		echo '<p>'
-			. esc_html__( 'Customize the Microsoft Entra sign-in button wording. Leave blank to use the translated default label.', 'wp-ms365-graph' )
+			. esc_html__( 'Customize the Microsoft Entra sign-in button wording. Leave blank to use the translated default label.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -1272,7 +1318,7 @@ class WP_MS365_Admin {
 				esc_textarea( $value )
 			);
 			echo '<p class="description">'
-				. esc_html__( 'Optional CSS loaded on the frontend for shortcode markup. Useful selectors: .msgraph_calendar, .msgraph_calendar__item, .msgraph_files, .msgraph_files__item.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional CSS loaded on the frontend for shortcode markup. Useful selectors: .msgraph_calendar, .msgraph_calendar__item, .msgraph_files, .msgraph_files__item.', 'esc-connect' )
 				. '</p>';
 			return;
 		}
@@ -1284,8 +1330,8 @@ class WP_MS365_Admin {
 		if ( 'client_secret' === $key ) {
 			$extra_data = sprintf(
 				' data-toggle-label-show="%1$s" data-toggle-label-hide="%2$s"',
-				esc_attr__( 'Show', 'wp-ms365-graph' ),
-				esc_attr__( 'Hide', 'wp-ms365-graph' )
+				esc_attr__( 'Show', 'esc-connect' ),
+				esc_attr__( 'Hide', 'esc-connect' )
 			);
 		}
 
@@ -1301,51 +1347,55 @@ class WP_MS365_Admin {
 
 		if ( 'specific_user' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'wp-ms365-graph' )
+				. esc_html__( 'Required for app-only mode. Use a Microsoft user principal name (for example user@contoso.com) or object ID. The app registration must have Microsoft Graph application permissions User.Read.All, Calendars.Read, and Files.Read.All (grant admin consent in Azure).', 'esc-connect' )
+				. '</p>';
+		} elseif ( 'sharepoint_image_basepath' === $key ) {
+			echo '<p class="description">'
+				. esc_html__( 'Optional default base URL used by [msgraph_sharepoint_library] for image_columns when image_basepath is omitted. Leave empty to fall back to the WordPress uploads URL.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'mail_sender_user' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Required when Graph mail transport is enabled. Use a mailbox UPN (for example no-reply@contoso.com) or user object ID.', 'wp-ms365-graph' )
+				. esc_html__( 'Required when Graph mail transport is enabled. Use a mailbox UPN (for example no-reply@contoso.com) or user object ID.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_team_id' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional default Team ID used by [msgraph_teams_message_form] when team_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional default Team ID used by [msgraph_teams_message_form] when team_id is not provided in the shortcode.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_channel_id' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional default Channel ID used by [msgraph_teams_message_form] when channel_id is not provided in the shortcode.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional default Channel ID used by [msgraph_teams_message_form] when channel_id is not provided in the shortcode.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_workflow_url' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Workflow endpoint URL for Teams message delivery. This is the primary sender used by [msgraph_teams_message_form]. Existing Incoming Webhook URLs are still accepted for backward compatibility.', 'wp-ms365-graph' )
+				. esc_html__( 'Workflow endpoint URL for Teams message delivery. This is the primary sender used by [msgraph_teams_message_form]. Existing Incoming Webhook URLs are still accepted for backward compatibility.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_rate_limit_max' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Maximum accepted message submissions per user/IP in each rate-limit window.', 'wp-ms365-graph' )
+				. esc_html__( 'Maximum accepted message submissions per user/IP in each rate-limit window.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_rate_limit_window' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Rate-limit window in seconds for Teams message submissions.', 'wp-ms365-graph' )
+				. esc_html__( 'Rate-limit window in seconds for Teams message submissions.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'teams_min_submit_seconds' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Rejects form submissions faster than this threshold to reduce bot traffic.', 'wp-ms365-graph' )
+				. esc_html__( 'Rejects form submissions faster than this threshold to reduce bot traffic.', 'esc-connect' )
 				. '</p>';
 		} elseif ( false !== strpos( $key, 'header_' ) || false !== strpos( $key, 'empty_text' ) ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional override. Leave blank to use the translated default text.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional override. Leave blank to use the translated default text.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'sso_allowed_domains' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Comma-separated list of email domains allowed to sign in (e.g. contoso.com, fabrikam.org). Leave blank to allow any tenant domain.', 'wp-ms365-graph' )
+				. esc_html__( 'Comma-separated list of email domains allowed to sign in (e.g. contoso.com, fabrikam.org). Leave blank to allow any tenant domain.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'sso_redirect_url' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional. Internal URL to redirect to after successful sign-in. Overrides the per-request destination. Leave blank to redirect to the WP admin or the page that triggered login.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional. Internal URL to redirect to after successful sign-in. Overrides the per-request destination. Leave blank to redirect to the WP admin or the page that triggered login.', 'esc-connect' )
 				. '</p>';
 		} elseif ( 'sso_signin_button_text' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'Optional override for the Entra sign-in button label used on wp-login.php and by [msgraph_login_button] when no label attribute is provided.', 'wp-ms365-graph' )
+				. esc_html__( 'Optional override for the Entra sign-in button label used on wp-login.php and by [msgraph_login_button] when no label attribute is provided.', 'esc-connect' )
 				. '</p>';
 		}
 	}
@@ -1403,14 +1453,14 @@ class WP_MS365_Admin {
 				class="button ms365-image-select"
 				data-target="<?php echo esc_attr( $field_id ); ?>"
 				data-preview="<?php echo esc_attr( $field_id . '_preview' ); ?>"
-			><?php esc_html_e( 'Select Image', 'wp-ms365-graph' ); ?></button>
+			><?php esc_html_e( 'Select Image', 'esc-connect' ); ?></button>
 			<?php if ( ! empty( $value ) ) : ?>
 			<button
 				type="button"
 				class="button ms365-image-remove"
 				data-target="<?php echo esc_attr( $field_id ); ?>"
 				data-preview="<?php echo esc_attr( $field_id . '_preview' ); ?>"
-			><?php esc_html_e( 'Remove', 'wp-ms365-graph' ); ?></button>
+			><?php esc_html_e( 'Remove', 'esc-connect' ); ?></button>
 			<?php endif; ?>
 			<div class="ms365-image-preview" id="<?php echo esc_attr( $field_id . '_preview' ); ?>" style="margin-top:8px;">
 				<?php if ( ! empty( $value ) ) : ?>
@@ -1418,7 +1468,7 @@ class WP_MS365_Admin {
 				<?php endif; ?>
 			</div>
 		</div>
-		<p class="description"><?php esc_html_e( 'Optional. Upload or select an image to replace the Microsoft logo in the sign-in button. The image is rendered as a small icon (20×20 px), so keep it square and no larger than 200×200 px. Leave blank to use the default Microsoft logo.', 'wp-ms365-graph' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Optional. Upload or select an image to replace the Microsoft logo in the sign-in button. The image is rendered as a small icon (20×20 px), so keep it square and no larger than 200×200 px. Leave blank to use the default Microsoft logo.', 'esc-connect' ); ?></p>
 		<?php
 	}
 
@@ -1441,7 +1491,7 @@ class WP_MS365_Admin {
 
 		if ( 'mail_enabled' === $key ) {
 			echo '<p class="description">'
-				. esc_html__( 'When enabled, wp_mail() is short-circuited and delivered via Microsoft Graph. Disable to revert to default WordPress mail transport.', 'wp-ms365-graph' )
+				. esc_html__( 'When enabled, wp_mail() is short-circuited and delivered via Microsoft Graph. Disable to revert to default WordPress mail transport.', 'esc-connect' )
 				. '</p>';
 		}
 	}
@@ -1469,7 +1519,7 @@ class WP_MS365_Admin {
 		echo '</select>';
 
 		if ( 'sso_default_role' === $key ) {
-			echo '<p class="description">' . esc_html__( 'WordPress role assigned to auto-created users. Only applies when Auto-Create Users is enabled.', 'wp-ms365-graph' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'WordPress role assigned to auto-created users. Only applies when Auto-Create Users is enabled.', 'esc-connect' ) . '</p>';
 		}
 	}
 
@@ -1480,24 +1530,24 @@ class WP_MS365_Admin {
 		$callback_uri        = WP_MS365_Auth::get_sso_redirect_uri();
 		$legacy_callback_uri = WP_MS365_Auth::get_sso_legacy_redirect_uri();
 		echo '<p>'
-			. esc_html__( 'Allow users to sign in to WordPress using their Microsoft tenant account via OAuth 2.0 Authorization Code + PKCE. The credentials configured in the Azure App Registration section above are reused.', 'wp-ms365-graph' )
+			. esc_html__( 'Allow users to sign in to WordPress using their Microsoft tenant account via OAuth 2.0 Authorization Code + PKCE. The credentials configured in the Azure App Registration section above are reused.', 'esc-connect' )
 			. '</p><p>'
-			. esc_html__( 'Optional: enable forced Entra sign-in to redirect wp-login.php directly to Microsoft. For emergency local login access, append ?ms365_local_login=1 to wp-login.php.', 'wp-ms365-graph' )
+			. esc_html__( 'Optional: enable forced Entra sign-in to redirect wp-login.php directly to Microsoft. For emergency local login access, append ?ms365_local_login=1 to wp-login.php.', 'esc-connect' )
 			. '</p><p>'
-			. '<strong>' . esc_html__( 'Required Azure app registration steps:', 'wp-ms365-graph' ) . '</strong>'
+			. '<strong>' . esc_html__( 'Required Azure app registration steps:', 'esc-connect' ) . '</strong>'
 			. '</p><ol>'
-			. '<li>' . esc_html__( 'Set application type to "Web".', 'wp-ms365-graph' ) . '</li>'
+			. '<li>' . esc_html__( 'Set application type to "Web".', 'esc-connect' ) . '</li>'
 			. '<li>' . sprintf(
 				/* translators: %s: callback redirect URI */
-				esc_html__( 'Add the following Redirect URI (preferred): %s', 'wp-ms365-graph' ),
+				esc_html__( 'Add the following Redirect URI (preferred): %s', 'esc-connect' ),
 				'<code>' . esc_html( $callback_uri ) . '</code>'
 			) . '</li>'
 			. '<li>' . sprintf(
 				/* translators: %s: legacy callback redirect URI */
-				esc_html__( 'Legacy callback URL also supported: %s', 'wp-ms365-graph' ),
+				esc_html__( 'Legacy callback URL also supported: %s', 'esc-connect' ),
 				'<code>' . esc_html( $legacy_callback_uri ) . '</code>'
 			) . '</li>'
-			. '<li>' . esc_html__( 'Under "API permissions" add the delegated permissions: openid, email, profile.', 'wp-ms365-graph' ) . '</li>'
+			. '<li>' . esc_html__( 'Under "API permissions" add the delegated permissions: openid, email, profile.', 'esc-connect' ) . '</li>'
 			. '</ol>';
 	}
 
@@ -1522,7 +1572,7 @@ class WP_MS365_Admin {
 	 */
 	public function ajax_sso_test_config() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'wp-ms365-graph' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'esc-connect' ) ), 403 );
 		}
 
 		check_ajax_referer( 'wp_ms365_sso_test', 'nonce' );
@@ -1531,16 +1581,16 @@ class WP_MS365_Admin {
 		$issues   = array();
 
 		if ( empty( $settings['sso_enabled'] ) ) {
-			$issues[] = __( 'Tenant sign-in is not enabled.', 'wp-ms365-graph' );
+			$issues[] = __( 'Tenant sign-in is not enabled.', 'esc-connect' );
 		}
 		if ( empty( $settings['tenant_id'] ) ) {
-			$issues[] = __( 'Tenant ID is missing.', 'wp-ms365-graph' );
+			$issues[] = __( 'Tenant ID is missing.', 'esc-connect' );
 		}
 		if ( empty( $settings['client_id'] ) ) {
-			$issues[] = __( 'Client ID is missing.', 'wp-ms365-graph' );
+			$issues[] = __( 'Client ID is missing.', 'esc-connect' );
 		}
 		if ( empty( $settings['client_secret'] ) ) {
-			$issues[] = __( 'Client Secret is missing.', 'wp-ms365-graph' );
+			$issues[] = __( 'Client Secret is missing.', 'esc-connect' );
 		}
 
 		wp_send_json_success(
@@ -1563,7 +1613,7 @@ class WP_MS365_Admin {
 	 */
 	public function enqueue_assets( $hook ) {
 		$allowed_hooks = array(
-			'toplevel_page_wp-ms365-graph',
+			'toplevel_page_esc-connect',
 		);
 		if ( ! in_array( $hook, $allowed_hooks, true ) ) {
 			return;
@@ -1597,7 +1647,7 @@ class WP_MS365_Admin {
 	 */
 	public function handle_request_new_token() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'Insufficient permissions.', 'esc-connect' ) );
 		}
 
 		check_admin_referer( 'wp_ms365_request_new_token' );
@@ -1606,7 +1656,7 @@ class WP_MS365_Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'page'            => 'wp-ms365-graph',
+					'page'            => 'esc-connect',
 					'tab'             => 'settings',
 					'token_requested' => '1',
 				),
@@ -1623,7 +1673,7 @@ class WP_MS365_Admin {
 	 */
 	public function handle_export_settings() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'Insufficient permissions.', 'esc-connect' ) );
 		}
 
 		check_admin_referer( 'wp_ms365_export_settings' );
@@ -1662,7 +1712,7 @@ class WP_MS365_Admin {
 	 */
 	public function handle_import_settings() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'Insufficient permissions.', 'esc-connect' ) );
 		}
 
 		check_admin_referer( 'wp_ms365_import_settings' );
@@ -1717,7 +1767,7 @@ class WP_MS365_Admin {
 	 */
 	private function redirect_to_settings_with_import_export_notice( $operation, $status, $reason = '' ) {
 		$args = array(
-			'page'   => 'wp-ms365-graph',
+			'page'   => 'esc-connect',
 			'tab'    => 'settings',
 			'op'     => sanitize_key( (string) $operation ),
 			'status' => sanitize_key( (string) $status ),
@@ -1740,7 +1790,7 @@ class WP_MS365_Admin {
 	 */
 	private function encrypt_settings_blob( array $settings, $password ) {
 		if ( ! function_exists( 'openssl_encrypt' ) ) {
-			return new WP_Error( 'ms365_encrypt_unavailable', __( 'OpenSSL is not available.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_encrypt_unavailable', __( 'OpenSSL is not available.', 'esc-connect' ) );
 		}
 
 		$plaintext = wp_json_encode(
@@ -1753,7 +1803,7 @@ class WP_MS365_Admin {
 		);
 
 		if ( false === $plaintext || '' === $plaintext ) {
-			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to encode settings payload.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to encode settings payload.', 'esc-connect' ) );
 		}
 
 		$iterations = 120000;
@@ -1762,14 +1812,14 @@ class WP_MS365_Admin {
 			$salt = random_bytes( 16 );
 			$iv   = random_bytes( 16 );
 		} catch ( Exception $e ) {
-			return new WP_Error( 'ms365_export_random_failed', __( 'Failed to generate encryption material.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_export_random_failed', __( 'Failed to generate encryption material.', 'esc-connect' ) );
 		}
 
 		$key        = hash_pbkdf2( 'sha256', (string) $password, $salt, $iterations, 32, true );
 		$ciphertext = openssl_encrypt( $plaintext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
 
 		if ( false === $ciphertext ) {
-			return new WP_Error( 'ms365_export_encrypt_failed', __( 'Failed to encrypt settings payload.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_export_encrypt_failed', __( 'Failed to encrypt settings payload.', 'esc-connect' ) );
 		}
 
 		$hmac = hash_hmac( 'sha256', $ciphertext, $key, true );
@@ -1788,7 +1838,7 @@ class WP_MS365_Admin {
 
 		$encoded_package = wp_json_encode( $package, JSON_PRETTY_PRINT );
 		if ( false === $encoded_package || '' === $encoded_package ) {
-			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to finalize encrypted settings payload.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_export_encode_failed', __( 'Failed to finalize encrypted settings payload.', 'esc-connect' ) );
 		}
 
 		return $encoded_package;
@@ -1803,16 +1853,16 @@ class WP_MS365_Admin {
 	 */
 	private function decrypt_settings_blob( $encrypted_blob, $password ) {
 		if ( ! function_exists( 'openssl_decrypt' ) ) {
-			return new WP_Error( 'ms365_decrypt_unavailable', __( 'OpenSSL is not available.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_decrypt_unavailable', __( 'OpenSSL is not available.', 'esc-connect' ) );
 		}
 
 		$package = json_decode( (string) $encrypted_blob, true );
 		if ( ! is_array( $package ) ) {
-			return new WP_Error( 'ms365_import_invalid_json', __( 'Invalid settings file format.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_invalid_json', __( 'Invalid settings file format.', 'esc-connect' ) );
 		}
 
 		if ( ! isset( $package['format'] ) || self::SETTINGS_EXPORT_FORMAT !== (string) $package['format'] ) {
-			return new WP_Error( 'ms365_import_invalid_format', __( 'Unsupported settings file format.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_invalid_format', __( 'Unsupported settings file format.', 'esc-connect' ) );
 		}
 
 		$iterations = isset( $package['iterations'] ) ? (int) $package['iterations'] : 0;
@@ -1822,24 +1872,24 @@ class WP_MS365_Admin {
 		$ciphertext = isset( $package['data'] ) ? base64_decode( (string) $package['data'], true ) : false;
 
 		if ( $iterations < 50000 || false === $salt || false === $iv || false === $hmac || false === $ciphertext ) {
-			return new WP_Error( 'ms365_import_invalid_payload', __( 'The settings file is corrupted or incomplete.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_invalid_payload', __( 'The settings file is corrupted or incomplete.', 'esc-connect' ) );
 		}
 
 		$key           = hash_pbkdf2( 'sha256', (string) $password, $salt, $iterations, 32, true );
 		$computed_hmac = hash_hmac( 'sha256', $ciphertext, $key, true );
 
 		if ( ! hash_equals( $hmac, $computed_hmac ) ) {
-			return new WP_Error( 'ms365_import_invalid_password', __( 'Invalid password or tampered settings file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_invalid_password', __( 'Invalid password or tampered settings file.', 'esc-connect' ) );
 		}
 
 		$plaintext = openssl_decrypt( $ciphertext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
 		if ( false === $plaintext || '' === $plaintext ) {
-			return new WP_Error( 'ms365_import_decrypt_failed', __( 'Unable to decrypt the settings file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_decrypt_failed', __( 'Unable to decrypt the settings file.', 'esc-connect' ) );
 		}
 
 		$decoded = json_decode( $plaintext, true );
 		if ( ! is_array( $decoded ) || empty( $decoded['settings'] ) || ! is_array( $decoded['settings'] ) ) {
-			return new WP_Error( 'ms365_import_invalid_content', __( 'Decrypted settings payload is invalid.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_import_invalid_content', __( 'Decrypted settings payload is invalid.', 'esc-connect' ) );
 		}
 
 		return $decoded['settings'];
@@ -1852,7 +1902,7 @@ class WP_MS365_Admin {
 	 */
 	public function handle_reset_shortcode_counts() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'Insufficient permissions.', 'esc-connect' ) );
 		}
 
 		check_admin_referer( 'wp_ms365_reset_shortcode_counts' );
@@ -1861,7 +1911,7 @@ class WP_MS365_Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'page'         => 'wp-ms365-graph',
+					'page'         => 'esc-connect',
 					'tab'          => 'dashboard',
 					'counts_reset' => '1',
 				),
@@ -1878,7 +1928,7 @@ class WP_MS365_Admin {
 	 */
 	public function handle_send_test_email() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'Insufficient permissions.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'Insufficient permissions.', 'esc-connect' ) );
 		}
 
 		check_admin_referer( 'wp_ms365_send_test_email' );
@@ -1888,7 +1938,7 @@ class WP_MS365_Admin {
 			wp_safe_redirect(
 				add_query_arg(
 					array(
-						'page' => 'wp-ms365-graph',
+						'page' => 'esc-connect',
 						'tab'  => 'diagnostics',
 						'mail_test' => 'error',
 						'reason'    => 'invalid_recipient',
@@ -1901,13 +1951,13 @@ class WP_MS365_Admin {
 
 		$subject = sprintf(
 			/* translators: %s: site name */
-			__( '[%s] MS Graph Connect test email', 'wp-ms365-graph' ),
+			__( '[%s] ESC Connect test email', 'esc-connect' ),
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
 		);
 
 		$message = sprintf(
 			/* translators: 1: site url, 2: datetime */
-			__( 'This is a diagnostics test email from MS Graph Connect.\n\nSite: %1$s\nTime (UTC): %2$s\n', 'wp-ms365-graph' ),
+			__( 'This is a diagnostics test email from ESC Connect.\n\nSite: %1$s\nTime (UTC): %2$s\n', 'esc-connect' ),
 			home_url( '/' ),
 			gmdate( 'Y-m-d H:i:s' )
 		);
@@ -1924,7 +1974,7 @@ class WP_MS365_Admin {
 		remove_action( 'wp_mail_failed', $error_listener, 10 );
 
 		$args = array(
-			'page' => 'wp-ms365-graph',
+			'page' => 'esc-connect',
 			'tab'  => 'diagnostics',
 			'mail_test' => $sent ? 'success' : 'error',
 		);
@@ -1946,7 +1996,7 @@ class WP_MS365_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error(
 				array(
-					'message'       => __( 'Insufficient permissions.', 'wp-ms365-graph' ),
+					'message'       => __( 'Insufficient permissions.', 'esc-connect' ),
 					'access_denied' => true,
 				),
 				403
@@ -1959,7 +2009,7 @@ class WP_MS365_Admin {
 		if ( '' === trim( $site_id ) ) {
 			wp_send_json_error(
 				array(
-					'message'       => __( 'SharePoint site ID is required.', 'wp-ms365-graph' ),
+					'message'       => __( 'SharePoint site ID is required.', 'esc-connect' ),
 					'access_denied' => false,
 				),
 				400

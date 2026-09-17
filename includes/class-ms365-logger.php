@@ -137,7 +137,7 @@ class WP_MS365_Logger {
 		$logs = self::get_logs();
 
 		if ( empty( $logs ) ) {
-			return '<p>' . esc_html__( 'No logs recorded. Enable WP_DEBUG in wp-config.php to see debug logs.', 'wp-ms365-graph' ) . '</p>';
+			return '<p>' . esc_html__( 'No logs recorded. Enable WP_DEBUG in wp-config.php to see debug logs.', 'esc-connect' ) . '</p>';
 		}
 
 		$html = '<table class="widefat striped">';

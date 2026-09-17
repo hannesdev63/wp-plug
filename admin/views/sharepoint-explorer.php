@@ -31,49 +31,49 @@ if ( $is_connected ) {
 <div class="wrap msgraph_sp-explorer">
 	<h1 class="msgraph_sp-explorer__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'MS Graph Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'SharePoint Explorer', 'esc-connect' ); ?>
 	</h1>
 
-	<p><?php esc_html_e( 'Use this page to look up the site_id and drive_id values for the [msgraph_sharepoint_library] shortcode.', 'wp-ms365-graph' ); ?></p>
+	<p><?php esc_html_e( 'Use this page to look up the site_id and drive_id values for the [msgraph_sharepoint_library] shortcode.', 'esc-connect' ); ?></p>
 
 	<?php if ( ! $is_connected ) : ?>
 		<div class="notice notice-error">
-			<p><?php esc_html_e( 'Not connected to Microsoft 365. Configure credentials in Settings before using this page.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'Not connected to Microsoft 365. Configure credentials in Settings before using this page.', 'esc-connect' ); ?></p>
 		</div>
 	<?php else : ?>
 
 		<!-- Search form -->
 		<form method="get" action="" class="msgraph_sp-explorer__search">
-			<input type="hidden" name="page" value="wp-ms365-graph" />
+			<input type="hidden" name="page" value="esc-connect" />
 			<input type="hidden" name="tab" value="sp-explorer" />
-			<label for="ms365_sp_search"><strong><?php esc_html_e( 'Filter sites by name:', 'wp-ms365-graph' ); ?></strong></label>
+			<label for="ms365_sp_search"><strong><?php esc_html_e( 'Filter sites by name:', 'esc-connect' ); ?></strong></label>
 			<input
 				type="text"
 				id="ms365_sp_search"
 				name="ms365_sp_search"
 				value="<?php echo esc_attr( '*' === $search_query ? '' : $search_query ); ?>"
-				placeholder="<?php esc_attr_e( '* = all', 'wp-ms365-graph' ); ?>"
+				placeholder="<?php esc_attr_e( '* = all', 'esc-connect' ); ?>"
 				class="regular-text"
 			/>
-			<?php submit_button( __( 'Search', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+			<?php submit_button( __( 'Search', 'esc-connect' ), 'secondary', 'submit', false ); ?>
 		</form>
 
 		<?php if ( is_wp_error( $sites_result ) ) : ?>
 			<div class="notice notice-error">
 				<p>
-					<strong><?php esc_html_e( 'Could not retrieve sites:', 'wp-ms365-graph' ); ?></strong>
+					<strong><?php esc_html_e( 'Could not retrieve sites:', 'esc-connect' ); ?></strong>
 					<?php echo esc_html( $sites_result->get_error_message() ); ?>
 				</p>
 			</div>
 		<?php elseif ( empty( $sites_result['value'] ) ) : ?>
-			<p class="description"><?php esc_html_e( 'No SharePoint sites found. The app may need the Sites.Read.All application permission (with admin consent) to list sites.', 'wp-ms365-graph' ); ?></p>
+			<p class="description"><?php esc_html_e( 'No SharePoint sites found. The app may need the Sites.Read.All application permission (with admin consent) to list sites.', 'esc-connect' ); ?></p>
 		<?php else : ?>
 
 			<p class="description" id="ms365-sp-results-meta" data-total-sites="<?php echo esc_attr( count( $sites_result['value'] ) ); ?>">
 				<?php
 				printf(
 					/* translators: %d: number of sites found */
-					esc_html( _n( 'Found %d site.', 'Found %d sites.', count( $sites_result['value'] ), 'wp-ms365-graph' ) ),
+					esc_html( _n( 'Found %d site.', 'Found %d sites.', count( $sites_result['value'] ), 'esc-connect' ) ),
 					count( $sites_result['value'] )
 				);
 				?>
@@ -93,34 +93,34 @@ if ( $is_connected ) {
 						<?php echo esc_html( $s_name ); ?>
 						<?php if ( $s_url ) : ?>
 							<a href="<?php echo esc_url( $s_url ); ?>" target="_blank" rel="noopener noreferrer" style="font-size:.85em;font-weight:normal;margin-left:.5em;">
-								<?php esc_html_e( 'Open site ↗', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( 'Open site ↗', 'esc-connect' ); ?>
 							</a>
 						<?php endif; ?>
 					</h3>
 
 					<table class="form-table msgraph_sp-explorer__meta" style="margin-top:0;">
 						<tr>
-							<th scope="row" style="width:120px;"><?php esc_html_e( 'site_id', 'wp-ms365-graph' ); ?></th>
+							<th scope="row" style="width:120px;"><?php esc_html_e( 'site_id', 'esc-connect' ); ?></th>
 							<td>
 								<code class="msgraph_sp-explorer__copyable"><?php echo esc_html( $sid ); ?></code>
 								<button
 									type="button"
 									class="button button-small msgraph_copy-btn"
 									data-copy="<?php echo esc_attr( $sid ); ?>"
-									title="<?php esc_attr_e( 'Copy site_id', 'wp-ms365-graph' ); ?>"
-								><?php esc_html_e( 'Copy', 'wp-ms365-graph' ); ?></button>
+									title="<?php esc_attr_e( 'Copy site_id', 'esc-connect' ); ?>"
+								><?php esc_html_e( 'Copy', 'esc-connect' ); ?></button>
 							</td>
 						</tr>
 					</table>
 
-					<h4><?php esc_html_e( 'Document Libraries (drives)', 'wp-ms365-graph' ); ?></h4>
+					<h4><?php esc_html_e( 'Document Libraries (drives)', 'esc-connect' ); ?></h4>
 					<div class="msgraph_sp-explorer__drives-container" data-state="loading">
 						<div class="msgraph_sp-skeleton" aria-hidden="true">
 							<div class="msgraph_sp-skeleton__line msgraph_sp-skeleton__line--lg"></div>
 							<div class="msgraph_sp-skeleton__line"></div>
 							<div class="msgraph_sp-skeleton__line"></div>
 						</div>
-						<p class="description msgraph_sp-explorer__loading-text"><?php esc_html_e( 'Loading drives...', 'wp-ms365-graph' ); ?></p>
+						<p class="description msgraph_sp-explorer__loading-text"><?php esc_html_e( 'Loading drives...', 'esc-connect' ); ?></p>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -201,7 +201,7 @@ if ( $is_connected ) {
 
 	function renderDrivesTable( siteId, drives ) {
 		if ( ! drives || ! drives.length ) {
-			return '<p class="description"><?php echo esc_js( __( 'No drives found for this site.', 'wp-ms365-graph' ) ); ?></p>';
+			return '<p class="description"><?php echo esc_js( __( 'No drives found for this site.', 'esc-connect' ) ); ?></p>';
 		}
 
 		var rows = drives.map( function ( drive ) {
@@ -211,7 +211,7 @@ if ( $is_connected ) {
 			var driveUrl = String( drive.webUrl || '' );
 			var snippet = '[msgraph_sharepoint_library site_id="' + siteId + '" drive_id="' + driveId + '" title="' + driveName + '" folder=""]';
 			var openLink = driveUrl
-				? ' <a href="' + escapeHtml( driveUrl ) + '" target="_blank" rel="noopener noreferrer" title="<?php echo esc_js( __( 'Open library', 'wp-ms365-graph' ) ); ?>">↗</a>'
+				? ' <a href="' + escapeHtml( driveUrl ) + '" target="_blank" rel="noopener noreferrer" title="<?php echo esc_js( __( 'Open library', 'esc-connect' ) ); ?>">↗</a>'
 				: '';
 
 			return ''
@@ -220,7 +220,7 @@ if ( $is_connected ) {
 				+ '<td><code>' + escapeHtml( driveType ) + '</code></td>'
 				+ '<td>'
 				+ '<code style="word-break:break-all;">' + escapeHtml( snippet ) + '</code> '
-				+ '<button type="button" class="button button-small msgraph_copy-btn" data-copy="' + escapeHtml( snippet ) + '"><?php echo esc_js( __( 'Copy', 'wp-ms365-graph' ) ); ?></button>'
+				+ '<button type="button" class="button button-small msgraph_copy-btn" data-copy="' + escapeHtml( snippet ) + '"><?php echo esc_js( __( 'Copy', 'esc-connect' ) ); ?></button>'
 				+ '</td>'
 				+ '</tr>';
 		} ).join( '' );
@@ -228,9 +228,9 @@ if ( $is_connected ) {
 		return ''
 			+ '<table class="widefat striped msgraph_sp-explorer__drives">'
 			+ '<thead><tr>'
-			+ '<th><?php echo esc_js( __( 'Library Name', 'wp-ms365-graph' ) ); ?></th>'
-			+ '<th><?php echo esc_js( __( 'Type', 'wp-ms365-graph' ) ); ?></th>'
-			+ '<th><?php echo esc_js( __( 'Shortcode snippet', 'wp-ms365-graph' ) ); ?></th>'
+			+ '<th><?php echo esc_js( __( 'Library Name', 'esc-connect' ) ); ?></th>'
+			+ '<th><?php echo esc_js( __( 'Type', 'esc-connect' ) ); ?></th>'
+			+ '<th><?php echo esc_js( __( 'Shortcode snippet', 'esc-connect' ) ); ?></th>'
 			+ '</tr></thead>'
 			+ '<tbody>' + rows + '</tbody>'
 			+ '</table>';
@@ -272,11 +272,11 @@ if ( $is_connected ) {
 
 			var message = payload && payload.data && payload.data.message
 				? payload.data.message
-				: '<?php echo esc_js( __( 'Could not load drives.', 'wp-ms365-graph' ) ); ?>';
+				: '<?php echo esc_js( __( 'Could not load drives.', 'esc-connect' ) ); ?>';
 			container.innerHTML = '<p class="description">' + escapeHtml( message ) + '</p>';
 			container.setAttribute( 'data-state', 'error' );
 		} ).catch( function () {
-			container.innerHTML = '<p class="description"><?php echo esc_js( __( 'Could not load drives.', 'wp-ms365-graph' ) ); ?></p>';
+			container.innerHTML = '<p class="description"><?php echo esc_js( __( 'Could not load drives.', 'esc-connect' ) ); ?></p>';
 			container.setAttribute( 'data-state', 'error' );
 		} );
 	}
