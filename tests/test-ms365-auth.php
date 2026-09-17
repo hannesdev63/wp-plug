@@ -212,7 +212,7 @@ assert_equals( 's3cr3t',                               $settings['client_secret'
 echo "\n=== Test: get_redirect_uri() includes admin URL and page parameter ===\n";
 $uri = WP_MS365_Auth::get_redirect_uri();
 assert_contains( 'admin.php', $uri, 'redirect_uri contains admin.php' );
-assert_contains( 'wp-ms365-graph', $uri, 'redirect_uri contains page parameter' );
+assert_contains( 'esc-connect', $uri, 'redirect_uri contains page parameter' );
 
 echo "\n=== Test: get_sso_login_url() builds a valid Microsoft login URL ===\n";
 $auth_url = WP_MS365_Auth::get_sso_login_url();

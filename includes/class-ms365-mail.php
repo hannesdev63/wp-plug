@@ -41,7 +41,7 @@ class WP_MS365_Mail {
 		}
 
 		if ( '' === $sender_user ) {
-			$error = new WP_Error( 'ms365_mail_missing_sender', __( 'Graph mail sender is not configured. Set Mail Sender Mailbox (UPN or ID) in plugin settings.', 'wp-ms365-graph' ) );
+			$error = new WP_Error( 'ms365_mail_missing_sender', __( 'Graph mail sender is not configured. Set Mail Sender Mailbox (UPN or ID) in plugin settings.', 'esc-connect' ) );
 			$this->emit_wp_mail_failed( $error, $atts );
 			WP_MS365_Logger::log( 'error', 'Graph mail failed: sender mailbox not configured' );
 			return false;
@@ -54,7 +54,7 @@ class WP_MS365_Mail {
 		$reply_to       = $this->normalize_recipient_list( $parsed_headers['reply_to'] );
 
 		if ( empty( $to ) && empty( $cc ) && empty( $bcc ) ) {
-			$error = new WP_Error( 'ms365_mail_missing_recipient', __( 'No valid email recipients were provided.', 'wp-ms365-graph' ) );
+			$error = new WP_Error( 'ms365_mail_missing_recipient', __( 'No valid email recipients were provided.', 'esc-connect' ) );
 			$this->emit_wp_mail_failed( $error, $atts );
 			WP_MS365_Logger::log( 'error', 'Graph mail failed: no recipients' );
 			return false;
@@ -241,17 +241,17 @@ class WP_MS365_Mail {
 			}
 
 			if ( ! file_exists( $path ) || ! is_readable( $path ) ) {
-				return new WP_Error( 'ms365_mail_attachment_missing', sprintf( __( 'Attachment file not readable: %s', 'wp-ms365-graph' ), basename( $path ) ) );
+				return new WP_Error( 'ms365_mail_attachment_missing', sprintf( __( 'Attachment file not readable: %s', 'esc-connect' ), basename( $path ) ) );
 			}
 
 			$size = (int) filesize( $path );
 			if ( $size > self::MAX_ATTACHMENT_BYTES ) {
-				return new WP_Error( 'ms365_mail_attachment_too_large', sprintf( __( 'Attachment exceeds 3 MiB Graph JSON limit: %s', 'wp-ms365-graph' ), basename( $path ) ) );
+				return new WP_Error( 'ms365_mail_attachment_too_large', sprintf( __( 'Attachment exceeds 3 MiB Graph JSON limit: %s', 'esc-connect' ), basename( $path ) ) );
 			}
 
 			$content = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 			if ( false === $content ) {
-				return new WP_Error( 'ms365_mail_attachment_read_failed', sprintf( __( 'Failed reading attachment: %s', 'wp-ms365-graph' ), basename( $path ) ) );
+				return new WP_Error( 'ms365_mail_attachment_read_failed', sprintf( __( 'Failed reading attachment: %s', 'esc-connect' ), basename( $path ) ) );
 			}
 
 			$mime = function_exists( 'mime_content_type' ) ? (string) mime_content_type( $path ) : '';

@@ -48,7 +48,7 @@ if ( $is_connected && '' !== $configured_user ) {
 $clear_logs = isset( $_GET['clear_logs'] ) && '1' === $_GET['clear_logs'];
 if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	WP_MS365_Logger::clear_logs();
-	echo '<div class="notice notice-success"><p>' . esc_html__( 'Logs cleared.', 'wp-ms365-graph' ) . '</p></div>';
+	echo '<div class="notice notice-success"><p>' . esc_html__( 'Logs cleared.', 'esc-connect' ) . '</p></div>';
 }
 // phpcs:enable
 ?>
@@ -56,20 +56,20 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 <div class="wrap msgraph_diagnostics">
 	<h1 class="msgraph_diagnostics__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'Diagnostics', 'esc-connect' ); ?>
 	</h1>
 
 	<?php if ( 'success' === $mail_test_status ) : ?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php printf( esc_html__( 'Test email sent successfully to %s.', 'wp-ms365-graph' ), esc_html( $admin_email ) ); ?></p>
+			<p><?php printf( esc_html__( 'Test email sent successfully to %s.', 'esc-connect' ), esc_html( $admin_email ) ); ?></p>
 		</div>
 	<?php elseif ( 'error' === $mail_test_status ) : ?>
 		<div class="notice notice-error is-dismissible">
 			<p>
 				<?php
-				echo esc_html__( 'Test email failed.', 'wp-ms365-graph' );
+				echo esc_html__( 'Test email failed.', 'esc-connect' );
 				if ( 'invalid_recipient' === $mail_test_reason ) {
-					echo ' ' . esc_html__( 'Admin email address is not configured or invalid.', 'wp-ms365-graph' );
+					echo ' ' . esc_html__( 'Admin email address is not configured or invalid.', 'esc-connect' );
 				} elseif ( '' !== $mail_test_reason ) {
 					echo ' ' . esc_html( $mail_test_reason );
 				}
@@ -79,44 +79,44 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	<?php endif; ?>
 
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Email Transport Test', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Email Transport Test', 'esc-connect' ); ?></h2>
 		<p>
-			<?php esc_html_e( 'Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph.', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Send a test email using WordPress mail flow (wp_mail). If Graph mail transport is enabled, this test will go through Microsoft Graph.', 'esc-connect' ); ?>
 		</p>
 		<p>
-			<?php echo esc_html__( 'Recipient:', 'wp-ms365-graph' ); ?> <code><?php echo esc_html( $admin_email ); ?></code>
+			<?php echo esc_html__( 'Recipient:', 'esc-connect' ); ?> <code><?php echo esc_html( $admin_email ); ?></code>
 		</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="wp_ms365_send_test_email" />
 			<?php wp_nonce_field( 'wp_ms365_send_test_email' ); ?>
-			<?php submit_button( __( 'Send Test Email', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+			<?php submit_button( __( 'Send Test Email', 'esc-connect' ), 'secondary', 'submit', false ); ?>
 		</form>
 	</div>
 
 	<!-- System Information -->
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'System Information', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'System Information', 'esc-connect' ); ?></h2>
 		<table class="form-table">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Plugin Version', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Plugin Version', 'esc-connect' ); ?></th>
 				<td><code><?php echo esc_html( WP_MS365_VERSION ); ?></code></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'WordPress Version', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'WordPress Version', 'esc-connect' ); ?></th>
 				<td><code><?php echo esc_html( get_bloginfo( 'version' ) ); ?></code></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'PHP Version', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'PHP Version', 'esc-connect' ); ?></th>
 				<td><code><?php echo esc_html( phpversion() ); ?></code></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'WP_DEBUG Enabled', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'WP_DEBUG Enabled', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( $debug_enabled ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'No', 'wp-ms365-graph' ); ?></span>
-						<p class="description"><?php esc_html_e( 'Enable WP_DEBUG in wp-config.php to see debug logs.', 'wp-ms365-graph' ); ?></p>
+						<span style="color: red;">✗ <?php esc_html_e( 'No', 'esc-connect' ); ?></span>
+						<p class="description"><?php esc_html_e( 'Enable WP_DEBUG in wp-config.php to see debug logs.', 'esc-connect' ); ?></p>
 					<?php endif; ?>
 				</td>
 			</tr>
@@ -125,59 +125,59 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 	<!-- Authentication Configuration -->
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Authentication Configuration', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Authentication Configuration', 'esc-connect' ); ?></h2>
 		<table class="form-table">
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Connected', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Connected', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( $is_connected ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'No', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'No', 'esc-connect' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Tenant ID Configured', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Tenant ID Configured', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( ! empty( $settings['tenant_id'] ) ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
 						<br /><code><?php echo esc_html( $settings['tenant_id'] ); ?></code>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'No', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'No', 'esc-connect' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Client ID Configured', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Client ID Configured', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( ! empty( $settings['client_id'] ) ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
 						<br /><code><?php echo esc_html( $settings['client_id'] ); ?></code>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'No', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'No', 'esc-connect' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Client Secret Configured', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Client Secret Configured', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( ! empty( $settings['client_secret'] ) ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
-						<p class="description"><?php esc_html_e( '(value hidden)', 'wp-ms365-graph' ); ?></p>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
+						<p class="description"><?php esc_html_e( '(value hidden)', 'esc-connect' ); ?></p>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'No', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'No', 'esc-connect' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Specific User Configured', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Specific User Configured', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( ! empty( $configured_user ) ) : ?>
-						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'wp-ms365-graph' ); ?></span>
+						<span style="color: green;">✓ <?php esc_html_e( 'Yes', 'esc-connect' ); ?></span>
 						<br /><code><?php echo esc_html( $configured_user ); ?></code>
 					<?php else : ?>
-						<span style="color: red;">✗ <?php esc_html_e( 'Not set (required for app-only mode)', 'wp-ms365-graph' ); ?></span>
+						<span style="color: red;">✗ <?php esc_html_e( 'Not set (required for app-only mode)', 'esc-connect' ); ?></span>
 					<?php endif; ?>
 				</td>
 			</tr>
@@ -187,21 +187,21 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 	<!-- Live Graph Checks -->
 	<?php if ( '' !== $configured_user ) : ?>
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Live Graph Checks', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Live Graph Checks', 'esc-connect' ); ?></h2>
 		<?php if ( ! $is_connected ) : ?>
-			<p class="description"><?php esc_html_e( 'Connect the plugin first to run live checks.', 'wp-ms365-graph' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Connect the plugin first to run live checks.', 'esc-connect' ); ?></p>
 		<?php else : ?>
 		<table class="form-table">
 
 			<!-- Check 1: user exists -->
 			<tr>
-				<th scope="row"><?php esc_html_e( 'User exists in Entra ID', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'User exists in Entra ID', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( is_wp_error( $diag_user_result ) ) : ?>
-						<span style="color:red;">✗ <?php esc_html_e( 'Failed', 'wp-ms365-graph' ); ?></span>
+						<span style="color:red;">✗ <?php esc_html_e( 'Failed', 'esc-connect' ); ?></span>
 						<p class="description"><?php echo esc_html( $diag_user_result->get_error_message() ); ?></p>
 					<?php else : ?>
-						<span style="color:green;">✓ <?php esc_html_e( 'Found', 'wp-ms365-graph' ); ?></span>
+						<span style="color:green;">✓ <?php esc_html_e( 'Found', 'esc-connect' ); ?></span>
 						<?php
 						$display_name = isset( $diag_user_result['displayName'] ) ? $diag_user_result['displayName'] : '';
 						$upn          = isset( $diag_user_result['userPrincipalName'] ) ? $diag_user_result['userPrincipalName'] : '';
@@ -220,26 +220,26 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 			<!-- Check 2: calendar provisioned -->
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Exchange Online / Calendar provisioned', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Exchange Online / Calendar provisioned', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( is_wp_error( $diag_calendar_result ) ) :
 						$cal_msg    = $diag_calendar_result->get_error_message();
 						$cal_data   = $diag_calendar_result->get_error_data();
 						$cal_status = is_array( $cal_data ) && isset( $cal_data['status'] ) ? (int) $cal_data['status'] : 0;
 					?>
-						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'wp-ms365-graph' ); ?></span>
+						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'esc-connect' ); ?></span>
 						<p class="description"><?php echo esc_html( $cal_msg ); ?></p>
 						<?php if ( 403 === $cal_status ) : ?>
 							<p class="description" style="color:red;">
-								<?php esc_html_e( '→ Missing permission. Add Microsoft Graph application permission Calendars.Read to your Azure app and grant admin consent.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ Missing permission. Add Microsoft Graph application permission Calendars.Read to your Azure app and grant admin consent.', 'esc-connect' ); ?>
 							</p>
 						<?php elseif ( 404 === $cal_status || 0 === $cal_status ) : ?>
 							<p class="description" style="color:orange;">
-								<?php esc_html_e( '→ License is assigned but Exchange has not initialized the mailbox yet. Have the user open Outlook on the web (outlook.office.com) once — that triggers mailbox creation. Allow up to 24 h after license assignment.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ License is assigned but Exchange has not initialized the mailbox yet. Have the user open Outlook on the web (outlook.office.com) once — that triggers mailbox creation. Allow up to 24 h after license assignment.', 'esc-connect' ); ?>
 							</p>
 						<?php endif; ?>
 					<?php else : ?>
-						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'wp-ms365-graph' ); ?></span>
+						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'esc-connect' ); ?></span>
 						<?php if ( ! empty( $diag_calendar_result['name'] ) ) : ?>
 							<p class="description"><?php echo esc_html( $diag_calendar_result['name'] ); ?></p>
 						<?php endif; ?>
@@ -249,26 +249,26 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 			<!-- Check 3: OneDrive provisioned -->
 			<tr>
-				<th scope="row"><?php esc_html_e( 'OneDrive provisioned', 'wp-ms365-graph' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'OneDrive provisioned', 'esc-connect' ); ?></th>
 				<td>
 					<?php if ( is_wp_error( $diag_drive_result ) ) :
 						$drv_msg    = $diag_drive_result->get_error_message();
 						$drv_data   = $diag_drive_result->get_error_data();
 						$drv_status = is_array( $drv_data ) && isset( $drv_data['status'] ) ? (int) $drv_data['status'] : 0;
 					?>
-						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'wp-ms365-graph' ); ?></span>
+						<span style="color:red;">✗ <?php esc_html_e( 'Not available', 'esc-connect' ); ?></span>
 						<p class="description"><?php echo esc_html( $drv_msg ); ?></p>
 						<?php if ( 403 === $drv_status ) : ?>
 							<p class="description" style="color:red;">
-								<?php esc_html_e( '→ Missing permission. Ensure Microsoft Graph application permission Files.Read.All is added to your Azure app with admin consent.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ Missing permission. Ensure Microsoft Graph application permission Files.Read.All is added to your Azure app with admin consent.', 'esc-connect' ); ?>
 							</p>
 						<?php else : ?>
 							<p class="description" style="color:orange;">
-								<?php esc_html_e( '→ OneDrive not initialized. Have the user open OneDrive (onedrive.live.com or SharePoint) once to trigger drive creation. Allow up to 24 h after license assignment.', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( '→ OneDrive not initialized. Have the user open OneDrive (onedrive.live.com or SharePoint) once to trigger drive creation. Allow up to 24 h after license assignment.', 'esc-connect' ); ?>
 							</p>
 						<?php endif; ?>
 					<?php else : ?>
-						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'wp-ms365-graph' ); ?></span>
+						<span style="color:green;">✓ <?php esc_html_e( 'Provisioned', 'esc-connect' ); ?></span>
 						<?php
 						$used  = isset( $diag_drive_result['quota']['used'] ) ? (int) $diag_drive_result['quota']['used'] : null;
 						$total = isset( $diag_drive_result['quota']['total'] ) ? (int) $diag_drive_result['quota']['total'] : null;
@@ -289,11 +289,11 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 	<!-- Application Scope -->
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Token Scope', 'wp-ms365-graph' ); ?></h2>
-		<p><?php esc_html_e( 'The plugin requests an app-only token using this scope:', 'wp-ms365-graph' ); ?></p>
+		<h2><?php esc_html_e( 'Token Scope', 'esc-connect' ); ?></h2>
+		<p><?php esc_html_e( 'The plugin requests an app-only token using this scope:', 'esc-connect' ); ?></p>
 		<code><?php echo esc_html( WP_MS365_Auth::SCOPES ); ?></code>
 		<p class="description">
-			<?php esc_html_e( 'Your Azure app registration must include these Microsoft Graph application permissions:', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Your Azure app registration must include these Microsoft Graph application permissions:', 'esc-connect' ); ?>
 			<br />
 			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code>
 		</p>
@@ -301,12 +301,12 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 	<!-- Debug Logs -->
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Debug Logs', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Debug Logs', 'esc-connect' ); ?></h2>
 
 		<?php if ( ! $debug_enabled ) : ?>
 			<div class="notice notice-warning">
 				<p>
-					<?php esc_html_e( 'WP_DEBUG is not enabled. To view logs, add the following to wp-config.php:', 'wp-ms365-graph' ); ?>
+					<?php esc_html_e( 'WP_DEBUG is not enabled. To view logs, add the following to wp-config.php:', 'esc-connect' ); ?>
 					<br /><code>define( 'WP_DEBUG', true );</code>
 				</p>
 			</div>
@@ -314,9 +314,9 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 		<p>
 			<?php if ( ! empty( $logs ) ) : ?>
-				<strong><?php printf( esc_html__( 'Total log entries: %d', 'wp-ms365-graph' ), count( $logs ) ); ?></strong>
+				<strong><?php printf( esc_html__( 'Total log entries: %d', 'esc-connect' ), count( $logs ) ); ?></strong>
 			<?php else : ?>
-				<strong><?php esc_html_e( 'No logs available.', 'wp-ms365-graph' ); ?></strong>
+				<strong><?php esc_html_e( 'No logs available.', 'esc-connect' ); ?></strong>
 			<?php endif; ?>
 		</p>
 
@@ -335,30 +335,30 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 				);
 				?>
 				<a href="<?php echo esc_url( $clear_logs_url ); ?>" class="button button-secondary">
-					<?php esc_html_e( 'Clear Logs', 'wp-ms365-graph' ); ?>
+					<?php esc_html_e( 'Clear Logs', 'esc-connect' ); ?>
 				</a>
 			</p>
 
 			<form method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>" style="margin:0 0 12px 0; display:flex; gap:8px; align-items:center;">
-				<input type="hidden" name="page" value="wp-ms365-graph" />
+				<input type="hidden" name="page" value="esc-connect" />
 				<input type="hidden" name="tab" value="diagnostics" />
 				<input type="hidden" name="log_page" value="1" />
-				<label for="wp_ms365_logs_per_page"><strong><?php esc_html_e( 'Rows per page', 'wp-ms365-graph' ); ?></strong></label>
+				<label for="wp_ms365_logs_per_page"><strong><?php esc_html_e( 'Rows per page', 'esc-connect' ); ?></strong></label>
 				<select name="logs_per_page" id="wp_ms365_logs_per_page">
 					<?php foreach ( $allowed_logs_per_page as $page_size ) : ?>
 						<option value="<?php echo esc_attr( (string) $page_size ); ?>"<?php selected( $logs_per_page, $page_size ); ?>><?php echo esc_html( (string) $page_size ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Apply', 'wp-ms365-graph' ); ?></button>
+				<button type="submit" class="button button-secondary"><?php esc_html_e( 'Apply', 'esc-connect' ); ?></button>
 			</form>
 
 			<table class="widefat striped">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Time', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Level', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Message', 'wp-ms365-graph' ); ?></th>
-						<th><?php esc_html_e( 'Context', 'wp-ms365-graph' ); ?></th>
+						<th><?php esc_html_e( 'Time', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Level', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Message', 'esc-connect' ); ?></th>
+						<th><?php esc_html_e( 'Context', 'esc-connect' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -395,16 +395,16 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 				<p style="margin-top:12px; display:flex; gap:8px; align-items:center;">
 					<?php if ( $log_page > 1 ) : ?>
 						<a class="button button-secondary" href="<?php echo esc_url( $prev_page_url ); ?>">
-							<?php esc_html_e( 'Previous', 'wp-ms365-graph' ); ?>
+							<?php esc_html_e( 'Previous', 'esc-connect' ); ?>
 						</a>
 					<?php else : ?>
-						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Previous', 'wp-ms365-graph' ); ?></button>
+						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Previous', 'esc-connect' ); ?></button>
 					<?php endif; ?>
 
 					<span>
 						<?php
 						printf(
-							esc_html__( 'Page %1$d of %2$d', 'wp-ms365-graph' ),
+							esc_html__( 'Page %1$d of %2$d', 'esc-connect' ),
 							(int) $log_page,
 							(int) $logs_total_pages
 						);
@@ -413,10 +413,10 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 					<?php if ( $log_page < $logs_total_pages ) : ?>
 						<a class="button button-secondary" href="<?php echo esc_url( $next_page_url ); ?>">
-							<?php esc_html_e( 'Next', 'wp-ms365-graph' ); ?>
+							<?php esc_html_e( 'Next', 'esc-connect' ); ?>
 						</a>
 					<?php else : ?>
-						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Next', 'wp-ms365-graph' ); ?></button>
+						<button class="button button-secondary" type="button" disabled><?php esc_html_e( 'Next', 'esc-connect' ); ?></button>
 					<?php endif; ?>
 				</p>
 			<?php endif; ?>
@@ -425,12 +425,12 @@ if ( $clear_logs && check_admin_referer( 'wp_ms365_clear_logs' ) ) {
 
 	<!-- Troubleshooting Tips -->
 	<div class="msgraph_card">
-		<h2><?php esc_html_e( 'Troubleshooting Tips', 'wp-ms365-graph' ); ?></h2>
+		<h2><?php esc_html_e( 'Troubleshooting Tips', 'esc-connect' ); ?></h2>
 		<ul>
-			<li><?php esc_html_e( 'After changing app permissions in Azure, grant admin consent and clear plugin connection once so a new app-only token is fetched.', 'wp-ms365-graph' ); ?></li>
-			<li><?php esc_html_e( 'Calendar and OneDrive require the target user to sign in to Outlook/OneDrive at least once after license assignment.', 'wp-ms365-graph' ); ?></li>
-			<li><?php esc_html_e( 'Use Microsoft Graph application permissions (not delegated) for no-user-interaction access.', 'wp-ms365-graph' ); ?></li>
-			<li><?php esc_html_e( 'If the wrong user\'s data shows up, verify the Specific User field contains the correct UPN (user@domain.com).', 'wp-ms365-graph' ); ?></li>
+			<li><?php esc_html_e( 'After changing app permissions in Azure, grant admin consent and clear plugin connection once so a new app-only token is fetched.', 'esc-connect' ); ?></li>
+			<li><?php esc_html_e( 'Calendar and OneDrive require the target user to sign in to Outlook/OneDrive at least once after license assignment.', 'esc-connect' ); ?></li>
+			<li><?php esc_html_e( 'Use Microsoft Graph application permissions (not delegated) for no-user-interaction access.', 'esc-connect' ); ?></li>
+			<li><?php esc_html_e( 'If the wrong user\'s data shows up, verify the Specific User field contains the correct UPN (user@domain.com).', 'esc-connect' ); ?></li>
 		</ul>
 	</div>
 

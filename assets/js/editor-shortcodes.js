@@ -7,10 +7,10 @@
 
   function registerMsGraphBlock(config) {
     blocks.registerBlockType(config.name, {
-      title: __(config.title, 'wp-ms365-graph'),
+      title: __(config.title, 'esc-connect'),
       icon: config.icon || 'media-document',
       category: 'widgets',
-      description: __(config.description, 'wp-ms365-graph'),
+      description: __(config.description, 'esc-connect'),
       attributes: config.attributes,
 
       edit: function (props) {
@@ -23,18 +23,18 @@
             attributes: attrs,
           });
         } else {
-          previewNode = el('p', null, __('Preview is not available in this editor.', 'wp-ms365-graph'));
+          previewNode = el('p', null, __('Preview is not available in this editor.', 'esc-connect'));
         }
 
         return el(
           'div',
-          { className: 'wp-ms365-graph-block-editor' },
+          { className: 'esc-connect-block-editor' },
           el(
             blockEditor.InspectorControls,
             null,
             el(
               components.PanelBody,
-              { title: __('Shortcode Settings', 'wp-ms365-graph'), initialOpen: true },
+              { title: __('Shortcode Settings', 'esc-connect'), initialOpen: true },
               config.fields.map(function (field) {
                 if (field.type === 'text') {
                   return el(components.TextControl, {
@@ -77,9 +77,9 @@
               })
             )
           ),
-          el('h4', null, __('Preview', 'wp-ms365-graph')),
+          el('h4', null, __('Preview', 'esc-connect')),
           previewNode,
-          el('p', null, __('Shortcode equivalent:', 'wp-ms365-graph')),
+          el('p', null, __('Shortcode equivalent:', 'esc-connect')),
           el('code', null, '[' + config.shortcodeTag + config.shortcodeAttributes(attrs) + ']')
         );
       },
@@ -109,7 +109,7 @@
   }
 
   registerMsGraphBlock({
-    name: 'wp-ms365-graph/calendar',
+    name: 'esc-connect/calendar',
     title: 'Microsoft 365 Calendar',
     description: 'Insert the Graph calendar shortcode.',
     shortcodeTag: 'msgraph_calendar',
@@ -124,16 +124,16 @@
       return buildShortcodeAttributes(attrs, ['limit', 'days', 'title', 'class', 'show_headers']);
     },
     fields: [
-      { type: 'number', name: 'limit', label: __('Limit', 'wp-ms365-graph'), default: 10 },
-      { type: 'number', name: 'days', label: __('Days', 'wp-ms365-graph'), default: 30 },
-      { type: 'text', name: 'title', label: __('Title', 'wp-ms365-graph') },
-      { type: 'text', name: 'class', label: __('CSS Class', 'wp-ms365-graph') },
-      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'wp-ms365-graph') },
+      { type: 'number', name: 'limit', label: __('Limit', 'esc-connect'), default: 10 },
+      { type: 'number', name: 'days', label: __('Days', 'esc-connect'), default: 30 },
+      { type: 'text', name: 'title', label: __('Title', 'esc-connect') },
+      { type: 'text', name: 'class', label: __('CSS Class', 'esc-connect') },
+      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'esc-connect') },
     ],
   });
 
   registerMsGraphBlock({
-    name: 'wp-ms365-graph/files',
+    name: 'esc-connect/files',
     title: 'OneDrive Files',
     description: 'Insert a OneDrive file table shortcode.',
     shortcodeTag: 'msgraph_files',
@@ -154,22 +154,22 @@
       return buildShortcodeAttributes(attrs, ['folder', 'limit', 'title', 'columns', 'column_order', 'hide_columns', 'download_columns', 'class', 'table_class', 'item_class', 'show_headers']);
     },
     fields: [
-      { type: 'text', name: 'folder', label: __('Folder', 'wp-ms365-graph') },
-      { type: 'number', name: 'limit', label: __('Limit', 'wp-ms365-graph'), default: 50 },
-      { type: 'text', name: 'title', label: __('Title', 'wp-ms365-graph') },
-      { type: 'text', name: 'columns', label: __('Columns', 'wp-ms365-graph'), help: __('Comma-separated: file,size,modified', 'wp-ms365-graph') },
-      { type: 'text', name: 'column_order', label: __('Column Order', 'wp-ms365-graph') },
-      { type: 'text', name: 'hide_columns', label: __('Hide Columns', 'wp-ms365-graph') },
-      { type: 'text', name: 'download_columns', label: __('Download Columns', 'wp-ms365-graph') },
-      { type: 'text', name: 'class', label: __('Wrapper Class', 'wp-ms365-graph') },
-      { type: 'text', name: 'table_class', label: __('Table Class', 'wp-ms365-graph') },
-      { type: 'text', name: 'item_class', label: __('Item Class', 'wp-ms365-graph') },
-      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'wp-ms365-graph') },
+      { type: 'text', name: 'folder', label: __('Folder', 'esc-connect') },
+      { type: 'number', name: 'limit', label: __('Limit', 'esc-connect'), default: 50 },
+      { type: 'text', name: 'title', label: __('Title', 'esc-connect') },
+      { type: 'text', name: 'columns', label: __('Columns', 'esc-connect'), help: __('Comma-separated: file,size,modified', 'esc-connect') },
+      { type: 'text', name: 'column_order', label: __('Column Order', 'esc-connect') },
+      { type: 'text', name: 'hide_columns', label: __('Hide Columns', 'esc-connect') },
+      { type: 'text', name: 'download_columns', label: __('Download Columns', 'esc-connect') },
+      { type: 'text', name: 'class', label: __('Wrapper Class', 'esc-connect') },
+      { type: 'text', name: 'table_class', label: __('Table Class', 'esc-connect') },
+      { type: 'text', name: 'item_class', label: __('Item Class', 'esc-connect') },
+      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'esc-connect') },
     ],
   });
 
   registerMsGraphBlock({
-    name: 'wp-ms365-graph/sharepoint-library',
+    name: 'esc-connect/sharepoint-library',
     title: 'SharePoint Library',
     description: 'Insert a SharePoint library table shortcode.',
     shortcodeTag: 'msgraph_sharepoint_library',
@@ -194,26 +194,26 @@
       return buildShortcodeAttributes(attrs, ['site_id', 'drive_id', 'folder', 'limit', 'title', 'columns', 'column_order', 'hide_columns', 'download_columns', 'image_columns', 'image_basepath', 'class', 'table_class', 'item_class', 'show_headers']);
     },
     fields: [
-      { type: 'text', name: 'site_id', label: __('Site ID', 'wp-ms365-graph') },
-      { type: 'text', name: 'drive_id', label: __('Drive ID', 'wp-ms365-graph') },
-      { type: 'text', name: 'folder', label: __('Folder', 'wp-ms365-graph') },
-      { type: 'number', name: 'limit', label: __('Limit', 'wp-ms365-graph'), default: 50 },
-      { type: 'text', name: 'title', label: __('Title', 'wp-ms365-graph') },
-      { type: 'text', name: 'columns', label: __('Columns', 'wp-ms365-graph'), help: __('Comma-separated: file,size,modified', 'wp-ms365-graph') },
-      { type: 'text', name: 'column_order', label: __('Column Order', 'wp-ms365-graph') },
-      { type: 'text', name: 'hide_columns', label: __('Hide Columns', 'wp-ms365-graph') },
-      { type: 'text', name: 'download_columns', label: __('Download Columns', 'wp-ms365-graph') },
-      { type: 'text', name: 'image_columns', label: __('Image Columns', 'wp-ms365-graph'), help: __('Comma-separated columns rendered as image file names.', 'wp-ms365-graph') },
-      { type: 'text', name: 'image_basepath', label: __('Image Base Path', 'wp-ms365-graph'), help: __('Base URL prepended to image file names (default: WordPress uploads URL).', 'wp-ms365-graph') },
-      { type: 'text', name: 'class', label: __('Wrapper Class', 'wp-ms365-graph') },
-      { type: 'text', name: 'table_class', label: __('Table Class', 'wp-ms365-graph') },
-      { type: 'text', name: 'item_class', label: __('Item Class', 'wp-ms365-graph') },
-      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'wp-ms365-graph') },
+      { type: 'text', name: 'site_id', label: __('Site ID', 'esc-connect') },
+      { type: 'text', name: 'drive_id', label: __('Drive ID', 'esc-connect') },
+      { type: 'text', name: 'folder', label: __('Folder', 'esc-connect') },
+      { type: 'number', name: 'limit', label: __('Limit', 'esc-connect'), default: 50 },
+      { type: 'text', name: 'title', label: __('Title', 'esc-connect') },
+      { type: 'text', name: 'columns', label: __('Columns', 'esc-connect'), help: __('Comma-separated: file,size,modified', 'esc-connect') },
+      { type: 'text', name: 'column_order', label: __('Column Order', 'esc-connect') },
+      { type: 'text', name: 'hide_columns', label: __('Hide Columns', 'esc-connect') },
+      { type: 'text', name: 'download_columns', label: __('Download Columns', 'esc-connect') },
+      { type: 'text', name: 'image_columns', label: __('Image Columns', 'esc-connect'), help: __('Comma-separated columns rendered as image file names.', 'esc-connect') },
+      { type: 'text', name: 'image_basepath', label: __('Image Base Path', 'esc-connect'), help: __('Base URL prepended to image file names (default: WordPress uploads URL).', 'esc-connect') },
+      { type: 'text', name: 'class', label: __('Wrapper Class', 'esc-connect') },
+      { type: 'text', name: 'table_class', label: __('Table Class', 'esc-connect') },
+      { type: 'text', name: 'item_class', label: __('Item Class', 'esc-connect') },
+      { type: 'toggle', name: 'show_headers', label: __('Show Headers', 'esc-connect') },
     ],
   });
 
   registerMsGraphBlock({
-    name: 'wp-ms365-graph/login-button',
+    name: 'esc-connect/login-button',
     title: 'Microsoft Sign-In Button',
     description: 'Insert the Graph login-button shortcode.',
     shortcodeTag: 'msgraph_login_button',
@@ -226,9 +226,9 @@
       return buildShortcodeAttributes(attrs, ['label', 'redirect_to', 'class']);
     },
     fields: [
-      { type: 'text', name: 'label', label: __('Label', 'wp-ms365-graph') },
-      { type: 'text', name: 'redirect_to', label: __('Redirect To', 'wp-ms365-graph') },
-      { type: 'text', name: 'class', label: __('CSS Class', 'wp-ms365-graph') },
+      { type: 'text', name: 'label', label: __('Label', 'esc-connect') },
+      { type: 'text', name: 'redirect_to', label: __('Redirect To', 'esc-connect') },
+      { type: 'text', name: 'class', label: __('CSS Class', 'esc-connect') },
     ],
   });
 })(window.wp.blocks, window.wp.element, window.wp.components, window.wp.blockEditor, window.wp.i18n);

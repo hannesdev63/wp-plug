@@ -235,13 +235,13 @@ class WP_MS365_Login_Logs {
 	 */
 	public static function render_page( $context = array() ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to view this page.', 'wp-ms365-graph' ) );
+			wp_die( esc_html__( 'You do not have permission to view this page.', 'esc-connect' ) );
 		}
 
 		global $wpdb;
 
 		$as_tab   = is_array( $context ) && ! empty( $context['as_tab'] );
-		$page_key = $as_tab ? 'wp-ms365-graph' : 'wp-ms365-login-logs';
+		$page_key = $as_tab ? 'esc-connect' : 'wp-ms365-login-logs';
 
 		$per_page = 50;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -273,37 +273,37 @@ class WP_MS365_Login_Logs {
 		$total_pages = max( 1, (int) ceil( $total / $per_page ) );
 
 		echo '<div class="wrap">';
-		echo '<h1>' . esc_html__( 'Login Logs', 'wp-ms365-graph' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Shows successful and failed WordPress login attempts.', 'wp-ms365-graph' ) . '</p>';
+		echo '<h1>' . esc_html__( 'Login Logs', 'esc-connect' ) . '</h1>';
+		echo '<p>' . esc_html__( 'Shows successful and failed WordPress login attempts.', 'esc-connect' ) . '</p>';
 
 		echo '<form method="get" style="margin: 1em 0;">';
 		echo '<input type="hidden" name="page" value="' . esc_attr( $page_key ) . '" />';
 		if ( $as_tab ) {
 			echo '<input type="hidden" name="tab" value="login-access" />';
 		}
-		echo '<label for="ms365-status-filter" style="margin-right:8px;">' . esc_html__( 'Status', 'wp-ms365-graph' ) . '</label>';
+		echo '<label for="ms365-status-filter" style="margin-right:8px;">' . esc_html__( 'Status', 'esc-connect' ) . '</label>';
 		echo '<select id="ms365-status-filter" name="status">';
-		echo '<option value="">' . esc_html__( 'All', 'wp-ms365-graph' ) . '</option>';
-		echo '<option value="success" ' . selected( $status_filter, 'success', false ) . '>' . esc_html__( 'Success', 'wp-ms365-graph' ) . '</option>';
-		echo '<option value="failed" ' . selected( $status_filter, 'failed', false ) . '>' . esc_html__( 'Failed', 'wp-ms365-graph' ) . '</option>';
+		echo '<option value="">' . esc_html__( 'All', 'esc-connect' ) . '</option>';
+		echo '<option value="success" ' . selected( $status_filter, 'success', false ) . '>' . esc_html__( 'Success', 'esc-connect' ) . '</option>';
+		echo '<option value="failed" ' . selected( $status_filter, 'failed', false ) . '>' . esc_html__( 'Failed', 'esc-connect' ) . '</option>';
 		echo '</select>';
-		echo '<button type="submit" class="button" style="margin-left:8px;">' . esc_html__( 'Filter', 'wp-ms365-graph' ) . '</button>';
+		echo '<button type="submit" class="button" style="margin-left:8px;">' . esc_html__( 'Filter', 'esc-connect' ) . '</button>';
 		echo '</form>';
 
 		echo '<table class="widefat striped">';
 		echo '<thead><tr>';
-		echo '<th>' . esc_html__( 'Date', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Status', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Username', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Email', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'ID', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Source', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'IP', 'wp-ms365-graph' ) . '</th>';
-		echo '<th>' . esc_html__( 'Reason', 'wp-ms365-graph' ) . '</th>';
+		echo '<th>' . esc_html__( 'Date', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Status', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Username', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Email', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'ID', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Source', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'IP', 'esc-connect' ) . '</th>';
+		echo '<th>' . esc_html__( 'Reason', 'esc-connect' ) . '</th>';
 		echo '</tr></thead><tbody>';
 
 		if ( empty( $logs ) ) {
-			echo '<tr><td colspan="8">' . esc_html__( 'No login attempts found.', 'wp-ms365-graph' ) . '</td></tr>';
+			echo '<tr><td colspan="8">' . esc_html__( 'No login attempts found.', 'esc-connect' ) . '</td></tr>';
 		} else {
 			foreach ( $logs as $log ) {
 				echo '<tr>';
@@ -337,8 +337,8 @@ class WP_MS365_Login_Logs {
 				'format'    => '&paged=%#%',
 				'current'   => $paged,
 				'total'     => $total_pages,
-				'prev_text' => __( '&laquo;', 'wp-ms365-graph' ),
-				'next_text' => __( '&raquo;', 'wp-ms365-graph' ),
+				'prev_text' => __( '&laquo;', 'esc-connect' ),
+				'next_text' => __( '&raquo;', 'esc-connect' ),
 			)
 		);
 		if ( is_string( $pagination ) ) {

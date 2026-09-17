@@ -19,7 +19,7 @@
 }
 
 /* Menu icon sizing fix – WordPress wraps data-URI icons in an <img> */
-#toplevel_page_wp-ms365-graph .wp-menu-image img {
+#toplevel_page_esc-connect .wp-menu-image img {
     width: 20px !important;
     height: 20px !important;
     padding: 0 !important;

@@ -20,18 +20,18 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 <div class="wrap msgraph_settings">
 	<h1 class="msgraph_settings__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Settings', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'Settings', 'esc-connect' ); ?>
 	</h1>
 
 	<?php if ( $token_requested ) : ?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php esc_html_e( 'Requested a new token. A fresh app-only token will be retrieved automatically on the next Graph request.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'Requested a new token. A fresh app-only token will be retrieved automatically on the next Graph request.', 'esc-connect' ); ?></p>
 		</div>
 	<?php endif; ?>
 
 	<?php if ( 'success' === $op_status && 'import' === $operation ) : ?>
 		<div class="notice notice-success is-dismissible">
-			<p><?php esc_html_e( 'Settings import completed successfully.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'Settings import completed successfully.', 'esc-connect' ); ?></p>
 		</div>
 	<?php elseif ( 'error' === $op_status && 'import' === $operation ) : ?>
 		<div class="notice notice-error is-dismissible">
@@ -39,22 +39,22 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 				<?php
 				switch ( $op_reason ) {
 					case 'missing_password':
-						esc_html_e( 'Import failed: please provide the decryption password.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed: please provide the decryption password.', 'esc-connect' );
 						break;
 					case 'missing_file':
-						esc_html_e( 'Import failed: please choose an encrypted settings file.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed: please choose an encrypted settings file.', 'esc-connect' );
 						break;
 					case 'upload_failed':
-						esc_html_e( 'Import failed: file upload error.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed: file upload error.', 'esc-connect' );
 						break;
 					case 'invalid_size':
-						esc_html_e( 'Import failed: file size is invalid.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed: file size is invalid.', 'esc-connect' );
 						break;
 					case 'decrypt_failed':
-						esc_html_e( 'Import failed: invalid password or corrupted settings file.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed: invalid password or corrupted settings file.', 'esc-connect' );
 						break;
 					default:
-						esc_html_e( 'Import failed. Please verify your file and password.', 'wp-ms365-graph' );
+						esc_html_e( 'Import failed. Please verify your file and password.', 'esc-connect' );
 						break;
 				}
 				?>
@@ -65,11 +65,11 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 			<p>
 				<?php
 				if ( 'missing_password' === $op_reason ) {
-					esc_html_e( 'Export failed: please provide an encryption password.', 'wp-ms365-graph' );
+					esc_html_e( 'Export failed: please provide an encryption password.', 'esc-connect' );
 				} elseif ( 'password_mismatch' === $op_reason ) {
-					esc_html_e( 'Export failed: the password and confirmation do not match.', 'wp-ms365-graph' );
+					esc_html_e( 'Export failed: the password and confirmation do not match.', 'esc-connect' );
 				} else {
-					esc_html_e( 'Export failed. Encryption may not be available on this server.', 'wp-ms365-graph' );
+					esc_html_e( 'Export failed. Encryption may not be available on this server.', 'esc-connect' );
 				}
 				?>
 			</p>
@@ -82,23 +82,23 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<div class="msgraph_status <?php echo $is_connected ? 'msgraph_status--connected' : 'msgraph_status--disconnected'; ?>">
 		<?php if ( $is_connected ) : ?>
 			<span class="msgraph_status__dot"></span>
-			<strong><?php esc_html_e( 'Connected (app-only)', 'wp-ms365-graph' ); ?></strong>
+			<strong><?php esc_html_e( 'Connected (app-only)', 'esc-connect' ); ?></strong>
 			<?php if ( $connected_user ) : ?>
 				&nbsp;<?php /* translators: %s: connection mode label */ ?>
-				<span><?php printf( esc_html__( 'mode: %s', 'wp-ms365-graph' ), esc_html( $connected_user ) ); ?></span>
+				<span><?php printf( esc_html__( 'mode: %s', 'esc-connect' ), esc_html( $connected_user ) ); ?></span>
 			<?php endif; ?>
 			&nbsp;&mdash;&nbsp;
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
 				<input type="hidden" name="action" value="wp_ms365_request_new_token" />
 				<?php wp_nonce_field( 'wp_ms365_request_new_token' ); ?>
 				<button type="submit" class="button button-small msgraph_status__disconnect">
-					<?php esc_html_e( 'Request New Token', 'wp-ms365-graph' ); ?>
+					<?php esc_html_e( 'Request New Token', 'esc-connect' ); ?>
 				</button>
 			</form>
 		<?php else : ?>
 			<span class="msgraph_status__dot"></span>
-			<strong><?php esc_html_e( 'Not connected', 'wp-ms365-graph' ); ?></strong>
-			<span><?php esc_html_e( 'Save valid credentials to enable automatic app-only token retrieval.', 'wp-ms365-graph' ); ?></span>
+			<strong><?php esc_html_e( 'Not connected', 'esc-connect' ); ?></strong>
+			<span><?php esc_html_e( 'Save valid credentials to enable automatic app-only token retrieval.', 'esc-connect' ); ?></span>
 		<?php endif; ?>
 	</div>
 
@@ -107,7 +107,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 		<?php settings_fields( 'wp_ms365_settings_group' ); ?>
 		<?php
 		global $wp_settings_sections;
-		$settings_page_sections = isset( $wp_settings_sections['wp-ms365-graph'] ) ? $wp_settings_sections['wp-ms365-graph'] : array();
+		$settings_page_sections = isset( $wp_settings_sections['esc-connect'] ) ? $wp_settings_sections['esc-connect'] : array();
 		?>
 
 		<div class="msgraph_settings__cards">
@@ -120,7 +120,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 					}
 					?>
 					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_azure_app' ); ?>
+						<?php do_settings_fields( 'esc-connect', 'wp_ms365_azure_app' ); ?>
 					</table>
 				</div>
 			<?php endif; ?>
@@ -134,7 +134,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 					}
 					?>
 					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_teams' ); ?>
+						<?php do_settings_fields( 'esc-connect', 'wp_ms365_teams' ); ?>
 					</table>
 				</div>
 			<?php endif; ?>
@@ -148,7 +148,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 					}
 					?>
 					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_mail' ); ?>
+						<?php do_settings_fields( 'esc-connect', 'wp_ms365_mail' ); ?>
 					</table>
 				</div>
 			<?php endif; ?>
@@ -162,7 +162,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 					}
 					?>
 					<table class="form-table" role="presentation">
-						<?php do_settings_fields( 'wp-ms365-graph', 'wp_ms365_sso' ); ?>
+						<?php do_settings_fields( 'esc-connect', 'wp_ms365_sso' ); ?>
 					</table>
 				</div>
 			<?php endif; ?>
@@ -175,93 +175,93 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 	<?php if ( ! empty( $settings['specific_user'] ) ) : ?>
 	<div class="notice notice-info">
 		<p>
-			<strong><?php esc_html_e( 'Note: App-only access requires Microsoft Graph application permissions.', 'wp-ms365-graph' ); ?></strong><br />
-			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'wp-ms365-graph' ); ?>
+			<strong><?php esc_html_e( 'Note: App-only access requires Microsoft Graph application permissions.', 'esc-connect' ); ?></strong><br />
+			<?php esc_html_e( 'Make sure your Azure app registration includes the following permissions:', 'esc-connect' ); ?>
 			<code>User.Read.All</code>, <code>Calendars.Read</code>, <code>Files.Read.All</code>, <code>Sites.Read.All</code><?php if ( ! empty( $settings['mail_enabled'] ) ) : ?>, <code>Mail.Send</code><?php endif; ?>.<br />
-			<?php esc_html_e( 'Teams form submissions are delivered via Teams Workflow endpoint URL (no additional Microsoft Graph permission is required for that form sender).', 'wp-ms365-graph' ); ?><br />
-			<?php esc_html_e( 'After adding these application permissions, click "Grant admin consent" in Azure and save credentials again.', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Teams form submissions are delivered via Teams Workflow endpoint URL (no additional Microsoft Graph permission is required for that form sender).', 'esc-connect' ); ?><br />
+			<?php esc_html_e( 'After adding these application permissions, click "Grant admin consent" in Azure and save credentials again.', 'esc-connect' ); ?>
 		</p>
 	</div>
 	<?php endif; ?>
 	<!-- Diagnostics note -->
 	<div class="notice notice-info">
 		<p>
-			<?php esc_html_e( 'Having issues? Check the ', 'wp-ms365-graph' ); ?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wp-ms365-graph&tab=diagnostics' ) ); ?>">
-				<?php esc_html_e( 'Diagnostics page', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Having issues? Check the ', 'esc-connect' ); ?>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=esc-connect&tab=diagnostics' ) ); ?>">
+				<?php esc_html_e( 'Diagnostics page', 'esc-connect' ); ?>
 			</a>
-			<?php esc_html_e( ' for troubleshooting and debug logs.', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( ' for troubleshooting and debug logs.', 'esc-connect' ); ?>
 		</p>
 	</div>
 
 	<hr />
-	<!-- <h2><?php esc_html_e( 'Connection Mode', 'wp-ms365-graph' ); ?></h2>
+	<!-- <h2><?php esc_html_e( 'Connection Mode', 'esc-connect' ); ?></h2>
 	<p>
-		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials) for Graph data features. No interactive Microsoft sign-in is required for shortcodes.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'This plugin uses app-only authentication (client credentials) for Graph data features. No interactive Microsoft sign-in is required for shortcodes.', 'esc-connect' ); ?>
 	</p> -->
 
 	<?php if ( ! empty( $settings['sso_enabled'] ) ) : ?>
 	<div class="notice notice-info">
 		<p>
-			<strong><?php esc_html_e( 'Tenant Sign-In is active.', 'wp-ms365-graph' ); ?></strong>
-			<?php esc_html_e( 'Register the following Redirect URI in your Azure app registration:', 'wp-ms365-graph' ); ?><br />
+			<strong><?php esc_html_e( 'Tenant Sign-In is active.', 'esc-connect' ); ?></strong>
+			<?php esc_html_e( 'Register the following Redirect URI in your Azure app registration:', 'esc-connect' ); ?><br />
 			<code><?php echo esc_html( WP_MS365_Auth::get_sso_redirect_uri() ); ?></code>
 		</p>
 		<p>
-			<?php esc_html_e( 'Required delegated permissions: openid, email, profile.', 'wp-ms365-graph' ); ?>
+			<?php esc_html_e( 'Required delegated permissions: openid, email, profile.', 'esc-connect' ); ?>
 		</p>
 	</div>
 	<?php endif; ?>
 
 	<hr />
-	<h2><?php esc_html_e( 'Import / Export', 'wp-ms365-graph' ); ?></h2>
+	<h2><?php esc_html_e( 'Import / Export', 'esc-connect' ); ?></h2>
 	<p>
-		<?php esc_html_e( 'Export creates an encrypted file containing plugin settings and shortcode wording. Import decrypts and restores the same data.', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'Export creates an encrypted file containing plugin settings and shortcode wording. Import decrypts and restores the same data.', 'esc-connect' ); ?>
 	</p>
 
 	<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; align-items:start;">
 		<div class="msgraph_card" style="margin:0;">
-			<h3><?php esc_html_e( 'Export Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
+			<h3><?php esc_html_e( 'Export Encrypted Settings', 'esc-connect' ); ?></h3>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="wp_ms365_export_settings" />
 				<?php wp_nonce_field( 'wp_ms365_export_settings' ); ?>
 				<p>
-					<label for="wp_ms365_export_password"><strong><?php esc_html_e( 'Encryption password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_export_password" name="export_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<label for="wp_ms365_export_password"><strong><?php esc_html_e( 'Encryption password', 'esc-connect' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_export_password" name="export_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'esc-connect' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'esc-connect' ); ?>" />
 				</p>
 				<p>
-					<label for="wp_ms365_export_password_confirm"><strong><?php esc_html_e( 'Confirm password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_export_password_confirm" name="export_password_confirm" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<label for="wp_ms365_export_password_confirm"><strong><?php esc_html_e( 'Confirm password', 'esc-connect' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_export_password_confirm" name="export_password_confirm" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'esc-connect' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'esc-connect' ); ?>" />
 				</p>
 				<p class="description">
-					<?php esc_html_e( 'Keep this password safe. It is required to decrypt the export during import.', 'wp-ms365-graph' ); ?>
+					<?php esc_html_e( 'Keep this password safe. It is required to decrypt the export during import.', 'esc-connect' ); ?>
 				</p>
-				<?php submit_button( __( 'Export Encrypted File', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+				<?php submit_button( __( 'Export Encrypted File', 'esc-connect' ), 'secondary', 'submit', false ); ?>
 			</form>
 		</div>
 
 		<div class="msgraph_card" style="margin:0;">
-			<h3><?php esc_html_e( 'Import Encrypted Settings', 'wp-ms365-graph' ); ?></h3>
+			<h3><?php esc_html_e( 'Import Encrypted Settings', 'esc-connect' ); ?></h3>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
 				<input type="hidden" name="action" value="wp_ms365_import_settings" />
 				<?php wp_nonce_field( 'wp_ms365_import_settings' ); ?>
 				<p>
-					<label for="wp_ms365_import_file"><strong><?php esc_html_e( 'Encrypted settings file', 'wp-ms365-graph' ); ?></strong></label><br />
+					<label for="wp_ms365_import_file"><strong><?php esc_html_e( 'Encrypted settings file', 'esc-connect' ); ?></strong></label><br />
 					<label for="wp_ms365_import_file" class="msgraph_dropzone" data-dropzone>
-						<span class="msgraph_dropzone__title"><?php esc_html_e( 'Drag and drop your encrypted settings file here', 'wp-ms365-graph' ); ?></span>
-						<span class="msgraph_dropzone__meta"><?php esc_html_e( 'or click to choose a file', 'wp-ms365-graph' ); ?></span>
-						<span class="msgraph_dropzone__filename" data-dropzone-filename><?php esc_html_e( 'No file selected', 'wp-ms365-graph' ); ?></span>
+						<span class="msgraph_dropzone__title"><?php esc_html_e( 'Drag and drop your encrypted settings file here', 'esc-connect' ); ?></span>
+						<span class="msgraph_dropzone__meta"><?php esc_html_e( 'or click to choose a file', 'esc-connect' ); ?></span>
+						<span class="msgraph_dropzone__filename" data-dropzone-filename><?php esc_html_e( 'No file selected', 'esc-connect' ); ?></span>
 					</label>
 					<input type="file" id="wp_ms365_import_file" name="import_file" class="msgraph_dropzone__input" accept=".json,.enc" required data-dropzone-input data-filename-target="[data-dropzone-filename]" />
 				</p>
 				<p>
-					<label for="wp_ms365_import_password"><strong><?php esc_html_e( 'Decryption password', 'wp-ms365-graph' ); ?></strong></label><br />
-					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'wp-ms365-graph' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'wp-ms365-graph' ); ?>" />
+					<label for="wp_ms365_import_password"><strong><?php esc_html_e( 'Decryption password', 'esc-connect' ); ?></strong></label><br />
+					<input type="password" id="wp_ms365_import_password" name="import_password" class="regular-text msgraph_password-input" autocomplete="off" required data-toggle-label-show="<?php echo esc_attr__( 'Show', 'esc-connect' ); ?>" data-toggle-label-hide="<?php echo esc_attr__( 'Hide', 'esc-connect' ); ?>" />
 				</p>
 				<p class="description">
-					<?php esc_html_e( 'Import replaces current plugin settings and wording values.', 'wp-ms365-graph' ); ?>
+					<?php esc_html_e( 'Import replaces current plugin settings and wording values.', 'esc-connect' ); ?>
 				</p>
-				<?php submit_button( __( 'Import Encrypted File', 'wp-ms365-graph' ), 'secondary', 'submit', false ); ?>
+				<?php submit_button( __( 'Import Encrypted File', 'esc-connect' ), 'secondary', 'submit', false ); ?>
 			</form>
 		</div>
 	</div>
@@ -335,7 +335,7 @@ $op_reason       = isset( $_GET['reason'] ) ? sanitize_key( wp_unslash( $_GET['r
 				}
 
 				var updateFilename = function () {
-					var fileName = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '<?php echo esc_js( __( 'No file selected', 'wp-ms365-graph' ) ); ?>';
+					var fileName = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '<?php echo esc_js( __( 'No file selected', 'esc-connect' ) ); ?>';
 					if (filenameNode) {
 						filenameNode.textContent = fileName;
 					}

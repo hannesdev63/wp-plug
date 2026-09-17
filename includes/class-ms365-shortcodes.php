@@ -67,7 +67,7 @@ class WP_MS365_Shortcodes {
 	private function handle_drive_download() {
 		$item_id = $this->decode_local_token_param( 'ms365_download' );
 		if ( '' === $item_id ) {
-			wp_die( esc_html__( 'Invalid download request.', 'wp-ms365-graph' ), 400 );
+			wp_die( esc_html__( 'Invalid download request.', 'esc-connect' ), 400 );
 		}
 
 		$item_info = WP_MS365_Graph::get_drive_item_info( $item_id, WP_MS365_Graph::get_configured_user() );
@@ -113,7 +113,7 @@ class WP_MS365_Shortcodes {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen
 		$handle = @fopen( $download_url, 'rb', false, $context );
 		if ( false === $handle ) {
-			wp_die( esc_html__( 'Unable to download this file right now.', 'wp-ms365-graph' ), 502 );
+			wp_die( esc_html__( 'Unable to download this file right now.', 'esc-connect' ), 502 );
 		}
 
 		nocache_headers();
@@ -138,7 +138,7 @@ class WP_MS365_Shortcodes {
 		$context     = json_decode( (string) $raw_context, true );
 
 		if ( ! is_array( $context ) || empty( $context['site_id'] ) || empty( $context['drive_id'] ) || empty( $context['item_id'] ) ) {
-			wp_die( esc_html__( 'Invalid download request.', 'wp-ms365-graph' ), 400 );
+			wp_die( esc_html__( 'Invalid download request.', 'esc-connect' ), 400 );
 		}
 
 		$site_id  = trim( (string) $context['site_id'] );
@@ -188,7 +188,7 @@ class WP_MS365_Shortcodes {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_fopen
 		$handle = @fopen( $download_url, 'rb', false, $context );
 		if ( false === $handle ) {
-			wp_die( esc_html__( 'Unable to download this file right now.', 'wp-ms365-graph' ), 502 );
+			wp_die( esc_html__( 'Unable to download this file right now.', 'esc-connect' ), 502 );
 		}
 
 		nocache_headers();
@@ -211,7 +211,7 @@ class WP_MS365_Shortcodes {
 	private function handle_calendar_ics_download() {
 		$event_id = $this->decode_local_token_param( 'ms365_calendar_ics' );
 		if ( '' === $event_id ) {
-			wp_die( esc_html__( 'Invalid calendar export request.', 'wp-ms365-graph' ), 400 );
+			wp_die( esc_html__( 'Invalid calendar export request.', 'esc-connect' ), 400 );
 		}
 
 		$event = WP_MS365_Graph::get_calendar_event( $event_id, WP_MS365_Graph::get_configured_user() );
@@ -243,7 +243,7 @@ class WP_MS365_Shortcodes {
 		$subject  = isset( $event['subject'] ) ? $this->escape_ics_text( (string) $event['subject'] ) : 'Event';
 		$location = isset( $event['location']['displayName'] ) ? $this->escape_ics_text( (string) $event['location']['displayName'] ) : '';
 		$preview  = isset( $event['bodyPreview'] ) ? $this->escape_ics_text( (string) $event['bodyPreview'] ) : '';
-		$uid      = isset( $event['id'] ) ? $this->escape_ics_text( (string) $event['id'] ) . '@wp-ms365-graph' : wp_generate_uuid4() . '@wp-ms365-graph';
+		$uid      = isset( $event['id'] ) ? $this->escape_ics_text( (string) $event['id'] ) . '@esc-connect' : wp_generate_uuid4() . '@esc-connect';
 
 		$start_dt = isset( $event['start']['dateTime'] ) ? (string) $event['start']['dateTime'] : '';
 		$end_dt   = isset( $event['end']['dateTime'] ) ? (string) $event['end']['dateTime'] : '';
@@ -360,7 +360,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( (int) $payload['exp'] < time() ) {
-			wp_die( esc_html__( 'This link has expired. Please reload the page to get a new one.', 'wp-ms365-graph' ), 410 );
+			wp_die( esc_html__( 'This link has expired. Please reload the page to get a new one.', 'esc-connect' ), 410 );
 		}
 
 		return (string) $payload['id'];
@@ -423,7 +423,7 @@ class WP_MS365_Shortcodes {
 		} elseif ( ! empty( $settings['sso_signin_button_text'] ) ) {
 			$label = esc_html( (string) $settings['sso_signin_button_text'] );
 		} else {
-			$label = esc_html__( 'Sign in with Microsoft', 'wp-ms365-graph' );
+			$label = esc_html__( 'Sign in with Microsoft', 'esc-connect' );
 		}
 		$redirect_to = esc_url_raw( (string) $atts['redirect_to'] );
 		$extra_class = '' !== $atts['class'] ? ' ' . esc_attr( $atts['class'] ) : '';
@@ -521,7 +521,7 @@ class WP_MS365_Shortcodes {
 			'duration' => $wording['calendar_header_duration'],
 			'location' => $wording['calendar_header_location'],
 		);
-		$all_day_label = isset( $wording['calendar_all_day_text'] ) ? (string) $wording['calendar_all_day_text'] : __( 'All day', 'wp-ms365-graph' );
+		$all_day_label = isset( $wording['calendar_all_day_text'] ) ? (string) $wording['calendar_all_day_text'] : __( 'All day', 'esc-connect' );
 
 		$requested_columns = array_filter(
 			array_map( 'trim', explode( ',', strtolower( (string) $atts['columns'] ) ) ),
@@ -705,7 +705,7 @@ class WP_MS365_Shortcodes {
 								</tr>
 								<?php foreach ( $group_events as $event ) : ?>
 									<?php
-									$subject        = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'wp-ms365-graph' );
+									$subject        = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'esc-connect' );
 									$start          = isset( $event['start']['dateTime'] ) ? $event['start']['dateTime'] : '';
 									$end            = isset( $event['end']['dateTime'] ) ? $event['end']['dateTime'] : '';
 									$location       = isset( $event['location']['displayName'] ) ? $event['location']['displayName'] : '';
@@ -748,7 +748,7 @@ class WP_MS365_Shortcodes {
 						<?php else : ?>
 							<?php foreach ( $items as $event ) : ?>
 								<?php
-								$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'wp-ms365-graph' );
+								$subject  = isset( $event['subject'] ) ? $event['subject'] : __( '(No subject)', 'esc-connect' );
 								$start    = isset( $event['start']['dateTime'] ) ? $event['start']['dateTime'] : '';
 								$end      = isset( $event['end']['dateTime'] ) ? $event['end']['dateTime'] : '';
 								$location = isset( $event['location']['displayName'] ) ? $event['location']['displayName'] : '';
@@ -859,7 +859,7 @@ class WP_MS365_Shortcodes {
 			$days = max( 1, (int) round( $seconds / DAY_IN_SECONDS ) );
 			return sprintf(
 				/* translators: %d: number of days */
-				_n( '%d day', '%d days', $days, 'wp-ms365-graph' ),
+				_n( '%d day', '%d days', $days, 'esc-connect' ),
 				$days
 			);
 		}
@@ -868,10 +868,10 @@ class WP_MS365_Shortcodes {
 		$minutes = (int) floor( ( $seconds % HOUR_IN_SECONDS ) / MINUTE_IN_SECONDS );
 		$total_minutes = (int) round( $seconds / MINUTE_IN_SECONDS );
 		$display_mode   = strtolower( trim( (string) $display_mode ) );
-		$hour_single = isset( $wording['calendar_duration_hour_single'] ) && '' !== trim( (string) $wording['calendar_duration_hour_single'] ) ? trim( (string) $wording['calendar_duration_hour_single'] ) : __( 'hour', 'wp-ms365-graph' );
-		$hour_plural = isset( $wording['calendar_duration_hour_plural'] ) && '' !== trim( (string) $wording['calendar_duration_hour_plural'] ) ? trim( (string) $wording['calendar_duration_hour_plural'] ) : __( 'hours', 'wp-ms365-graph' );
-		$minute_single = isset( $wording['calendar_duration_minute_single'] ) && '' !== trim( (string) $wording['calendar_duration_minute_single'] ) ? trim( (string) $wording['calendar_duration_minute_single'] ) : __( 'minute', 'wp-ms365-graph' );
-		$minute_plural = isset( $wording['calendar_duration_minute_plural'] ) && '' !== trim( (string) $wording['calendar_duration_minute_plural'] ) ? trim( (string) $wording['calendar_duration_minute_plural'] ) : __( 'minutes', 'wp-ms365-graph' );
+		$hour_single = isset( $wording['calendar_duration_hour_single'] ) && '' !== trim( (string) $wording['calendar_duration_hour_single'] ) ? trim( (string) $wording['calendar_duration_hour_single'] ) : __( 'hour', 'esc-connect' );
+		$hour_plural = isset( $wording['calendar_duration_hour_plural'] ) && '' !== trim( (string) $wording['calendar_duration_hour_plural'] ) ? trim( (string) $wording['calendar_duration_hour_plural'] ) : __( 'hours', 'esc-connect' );
+		$minute_single = isset( $wording['calendar_duration_minute_single'] ) && '' !== trim( (string) $wording['calendar_duration_minute_single'] ) ? trim( (string) $wording['calendar_duration_minute_single'] ) : __( 'minute', 'esc-connect' );
+		$minute_plural = isset( $wording['calendar_duration_minute_plural'] ) && '' !== trim( (string) $wording['calendar_duration_minute_plural'] ) ? trim( (string) $wording['calendar_duration_minute_plural'] ) : __( 'minutes', 'esc-connect' );
 
 		$format_duration_label = function( $count, $single, $plural ) {
 			return 1 === (int) $count ? $single : $plural;
@@ -930,7 +930,7 @@ class WP_MS365_Shortcodes {
 			if ( '' !== trim( (string) $all_day_label ) ) {
 				return (string) $all_day_label;
 			}
-			return __( 'All day', 'wp-ms365-graph' );
+			return __( 'All day', 'esc-connect' );
 		}
 
 		$start_ts = $this->parse_graph_datetime_to_timestamp( $start_date_time, $source_timezone );
@@ -964,7 +964,7 @@ class WP_MS365_Shortcodes {
 			if ( '' !== trim( (string) $all_day_label ) ) {
 				return (string) $all_day_label;
 			}
-			return __( 'All day', 'wp-ms365-graph' );
+			return __( 'All day', 'esc-connect' );
 		}
 
 		$start_ts = $this->parse_graph_datetime_to_timestamp( $start_date_time, $source_timezone );
@@ -1429,7 +1429,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( '' === $site_id || '' === $drive_id ) {
-			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
+			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'esc-connect' ) );
 		}
 
 		if ( ! WP_MS365_Auth::is_connected() ) {
@@ -1587,6 +1587,7 @@ class WP_MS365_Shortcodes {
 	 *   drive_id     – SharePoint document library drive ID (required)
 	 *   folder       – folder path inside the library (default: root)
 	 *   name         – file name inside folder (default: team.xlsx)
+	 *   sheet        – worksheet name to read (default: first worksheet)
 	 *   title        – heading text (default empty)
 	 *   show_headers – whether to render table headers (default true)
 	 *   sort_columns – comma-separated columns used for sorting (default: Position, Order, Name)
@@ -1594,7 +1595,7 @@ class WP_MS365_Shortcodes {
 	 *   hide_columns – comma-separated columns to hide (default: none)
 	 *   formatter – per-column numeric formatter rules (default: none)
 	 *   displaymode – list (default) or card
-	 *   card_title_column – column name used as card title in card mode (default: name)
+	 *   card_title_column – up to two column names used as card title rows in card mode (default: name)
 	 *   urls – comma-separated columns rendered as links using the column name as text and the cell value as href
 	 *
 	 * @param  array $atts Shortcode attributes.
@@ -1609,6 +1610,7 @@ class WP_MS365_Shortcodes {
 				'drive_id'     => '',
 				'folder'       => '',
 				'name'         => 'team.xlsx',
+				'sheet'        => '',
 				'title'        => '',
 				'class'        => '',
 				'table_class'  => '',
@@ -1632,6 +1634,7 @@ class WP_MS365_Shortcodes {
 		$drive_id     = trim( (string) $atts['drive_id'] );
 		$folder       = trim( (string) $atts['folder'] );
 		$file_name    = trim( (string) $atts['name'] );
+		$sheet_name   = trim( (string) $atts['sheet'] );
 		$show_headers = $this->shortcode_att_to_bool( $atts['show_headers'], true );
 		$sort_columns = $this->parse_shortcode_column_list( $atts['sort_columns'] );
 		$display_columns = $this->parse_shortcode_column_list( $atts['display_columns'] );
@@ -1659,10 +1662,26 @@ class WP_MS365_Shortcodes {
 		if ( '' === $card_title_column ) {
 			$card_title_column = 'name';
 		}
-		$card_title_column = $this->normalize_team_header_key( $card_title_column );
+		$card_title_columns = array_values(
+			array_unique(
+				array_filter(
+					array_map(
+						array( $this, 'normalize_team_header_key' ),
+						$this->parse_shortcode_column_list( $card_title_column )
+					),
+					static function ( $value ) {
+						return '' !== $value;
+					}
+				)
+			)
+		);
+		$card_title_columns = array_slice( $card_title_columns, 0, 2 );
+		if ( empty( $card_title_columns ) ) {
+			$card_title_columns = array( 'name' );
+		}
 
 		if ( '' === $site_id || '' === $drive_id ) {
-			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'wp-ms365-graph' ) );
+			return $this->error_notice( __( 'SharePoint site_id and drive_id are required.', 'esc-connect' ) );
 		}
 
 		if ( '' === $file_name ) {
@@ -1684,6 +1703,7 @@ class WP_MS365_Shortcodes {
 				'drive_id' => $drive_id,
 				'folder'   => $folder,
 				'name'     => $file_name,
+				'sheet'    => $sheet_name,
 			)
 		);
 
@@ -1717,7 +1737,7 @@ class WP_MS365_Shortcodes {
 				return $this->error_notice(
 					sprintf(
 						/* translators: %s: file name */
-						__( 'File "%s" was not found in the SharePoint library folder.', 'wp-ms365-graph' ),
+						__( 'File "%s" was not found in the SharePoint library folder.', 'esc-connect' ),
 						esc_html( $file_name )
 					)
 				);
@@ -1743,22 +1763,25 @@ class WP_MS365_Shortcodes {
 
 			$status_code = (int) wp_remote_retrieve_response_code( $response );
 			if ( $status_code < 200 || $status_code >= 300 ) {
-				return $this->error_notice( __( 'Unable to download the team XLSX file from SharePoint.', 'wp-ms365-graph' ) );
+				return $this->error_notice( __( 'Unable to download the team XLSX file from SharePoint.', 'esc-connect' ) );
 			}
 
 			$xlsx_body = (string) wp_remote_retrieve_body( $response );
 			if ( '' === $xlsx_body ) {
-				return $this->error_notice( __( 'Downloaded team XLSX file is empty.', 'wp-ms365-graph' ) );
+				return $this->error_notice( __( 'Downloaded team XLSX file is empty.', 'esc-connect' ) );
 			}
 
-			$parsed = $this->parse_xlsx_sheet_rows( $xlsx_body );
+			$parsed = $this->parse_xlsx_sheet_rows( $xlsx_body, $sheet_name );
 			if ( is_wp_error( $parsed ) ) {
 				return $this->error_notice( $parsed->get_error_message() );
 			}
 
 			$payload = array(
-				'headers' => $parsed['headers'],
-				'rows'    => $parsed['rows'],
+				'headers'        => $parsed['headers'],
+				'rows'           => $parsed['rows'],
+				'requested_sheet' => isset( $parsed['requested_sheet'] ) ? (string) $parsed['requested_sheet'] : '',
+				'resolved_sheet' => isset( $parsed['resolved_sheet'] ) ? (string) $parsed['resolved_sheet'] : '',
+				'used_fallback'  => ! empty( $parsed['used_fallback'] ),
 			);
 
 			set_transient( $team_cache_key, $payload, $this->get_shortcode_cache_ttl() );
@@ -1766,14 +1789,18 @@ class WP_MS365_Shortcodes {
 
 		$headers = isset( $payload['headers'] ) && is_array( $payload['headers'] ) ? $payload['headers'] : array();
 		$rows    = isset( $payload['rows'] ) && is_array( $payload['rows'] ) ? $payload['rows'] : array();
+		$resolved_sheet  = isset( $payload['resolved_sheet'] ) ? trim( (string) $payload['resolved_sheet'] ) : '';
+		$requested_sheet = isset( $payload['requested_sheet'] ) ? trim( (string) $payload['requested_sheet'] ) : '';
+		$used_fallback   = ! empty( $payload['used_fallback'] );
+		$show_sheet_debug_note = current_user_can( 'manage_options' ) && '' !== $resolved_sheet;
 
 		$prepared_table = $this->prepare_team_table_data( $headers, $rows, $sort_columns, $display_columns, $hide_columns );
 		$headers        = $prepared_table['headers'];
 		$rows           = $prepared_table['rows'];
 		$number_formatters = $this->parse_team_number_formatters( $atts['formatter'], $headers );
 
-		// Normalize the card_title_column for consistent matching with header keys.
-		$card_title_column_normalized = $this->normalize_team_header_key( $card_title_column );
+		// Keep title column keys normalized for consistent matching with header keys.
+		$card_title_column_normalized = $card_title_columns;
 
 		ob_start();
 		?>
@@ -1782,15 +1809,33 @@ class WP_MS365_Shortcodes {
 				<h3 class="msgraph_team__title"><?php echo esc_html( $atts['title'] ); ?></h3>
 			<?php endif; ?>
 
+			<?php if ( $show_sheet_debug_note ) : ?>
+				<p class="msgraph_team__sheet-note">
+					<?php
+					if ( '' !== $requested_sheet ) {
+						if ( $used_fallback ) {
+							echo esc_html( sprintf( __( 'Worksheet "%1$s" was not found. Using first sheet "%2$s".', 'esc-connect' ), $requested_sheet, $resolved_sheet ) );
+						} else {
+							echo esc_html( sprintf( __( 'Using worksheet "%1$s".', 'esc-connect' ), $resolved_sheet ) );
+						}
+					} else {
+						echo esc_html( sprintf( __( 'No worksheet selected. Using first sheet "%1$s".', 'esc-connect' ), $resolved_sheet ) );
+					}
+					?>
+				</p>
+			<?php endif; ?>
+
 			<?php if ( empty( $rows ) || empty( $headers ) ) : ?>
-				<p class="msgraph_team__empty"><?php echo esc_html__( 'No matching team rows found.', 'wp-ms365-graph' ); ?></p>
+				<p class="msgraph_team__empty"><?php echo esc_html__( 'No matching team rows found.', 'esc-connect' ); ?></p>
 			<?php elseif ( 'card' === $display_mode ) : ?>
 				<div class="msgraph_team__cards">
 					<?php foreach ( $rows as $row ) : ?>
 						<?php
 						$card_name = '';
+						$card_subtitle = '';
 						$card_image = '';
 						$card_details = array();
+						$title_parts = array();
 						foreach ( $headers as $header ) {
 							$raw_value = isset( $row[ $header ] ) ? (string) $row[ $header ] : '';
 							$display_value = $this->format_team_cell_value( $header, $raw_value, $number_formatters );
@@ -1803,8 +1848,10 @@ class WP_MS365_Shortcodes {
 									continue;
 								}
 							}
-							if ( '' === $card_name && $title_header_key === $card_title_column_normalized ) {
-								$card_name = $display_value;
+							if ( in_array( $title_header_key, $card_title_column_normalized, true ) ) {
+								if ( ! isset( $title_parts[ $title_header_key ] ) || '' === trim( (string) $title_parts[ $title_header_key ] ) ) {
+									$title_parts[ $title_header_key ] = $display_value;
+								}
 								continue;
 							}
 							$is_url_cell = ! empty( $url_columns ) && in_array( $this->normalize_team_header_key( $header ), array_map( array( $this, 'normalize_team_header_key' ), $url_columns ), true );
@@ -1815,7 +1862,14 @@ class WP_MS365_Shortcodes {
 								'is_url' => $is_url_cell,
 							);
 						}
-						// If no title found from specified column, use first non-empty value as fallback.
+						if ( isset( $card_title_column_normalized[0] ) ) {
+							$card_name = isset( $title_parts[ $card_title_column_normalized[0] ] ) ? (string) $title_parts[ $card_title_column_normalized[0] ] : '';
+						}
+						if ( isset( $card_title_column_normalized[1] ) ) {
+							$card_subtitle = isset( $title_parts[ $card_title_column_normalized[1] ] ) ? (string) $title_parts[ $card_title_column_normalized[1] ] : '';
+						}
+
+						// If no title found from specified columns, use first non-empty value as fallback.
 						if ( '' === $card_name ) {
 							foreach ( $card_details as $detail ) {
 								if ( '' !== trim( (string) $detail['value'] ) ) {
@@ -1826,7 +1880,7 @@ class WP_MS365_Shortcodes {
 						}
 						$filtered_details = array();
 						foreach ( $card_details as $detail ) {
-							if ( '' !== trim( (string) $detail['value'] ) && $this->normalize_team_header_key( $detail['label'] ) !== $card_title_column_normalized ) {
+							if ( '' !== trim( (string) $detail['value'] ) && ! in_array( $this->normalize_team_header_key( $detail['label'] ), $card_title_column_normalized, true ) ) {
 								$filtered_details[] = $detail;
 							}
 						}
@@ -1834,6 +1888,9 @@ class WP_MS365_Shortcodes {
 						<div class="msgraph_team__card">
 							<?php if ( '' !== $card_name ) : ?>
 								<h4 class="msgraph_team__card-name"><?php echo esc_html( $card_name ); ?></h4>
+							<?php endif; ?>
+							<?php if ( '' !== $card_subtitle ) : ?>
+								<div class="msgraph_team__card-subtitle"><?php echo esc_html( $card_subtitle ); ?></div>
 							<?php endif; ?>
 							<?php if ( '' !== $card_image ) : ?>
 								<div class="msgraph_team__card-image-wrap">
@@ -1900,52 +1957,56 @@ class WP_MS365_Shortcodes {
 	}
 
 	/**
-	 * Parse first worksheet rows from an XLSX binary.
+	 * Parse worksheet rows from an XLSX binary.
+	 *
+	 * If $sheet_name is empty or no worksheet with that name exists,
+	 * the first worksheet from workbook metadata is used.
 	 *
 	 * @param  string $xlsx_binary XLSX file body.
+	 * @param  string $sheet_name  Optional worksheet name.
 	 * @return array|WP_Error
 	 */
-	private function parse_xlsx_sheet_rows( $xlsx_binary ) {
+	private function parse_xlsx_sheet_rows( $xlsx_binary, $sheet_name = '' ) {
 		if ( ! class_exists( 'ZipArchive' ) ) {
-			return new WP_Error( 'ms365_zip_unavailable', __( 'ZipArchive is required to read XLSX files on this server.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_zip_unavailable', __( 'ZipArchive is required to read XLSX files on this server.', 'esc-connect' ) );
 		}
 
 		$tmp_file = wp_tempnam( 'ms365_team_xlsx' );
 		if ( ! $tmp_file ) {
-			return new WP_Error( 'ms365_tmp_file_error', __( 'Unable to create a temporary file for XLSX parsing.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_tmp_file_error', __( 'Unable to create a temporary file for XLSX parsing.', 'esc-connect' ) );
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		if ( false === @file_put_contents( $tmp_file, $xlsx_binary ) ) {
 			@unlink( $tmp_file );
-			return new WP_Error( 'ms365_tmp_write_error', __( 'Unable to write temporary XLSX data.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_tmp_write_error', __( 'Unable to write temporary XLSX data.', 'esc-connect' ) );
 		}
 
 		$zip = new ZipArchive();
 		if ( true !== $zip->open( $tmp_file ) ) {
 			@unlink( $tmp_file );
-			return new WP_Error( 'ms365_xlsx_open_error', __( 'Unable to open the XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_open_error', __( 'Unable to open the XLSX file.', 'esc-connect' ) );
 		}
 
 		$shared_strings = $this->xlsx_get_shared_strings( $zip );
-		$sheet_path     = $this->xlsx_get_first_sheet_path( $zip );
-		if ( is_wp_error( $sheet_path ) ) {
+		$sheet_selection = $this->xlsx_get_sheet_path( $zip, $sheet_name );
+		if ( is_wp_error( $sheet_selection ) ) {
 			$zip->close();
 			@unlink( $tmp_file );
-			return $sheet_path;
+			return $sheet_selection;
 		}
 
-		$sheet_xml = $zip->getFromName( $sheet_path );
+		$sheet_xml = $zip->getFromName( $sheet_selection['path'] );
 		$zip->close();
 		@unlink( $tmp_file );
 
 		if ( false === $sheet_xml || '' === trim( (string) $sheet_xml ) ) {
-			return new WP_Error( 'ms365_xlsx_sheet_missing', __( 'Could not read worksheet data from the XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_sheet_missing', __( 'Could not read worksheet data from the XLSX file.', 'esc-connect' ) );
 		}
 
 		$xml = simplexml_load_string( $sheet_xml );
 		if ( false === $xml ) {
-			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Could not parse worksheet XML from the XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Could not parse worksheet XML from the XLSX file.', 'esc-connect' ) );
 		}
 
 		$namespaces = $xml->getNamespaces( true );
@@ -1956,7 +2017,7 @@ class WP_MS365_Shortcodes {
 
 		$row_nodes = $xml->xpath( $has_default_namespace ? '//x:sheetData/x:row' : '//sheetData/row' );
 		if ( ! is_array( $row_nodes ) || empty( $row_nodes ) ) {
-			return new WP_Error( 'ms365_xlsx_empty_sheet', __( 'The XLSX worksheet has no rows.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_empty_sheet', __( 'The XLSX worksheet has no rows.', 'esc-connect' ) );
 		}
 
 		$rows = array();
@@ -2016,7 +2077,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( empty( $rows ) ) {
-			return new WP_Error( 'ms365_xlsx_empty_rows', __( 'No rows could be read from the XLSX worksheet.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_empty_rows', __( 'No rows could be read from the XLSX worksheet.', 'esc-connect' ) );
 		}
 
 		$header_row_index = null;
@@ -2038,7 +2099,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( null === $header_row_index || empty( $headers ) ) {
-			return new WP_Error( 'ms365_xlsx_missing_headers', __( 'The XLSX file does not contain a header row.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_missing_headers', __( 'The XLSX file does not contain a header row.', 'esc-connect' ) );
 		}
 
 		foreach ( $headers as $idx => $header ) {
@@ -2058,8 +2119,11 @@ class WP_MS365_Shortcodes {
 		}
 
 		return array(
-			'headers' => $headers,
-			'rows'    => $assoc_rows,
+			'headers'         => $headers,
+			'rows'            => $assoc_rows,
+			'requested_sheet' => isset( $sheet_selection['requested_sheet'] ) ? (string) $sheet_selection['requested_sheet'] : '',
+			'resolved_sheet'  => isset( $sheet_selection['resolved_sheet'] ) ? (string) $sheet_selection['resolved_sheet'] : '',
+			'used_fallback'   => ! empty( $sheet_selection['used_fallback'] ),
 		);
 	}
 
@@ -2110,20 +2174,30 @@ class WP_MS365_Shortcodes {
 	}
 
 	/**
-	 * Resolve the first worksheet path from workbook metadata.
+	 * Resolve a worksheet path from workbook metadata.
+	 *
+	 * If $sheet_name is provided and found, returns that worksheet path.
+	 * Otherwise falls back to the first worksheet.
 	 *
 	 * @param  ZipArchive $zip Opened ZIP archive.
-	 * @return string|WP_Error
+	 * @param  string     $sheet_name Optional worksheet name.
+	 * @return array|WP_Error
 	 */
-	private function xlsx_get_first_sheet_path( ZipArchive $zip ) {
+	private function xlsx_get_sheet_path( ZipArchive $zip, $sheet_name = '' ) {
+		$requested_sheet = trim( (string) $sheet_name );
 		$workbook_xml = $zip->getFromName( 'xl/workbook.xml' );
 		$rels_xml     = $zip->getFromName( 'xl/_rels/workbook.xml.rels' );
 
 		if ( false === $workbook_xml || false === $rels_xml ) {
 			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
-				return 'xl/worksheets/sheet1.xml';
+				return array(
+					'path'            => 'xl/worksheets/sheet1.xml',
+					'requested_sheet' => $requested_sheet,
+					'resolved_sheet'  => '',
+					'used_fallback'   => '' !== $requested_sheet,
+				);
 			}
-			return new WP_Error( 'ms365_xlsx_sheet_path_error', __( 'Unable to locate worksheet metadata in XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_sheet_path_error', __( 'Unable to locate worksheet metadata in XLSX file.', 'esc-connect' ) );
 		}
 
 		$workbook = simplexml_load_string( $workbook_xml );
@@ -2131,9 +2205,14 @@ class WP_MS365_Shortcodes {
 
 		if ( false === $workbook || false === $rels ) {
 			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
-				return 'xl/worksheets/sheet1.xml';
+				return array(
+					'path'            => 'xl/worksheets/sheet1.xml',
+					'requested_sheet' => $requested_sheet,
+					'resolved_sheet'  => '',
+					'used_fallback'   => '' !== $requested_sheet,
+				);
 			}
-			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Unable to parse worksheet metadata in XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_sheet_parse_error', __( 'Unable to parse worksheet metadata in XLSX file.', 'esc-connect' ) );
 		}
 
 		$workbook->registerXPathNamespace( 'x', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main' );
@@ -2142,32 +2221,72 @@ class WP_MS365_Shortcodes {
 		$sheet_nodes = $workbook->xpath( '//x:sheets/x:sheet' );
 		if ( ! is_array( $sheet_nodes ) || empty( $sheet_nodes ) ) {
 			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
-				return 'xl/worksheets/sheet1.xml';
+				return array(
+					'path'            => 'xl/worksheets/sheet1.xml',
+					'requested_sheet' => $requested_sheet,
+					'resolved_sheet'  => '',
+					'used_fallback'   => '' !== $requested_sheet,
+				);
 			}
-			return new WP_Error( 'ms365_xlsx_missing_sheet', __( 'No worksheet entries were found in the XLSX file.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_missing_sheet', __( 'No worksheet entries were found in the XLSX file.', 'esc-connect' ) );
 		}
 
-		$first_sheet = $sheet_nodes[0];
-		$rel_id      = isset( $first_sheet->attributes( 'r', true )['id'] ) ? (string) $first_sheet->attributes( 'r', true )['id'] : '';
+		$target_sheet       = $sheet_nodes[0];
+		$resolved_sheet     = isset( $target_sheet['name'] ) ? trim( (string) $target_sheet['name'] ) : '';
+		$requested_sheet_lc = strtolower( $requested_sheet );
+		$used_fallback      = false;
+
+		if ( '' !== $requested_sheet_lc ) {
+			$matched = false;
+			foreach ( $sheet_nodes as $sheet_node ) {
+				$candidate_name = isset( $sheet_node['name'] ) ? trim( (string) $sheet_node['name'] ) : '';
+				if ( '' !== $candidate_name && strtolower( $candidate_name ) === $requested_sheet_lc ) {
+					$target_sheet = $sheet_node;
+					$resolved_sheet = $candidate_name;
+					$matched = true;
+					break;
+				}
+			}
+
+			if ( ! $matched ) {
+				$used_fallback = true;
+			}
+		}
+
+		if ( '' === $resolved_sheet && isset( $target_sheet['name'] ) ) {
+			$resolved_sheet = trim( (string) $target_sheet['name'] );
+		}
+
+		$rel_id = isset( $target_sheet->attributes( 'r', true )['id'] ) ? (string) $target_sheet->attributes( 'r', true )['id'] : '';
 		if ( '' === $rel_id ) {
 			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
-				return 'xl/worksheets/sheet1.xml';
+				return array(
+					'path'            => 'xl/worksheets/sheet1.xml',
+					'requested_sheet' => $requested_sheet,
+					'resolved_sheet'  => '',
+					'used_fallback'   => true,
+				);
 			}
-			return new WP_Error( 'ms365_xlsx_missing_relationship', __( 'Worksheet relationship ID is missing in XLSX metadata.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_missing_relationship', __( 'Worksheet relationship ID is missing in XLSX metadata.', 'esc-connect' ) );
 		}
 
 		$rels->registerXPathNamespace( 'r', 'http://schemas.openxmlformats.org/package/2006/relationships' );
 		$relationship_nodes = $rels->xpath( '/r:Relationships/r:Relationship[@Id="' . $rel_id . '"]' );
 		if ( ! is_array( $relationship_nodes ) || empty( $relationship_nodes ) ) {
 			if ( false !== $zip->getFromName( 'xl/worksheets/sheet1.xml' ) ) {
-				return 'xl/worksheets/sheet1.xml';
+				return array(
+					'path'            => 'xl/worksheets/sheet1.xml',
+					'requested_sheet' => $requested_sheet,
+					'resolved_sheet'  => '',
+					'used_fallback'   => true,
+				);
 			}
-			return new WP_Error( 'ms365_xlsx_missing_relationship_target', __( 'Worksheet target path is missing in XLSX relationships.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_missing_relationship_target', __( 'Worksheet target path is missing in XLSX relationships.', 'esc-connect' ) );
 		}
 
 		$target = isset( $relationship_nodes[0]['Target'] ) ? (string) $relationship_nodes[0]['Target'] : '';
 		if ( '' === $target ) {
-			return new WP_Error( 'ms365_xlsx_invalid_relationship_target', __( 'Worksheet target is empty in XLSX relationships.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_invalid_relationship_target', __( 'Worksheet target is empty in XLSX relationships.', 'esc-connect' ) );
 		}
 
 		$target = ltrim( str_replace( '\\', '/', $target ), '/' );
@@ -2176,10 +2295,15 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( false === $zip->getFromName( $target ) ) {
-			return new WP_Error( 'ms365_xlsx_missing_sheet_xml', __( 'Worksheet XML file was not found inside the XLSX archive.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_xlsx_missing_sheet_xml', __( 'Worksheet XML file was not found inside the XLSX archive.', 'esc-connect' ) );
 		}
 
-		return $target;
+		return array(
+			'path'            => $target,
+			'requested_sheet' => $requested_sheet,
+			'resolved_sheet'  => $resolved_sheet,
+			'used_fallback'   => $used_fallback,
+		);
 	}
 
 	/**
@@ -2819,7 +2943,7 @@ class WP_MS365_Shortcodes {
 		}
 
 		if ( '' === $endpoint_url || ! wp_http_validate_url( $endpoint_url ) ) {
-			return $this->error_notice( __( 'Teams form is not configured. Set a valid endpoint_url in shortcode attributes or plugin settings.', 'wp-ms365-graph' ) );
+			return $this->error_notice( __( 'Teams form is not configured. Set a valid endpoint_url in shortcode attributes or plugin settings.', 'esc-connect' ) );
 		}
 
 		$max_length = max( 20, min( 4000, (int) $atts['max_length'] ) );
@@ -2884,7 +3008,7 @@ class WP_MS365_Shortcodes {
 				<?php wp_nonce_field( 'wp_ms365_submit_teams_message', 'wp_ms365_teams_nonce' ); ?>
 
 				<div class="msgraph_teams_form__honeypot" aria-hidden="true">
-					<label for="<?php echo esc_attr( $form_id . '_website' ); ?>"><?php esc_html_e( 'Website', 'wp-ms365-graph' ); ?></label>
+					<label for="<?php echo esc_attr( $form_id . '_website' ); ?>"><?php esc_html_e( 'Website', 'esc-connect' ); ?></label>
 					<input id="<?php echo esc_attr( $form_id . '_website' ); ?>" type="text" name="website" value="" tabindex="-1" autocomplete="off" />
 				</div>
 
@@ -3314,8 +3438,8 @@ class WP_MS365_Shortcodes {
 	public function enqueue_assets() {
 		// Intentionally do not load a default stylesheet so shortcode output inherits
 		// typography and spacing from the parent block/theme.
-		wp_register_style( 'wp-ms365-graph', false, array(), WP_MS365_VERSION );
-		wp_enqueue_style( 'wp-ms365-graph' );
+		wp_register_style( 'esc-connect', false, array(), WP_MS365_VERSION );
+		wp_enqueue_style( 'esc-connect' );
 
 		$settings   = WP_MS365_Auth::get_settings();
 		$custom_css = isset( $settings['custom_css'] ) ? trim( (string) $settings['custom_css'] ) : '';
@@ -3487,10 +3611,10 @@ class WP_MS365_Shortcodes {
 			}
 		';
 
-		wp_add_inline_style( 'wp-ms365-graph', $base_css );
+		wp_add_inline_style( 'esc-connect', $base_css );
 
 		if ( '' !== $custom_css ) {
-			wp_add_inline_style( 'wp-ms365-graph', $custom_css );
+			wp_add_inline_style( 'esc-connect', $custom_css );
 		}
 	}
 
@@ -3505,7 +3629,7 @@ class WP_MS365_Shortcodes {
 	 */
 	private function not_connected_notice() {
 		return '<p class="msgraph_notice msgraph_notice--warning">'
-			. esc_html__( 'Microsoft 365 is not connected. Please configure the plugin in the WordPress admin.', 'wp-ms365-graph' )
+			. esc_html__( 'Microsoft 365 is not connected. Please configure the plugin in the WordPress admin.', 'esc-connect' )
 			. '</p>';
 	}
 
@@ -3642,35 +3766,35 @@ class WP_MS365_Shortcodes {
 	private function get_shortcode_wording() {
 		$settings = WP_MS365_Auth::get_settings();
 		$defaults = array(
-			'calendar_empty_text'                => __( 'No upcoming events found.', 'wp-ms365-graph' ),
-			'calendar_header_date'               => __( 'Date', 'wp-ms365-graph' ),
-			'calendar_header_event'              => __( 'Event', 'wp-ms365-graph' ),
-			'calendar_header_duration'           => __( 'Duration', 'wp-ms365-graph' ),
-			'calendar_all_day_text'              => __( 'All day', 'wp-ms365-graph' ),
-			'calendar_duration_hour_single'      => __( 'hour', 'wp-ms365-graph' ),
-			'calendar_duration_hour_plural'      => __( 'hours', 'wp-ms365-graph' ),
-			'calendar_duration_minute_single'    => __( 'minute', 'wp-ms365-graph' ),
-			'calendar_duration_minute_plural'    => __( 'minutes', 'wp-ms365-graph' ),
-			'calendar_header_location'           => __( 'Location', 'wp-ms365-graph' ),
-			'files_empty_text'                   => __( 'No files found.', 'wp-ms365-graph' ),
-			'files_header_file'        => __( 'File', 'wp-ms365-graph' ),
-			'files_header_size'        => __( 'Size', 'wp-ms365-graph' ),
-			'files_header_modified'    => __( 'Modified', 'wp-ms365-graph' ),
-			'teams_form_placeholder'   => __( 'Type your message', 'wp-ms365-graph' ),
-			'teams_form_button_text'   => __( 'Send Message', 'wp-ms365-graph' ),
-			'teams_form_label_name'    => __( 'Your Name', 'wp-ms365-graph' ),
-			'teams_form_label_email'   => __( 'Your Email', 'wp-ms365-graph' ),
-			'teams_form_label_message' => __( 'Message', 'wp-ms365-graph' ),
-			'teams_form_success'       => __( 'Your message has been sent.', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_nonce' => __( 'Security validation failed. Please refresh the page and try again.', 'wp-ms365-graph' ),
-			'teams_form_error_missing_fields' => __( 'Please enter your name, email, and message before submitting.', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_email' => __( 'Please provide a valid email address.', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_form' => __( 'Invalid form submission. Please refresh and try again.', 'wp-ms365-graph' ),
-			'teams_form_error_submitted_too_fast' => __( 'Submitted too quickly. Please try again.', 'wp-ms365-graph' ),
-			'teams_form_error_rate_limited' => __( 'Too many requests. Please wait and try again later.', 'wp-ms365-graph' ),
-			'teams_form_error_invalid_endpoint' => __( 'Message delivery is not configured. Please contact the site administrator.', 'wp-ms365-graph' ),
-			'teams_form_error_post_fail' => __( 'Message could not be delivered to Teams. Please try again later.', 'wp-ms365-graph' ),
-			'teams_form_error_unknown'  => __( 'Message could not be sent.', 'wp-ms365-graph' ),
+			'calendar_empty_text'                => __( 'No upcoming events found.', 'esc-connect' ),
+			'calendar_header_date'               => __( 'Date', 'esc-connect' ),
+			'calendar_header_event'              => __( 'Event', 'esc-connect' ),
+			'calendar_header_duration'           => __( 'Duration', 'esc-connect' ),
+			'calendar_all_day_text'              => __( 'All day', 'esc-connect' ),
+			'calendar_duration_hour_single'      => __( 'hour', 'esc-connect' ),
+			'calendar_duration_hour_plural'      => __( 'hours', 'esc-connect' ),
+			'calendar_duration_minute_single'    => __( 'minute', 'esc-connect' ),
+			'calendar_duration_minute_plural'    => __( 'minutes', 'esc-connect' ),
+			'calendar_header_location'           => __( 'Location', 'esc-connect' ),
+			'files_empty_text'                   => __( 'No files found.', 'esc-connect' ),
+			'files_header_file'        => __( 'File', 'esc-connect' ),
+			'files_header_size'        => __( 'Size', 'esc-connect' ),
+			'files_header_modified'    => __( 'Modified', 'esc-connect' ),
+			'teams_form_placeholder'   => __( 'Type your message', 'esc-connect' ),
+			'teams_form_button_text'   => __( 'Send Message', 'esc-connect' ),
+			'teams_form_label_name'    => __( 'Your Name', 'esc-connect' ),
+			'teams_form_label_email'   => __( 'Your Email', 'esc-connect' ),
+			'teams_form_label_message' => __( 'Message', 'esc-connect' ),
+			'teams_form_success'       => __( 'Your message has been sent.', 'esc-connect' ),
+			'teams_form_error_invalid_nonce' => __( 'Security validation failed. Please refresh the page and try again.', 'esc-connect' ),
+			'teams_form_error_missing_fields' => __( 'Please enter your name, email, and message before submitting.', 'esc-connect' ),
+			'teams_form_error_invalid_email' => __( 'Please provide a valid email address.', 'esc-connect' ),
+			'teams_form_error_invalid_form' => __( 'Invalid form submission. Please refresh and try again.', 'esc-connect' ),
+			'teams_form_error_submitted_too_fast' => __( 'Submitted too quickly. Please try again.', 'esc-connect' ),
+			'teams_form_error_rate_limited' => __( 'Too many requests. Please wait and try again later.', 'esc-connect' ),
+			'teams_form_error_invalid_endpoint' => __( 'Message delivery is not configured. Please contact the site administrator.', 'esc-connect' ),
+			'teams_form_error_post_fail' => __( 'Message could not be delivered to Teams. Please try again later.', 'esc-connect' ),
+			'teams_form_error_unknown'  => __( 'Message could not be sent.', 'esc-connect' ),
 		);
 
 		foreach ( $defaults as $key => $default_value ) {

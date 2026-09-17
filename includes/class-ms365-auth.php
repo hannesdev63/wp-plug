@@ -257,7 +257,7 @@ class WP_MS365_Auth {
 	 */
 	public static function get_redirect_uri() {
 		return add_query_arg(
-			array( 'page' => 'wp-ms365-graph' ),
+			array( 'page' => 'esc-connect' ),
 			admin_url( 'admin.php' )
 		);
 	}
@@ -358,12 +358,12 @@ class WP_MS365_Auth {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$error_desc = isset( $_GET['error_description'] ) ? sanitize_text_field( wp_unslash( $_GET['error_description'] ) ) : '';
 			WP_MS365_Logger::log( 'error', 'SSO callback: Microsoft returned error', array( 'error' => $error, 'description' => $error_desc ) );
-			self::sso_die( __( 'Microsoft sign-in was denied or cancelled.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Microsoft sign-in was denied or cancelled.', 'esc-connect' ) );
 		}
 
 		if ( '' === $code || '' === $state ) {
 			WP_MS365_Logger::log( 'error', 'SSO callback: missing code or state' );
-			self::sso_die( __( 'Invalid sign-in response.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Invalid sign-in response.', 'esc-connect' ) );
 		}
 
 		// Validate and consume state transient (one-time use, prevents replay).
@@ -373,12 +373,12 @@ class WP_MS365_Auth {
 
 		if ( ! is_array( $state_data ) || empty( $state_data['nonce'] ) || empty( $state_data['code_verifier'] ) ) {
 			WP_MS365_Logger::log( 'error', 'SSO callback: state not found or expired' );
-			self::sso_die( __( 'Sign-in session expired or invalid. Please try again.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Sign-in session expired or invalid. Please try again.', 'esc-connect' ) );
 		}
 
 		$settings = self::get_settings();
 		if ( empty( $settings['sso_enabled'] ) ) {
-			self::sso_die( __( 'Microsoft sign-in is not enabled.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Microsoft sign-in is not enabled.', 'esc-connect' ) );
 		}
 
 		// Exchange authorization code for tokens.
@@ -400,14 +400,14 @@ class WP_MS365_Auth {
 
 		if ( is_wp_error( $token_response ) ) {
 			WP_MS365_Logger::log( 'error', 'SSO callback: token exchange failed', array( 'err' => $token_response->get_error_message() ) );
-			self::sso_die( __( 'Failed to obtain sign-in token. Please try again.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Failed to obtain sign-in token. Please try again.', 'esc-connect' ) );
 		}
 
 		$token_body = json_decode( wp_remote_retrieve_body( $token_response ), true );
 		if ( empty( $token_body['id_token'] ) ) {
 			$err = isset( $token_body['error_description'] ) ? $token_body['error_description'] : 'no id_token';
 			WP_MS365_Logger::log( 'error', 'SSO callback: no id_token in response', array( 'err' => $err ) );
-			self::sso_die( __( 'Sign-in failed: no identity token received.', 'wp-ms365-graph' ) );
+			self::sso_die( __( 'Sign-in failed: no identity token received.', 'esc-connect' ) );
 		}
 
 		// Parse and validate ID token claims.
@@ -648,7 +648,7 @@ class WP_MS365_Auth {
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 		if ( empty( $body['keys'] ) || ! is_array( $body['keys'] ) ) {
-			return new WP_Error( 'ms365_jwks_invalid', __( 'Invalid JWKS response from Microsoft.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_jwks_invalid', __( 'Invalid JWKS response from Microsoft.', 'esc-connect' ) );
 		}
 
 		set_transient( $cache_key, $body['keys'], HOUR_IN_SECONDS );
@@ -796,45 +796,45 @@ class WP_MS365_Auth {
 	private static function parse_id_token( $id_token, array $settings, $nonce ) {
 		$parts = explode( '.', (string) $id_token );
 		if ( 3 !== count( $parts ) ) {
-			return new WP_Error( 'ms365_sso_invalid_token', __( 'Malformed identity token.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_invalid_token', __( 'Malformed identity token.', 'esc-connect' ) );
 		}
 
 		// Verify RS256 signature against Microsoft's JWKS before trusting any claims.
 		if ( ! self::verify_id_token_signature( $id_token, $settings ) ) {
-			return new WP_Error( 'ms365_sso_invalid_signature', __( 'Identity token signature is invalid.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_invalid_signature', __( 'Identity token signature is invalid.', 'esc-connect' ) );
 		}
 
 		$payload_b64  = $parts[1];
 		$padding      = str_repeat( '=', ( 4 - strlen( $payload_b64 ) % 4 ) % 4 );
 		$payload_json = base64_decode( strtr( $payload_b64, '-_', '+/' ) . $padding );
 		if ( false === $payload_json ) {
-			return new WP_Error( 'ms365_sso_invalid_token', __( 'Identity token payload could not be decoded.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_invalid_token', __( 'Identity token payload could not be decoded.', 'esc-connect' ) );
 		}
 
 		$claims = json_decode( $payload_json, true );
 		if ( ! is_array( $claims ) ) {
-			return new WP_Error( 'ms365_sso_invalid_token', __( 'Identity token contains invalid payload.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_invalid_token', __( 'Identity token contains invalid payload.', 'esc-connect' ) );
 		}
 
 		// Audience must match our client ID.
 		if ( empty( $claims['aud'] ) || (string) $claims['aud'] !== $settings['client_id'] ) {
-			return new WP_Error( 'ms365_sso_aud_mismatch', __( 'Identity token audience mismatch.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_aud_mismatch', __( 'Identity token audience mismatch.', 'esc-connect' ) );
 		}
 
 		// Token must not be expired (allow 60 s clock skew).
 		if ( empty( $claims['exp'] ) || ( time() - 60 ) > (int) $claims['exp'] ) {
-			return new WP_Error( 'ms365_sso_token_expired', __( 'Identity token has expired.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_token_expired', __( 'Identity token has expired.', 'esc-connect' ) );
 		}
 
 		// Nonce must match what we sent (hash_equals prevents timing attacks).
 		if ( empty( $claims['nonce'] ) || ! hash_equals( $nonce, (string) $claims['nonce'] ) ) {
-			return new WP_Error( 'ms365_sso_nonce_mismatch', __( 'Identity token nonce mismatch.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_nonce_mismatch', __( 'Identity token nonce mismatch.', 'esc-connect' ) );
 		}
 
 		// Issuer must be from our tenant.
 		$expected_iss = sprintf( '%s/%s/v2.0', self::AUTHORITY_BASE, $settings['tenant_id'] );
 		if ( empty( $claims['iss'] ) || (string) $claims['iss'] !== $expected_iss ) {
-			return new WP_Error( 'ms365_sso_iss_mismatch', __( 'Identity token issuer mismatch.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_iss_mismatch', __( 'Identity token issuer mismatch.', 'esc-connect' ) );
 		}
 
 		return $claims;
@@ -861,7 +861,7 @@ class WP_MS365_Auth {
 		}
 
 		if ( '' === $email ) {
-			return new WP_Error( 'ms365_sso_no_email', __( 'No email address found in Microsoft identity token.', 'wp-ms365-graph' ) );
+			return new WP_Error( 'ms365_sso_no_email', __( 'No email address found in Microsoft identity token.', 'esc-connect' ) );
 		}
 
 		// Enforce allowed-domain constraint if configured.
@@ -871,7 +871,7 @@ class WP_MS365_Auth {
 			if ( ! in_array( $domain, $allowed, true ) ) {
 				return new WP_Error(
 					'ms365_sso_domain_not_allowed',
-					__( 'Your Microsoft account domain is not permitted to sign in to this site.', 'wp-ms365-graph' )
+					__( 'Your Microsoft account domain is not permitted to sign in to this site.', 'esc-connect' )
 				);
 			}
 		}
@@ -908,7 +908,7 @@ class WP_MS365_Auth {
 
 		return new WP_Error(
 			'ms365_sso_user_not_found',
-			__( 'No WordPress account is associated with your Microsoft identity. Please contact the site administrator.', 'wp-ms365-graph' )
+			__( 'No WordPress account is associated with your Microsoft identity. Please contact the site administrator.', 'esc-connect' )
 		);
 	}
 
@@ -992,7 +992,7 @@ class WP_MS365_Auth {
 	private static function sso_die( $message ) {
 		wp_die(
 			esc_html( $message ),
-			esc_html__( 'Sign-in Error', 'wp-ms365-graph' ),
+			esc_html__( 'Sign-in Error', 'esc-connect' ),
 			array(
 				'response'  => 403,
 				'back_link' => true,

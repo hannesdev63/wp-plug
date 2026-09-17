@@ -23,26 +23,26 @@ if ( $is_connected ) {
 <div class="wrap msgraph_calendar-explorer">
 	<h1 class="msgraph_calendar-explorer__heading">
 		<img src="<?php echo esc_url( WP_MS365_Admin::get_icon_url() ); ?>" class="msgraph_page-icon" alt="" width="28" height="28" />
-		<?php esc_html_e( 'ESC Connect', 'wp-ms365-graph' ); ?> &mdash; <?php esc_html_e( 'Calendar Explorer', 'wp-ms365-graph' ); ?>
+		<?php esc_html_e( 'ESC Connect', 'esc-connect' ); ?> &mdash; <?php esc_html_e( 'Calendar Explorer', 'esc-connect' ); ?>
 	</h1>
 
-	<p><?php esc_html_e( 'Use this page to copy an [msgraph_calendar] shortcode for any calendar the configured user can access. The app needs Microsoft Graph application permission Calendars.Read with admin consent to list calendars.', 'wp-ms365-graph' ); ?></p>
+	<p><?php esc_html_e( 'Use this page to copy an [msgraph_calendar] shortcode for any calendar the configured user can access. The app needs Microsoft Graph application permission Calendars.Read with admin consent to list calendars.', 'esc-connect' ); ?></p>
 
 	<?php if ( ! $is_connected ) : ?>
 		<div class="notice notice-error">
-			<p><?php esc_html_e( 'Not connected to Microsoft 365. Configure credentials in Settings before using this page.', 'wp-ms365-graph' ); ?></p>
+			<p><?php esc_html_e( 'Not connected to Microsoft 365. Configure credentials in Settings before using this page.', 'esc-connect' ); ?></p>
 		</div>
 	<?php else : ?>
 
 		<?php if ( is_wp_error( $calendars ) ) : ?>
 			<div class="notice notice-error">
 				<p>
-					<strong><?php esc_html_e( 'Could not retrieve calendars:', 'wp-ms365-graph' ); ?></strong>
+					<strong><?php esc_html_e( 'Could not retrieve calendars:', 'esc-connect' ); ?></strong>
 					<?php echo esc_html( $calendars->get_error_message() ); ?>
 				</p>
 			</div>
 		<?php elseif ( empty( $calendars['value'] ) ) : ?>
-			<p class="description"><?php esc_html_e( 'No calendars found. Ensure the app has Microsoft Graph application permission Calendars.Read and that admin consent has been granted.', 'wp-ms365-graph' ); ?></p>
+			<p class="description"><?php esc_html_e( 'No calendars found. Ensure the app has Microsoft Graph application permission Calendars.Read and that admin consent has been granted.', 'esc-connect' ); ?></p>
 		<?php else : ?>
 
 			<?php $calendar_count = count( $calendars['value'] ); ?>
@@ -50,7 +50,7 @@ if ( $is_connected ) {
 				<?php
 				printf(
 					/* translators: %d: number of calendars found */
-					esc_html( _n( 'Found %d calendar.', 'Found %d calendars.', $calendar_count, 'wp-ms365-graph' ) ),
+					esc_html( _n( 'Found %d calendar.', 'Found %d calendars.', $calendar_count, 'esc-connect' ) ),
 					$calendar_count
 				);
 				?>
@@ -59,7 +59,7 @@ if ( $is_connected ) {
 			<?php foreach ( $calendars['value'] as $calendar ) : ?>
 				<?php
 				$calendar_id      = isset( $calendar['id'] ) ? (string) $calendar['id'] : '';
-				$calendar_name    = isset( $calendar['name'] ) ? (string) $calendar['name'] : __( 'Untitled calendar', 'wp-ms365-graph' );
+				$calendar_name    = isset( $calendar['name'] ) ? (string) $calendar['name'] : __( 'Untitled calendar', 'esc-connect' );
 				$calendar_default = ! empty( $calendar['isDefaultCalendar'] );
 				$owner_label      = '';
 
@@ -80,7 +80,7 @@ if ( $is_connected ) {
 						<?php echo esc_html( $calendar_name ); ?>
 						<?php if ( $calendar_default ) : ?>
 							<span class="description" style="font-weight:normal;margin-left:.5em;">
-								<?php esc_html_e( 'Default calendar', 'wp-ms365-graph' ); ?>
+								<?php esc_html_e( 'Default calendar', 'esc-connect' ); ?>
 							</span>
 						<?php endif; ?>
 					</h3>
@@ -88,24 +88,24 @@ if ( $is_connected ) {
 					<table class="form-table msgraph_calendar-explorer__meta" style="margin-top:0;">
 						<?php if ( $owner_label ) : ?>
 							<tr>
-								<th scope="row" style="width:120px;"><?php esc_html_e( 'Owner', 'wp-ms365-graph' ); ?></th>
+								<th scope="row" style="width:120px;"><?php esc_html_e( 'Owner', 'esc-connect' ); ?></th>
 								<td><?php echo esc_html( $owner_label ); ?></td>
 							</tr>
 						<?php endif; ?>
 						<tr>
-							<th scope="row" style="width:120px;"><?php esc_html_e( 'calendar_id', 'wp-ms365-graph' ); ?></th>
+							<th scope="row" style="width:120px;"><?php esc_html_e( 'calendar_id', 'esc-connect' ); ?></th>
 							<td>
 								<code class="msgraph_calendar-explorer__copyable"><?php echo esc_html( $calendar_id ); ?></code>
 								<button
 									type="button"
 									class="button button-small msgraph_copy-btn"
 									data-copy="<?php echo esc_attr( $snippet ); ?>"
-									title="<?php esc_attr_e( 'Copy shortcode', 'wp-ms365-graph' ); ?>"
-								><?php esc_html_e( 'Copy shortcode', 'wp-ms365-graph' ); ?></button>
+									title="<?php esc_attr_e( 'Copy shortcode', 'esc-connect' ); ?>"
+								><?php esc_html_e( 'Copy shortcode', 'esc-connect' ); ?></button>
 							</td>
 						</tr>
 						<tr>
-							<th scope="row" style="width:120px;"><?php esc_html_e( 'Shortcode', 'wp-ms365-graph' ); ?></th>
+							<th scope="row" style="width:120px;"><?php esc_html_e( 'Shortcode', 'esc-connect' ); ?></th>
 							<td>
 								<code style="word-break:break-all;"><?php echo esc_html( $snippet ); ?></code>
 							</td>
