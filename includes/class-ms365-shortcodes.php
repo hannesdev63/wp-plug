@@ -1892,9 +1892,13 @@ class WP_MS365_Shortcodes {
 							<?php if ( '' !== $card_subtitle ) : ?>
 								<div class="msgraph_team__card-subtitle"><?php echo esc_html( $card_subtitle ); ?></div>
 							<?php endif; ?>
-							<?php if ( '' !== $card_image ) : ?>
+							<?php
+							$default_team_image = $this->get_default_team_card_image_url();
+							$resolved_card_image = ( '' !== $card_image ) ? $card_image : $default_team_image;
+							?>
+							<?php if ( '' !== $resolved_card_image ) : ?>
 								<div class="msgraph_team__card-image-wrap">
-									<img src="<?php echo esc_url( $card_image ); ?>" alt="<?php echo esc_attr( $card_name ); ?>" loading="lazy" decoding="async" class="msgraph_team__card-image" />
+									<img src="<?php echo esc_url( $resolved_card_image ); ?>" alt="<?php echo esc_attr( $card_name ); ?>" loading="lazy" decoding="async" class="msgraph_team__card-image"<?php if ( '' !== $default_team_image ) : ?> onerror="this.onerror=null;this.src='<?php echo esc_js( $default_team_image ); ?>';"<?php endif; ?><?php if ( '' !== $default_team_image && '' === $card_image ) : ?> data-fallback-image="1"<?php else : ?> data-fallback-image="0"<?php endif; ?> />
 								</div>
 							<?php endif; ?>
 							<div class="msgraph_team__card-details">
@@ -2855,6 +2859,28 @@ class WP_MS365_Shortcodes {
 	}
 
 	/**
+	 * Return the default site logo to use when a team member image is missing.
+	 *
+	 * @return string
+	 */
+	public function get_default_team_card_image_url() {
+		$custom_logo_id = get_theme_mod( 'custom_logo' );
+		if ( ! empty( $custom_logo_id ) ) {
+			$logo_url = wp_get_attachment_image_url( (int) $custom_logo_id, 'full' );
+			if ( ! empty( $logo_url ) ) {
+				return esc_url_raw( $logo_url );
+			}
+		}
+
+		$site_icon_url = get_site_icon_url( 'full' );
+		if ( ! empty( $site_icon_url ) ) {
+			return esc_url_raw( $site_icon_url );
+		}
+
+		return '';
+	}
+
+	/**
 	 * Normalize team field values for case-insensitive matching.
 	 *
 	 * @param  string $value Raw field value.
@@ -3474,6 +3500,7 @@ class WP_MS365_Shortcodes {
 				padding: 0;
 				margin: 0;
 				overflow: hidden;
+				display: block;
 			}
 			.msgraph_team__card-image {
 				display: block;
@@ -3481,13 +3508,25 @@ class WP_MS365_Shortcodes {
 				height: 420px;
 				object-fit: cover;
 				background: transparent;
+				border: 0;
+			}
+			.msgraph_team__card-image[data-fallback-image="1"] {
+				background: transparent;
+				object-fit: contain;
+				padding: 0;
+				box-sizing: border-box;
+				filter: none;
 			}
 			.msgraph_team__card-name {
+				display: flex;
+				align-items: flex-end;
 				margin: 0;
-				padding: 1.3rem 1.3rem 0;
-				font-size: clamp(1.7rem, 2.8vw, 2.6rem);
-				line-height: 0.96;
-				font-weight: 700;
+				padding: 1.3rem 1.3rem 0.45rem;
+				min-height: 7.25rem;
+				font-size: 2.8rem;
+				line-height: 1.05;
+				letter-spacing: -0.04em;
+				font-weight: 800;
 				color: #f4f4f6;
 				overflow-wrap: anywhere;
 				word-break: break-word;
